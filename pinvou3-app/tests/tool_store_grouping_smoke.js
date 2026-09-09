@@ -79,9 +79,11 @@ async function clickChip(page, text) {
     const page = await browser.newPage();
     await page.evaluateOnNewDocument(injectSource());
     await page.goto(url, { waitUntil: 'networkidle0' });
-    await page.waitForFunction(() => document.querySelector('[data-nav="toolstore"]'), { timeout: 20000 });
-    await page.evaluate(() => { document.querySelector('[data-nav="toolstore"]').dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })); });
-    await page.waitForFunction(() => document.body.innerText.includes('插件中心'), { timeout: 10000 });
+    await page.waitForFunction(() => document.querySelector('[data-nav="capabilities"]'), { timeout: 20000 });
+    await page.evaluate(() => { document.querySelector('[data-nav="capabilities"]').dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })); });
+    await page.waitForSelector('[data-testid="capability-tab-connectors"]', { timeout: 10000 });
+    await page.click('[data-testid="capability-tab-connectors"]');
+    await page.waitForFunction(() => document.body.innerText.includes('能力中心'), { timeout: 10000 });
     // 懒加载视图:标题来自静态 i18n,首帧即有;类型 chip 里的「插件包」依赖
     // list_marketplace_tools 返回后 skillToMcp 建立的二次渲染——视图切换包在
     // startTransition 里时该重渲染会比首帧晚一帧提交。等数据驱动的「插件包」
@@ -89,9 +91,10 @@ async function clickChip(page, text) {
     await page.waitForFunction(() => [...document.querySelectorAll('button')].some(b => (b.textContent || '').trim() === '插件包'), { timeout: 2000 });
 
     const chipText = await page.evaluate(() => [...document.querySelectorAll('button')].map(b => (b.textContent || '').trim()));
-    for (const label of ['按类型', '按业务', '全部', '插件包', 'MCP', 'Skill', 'CLI 集成', 'API & Webhook', '即将上线']) {
+    for (const label of ['按类型', '按业务', '全部', '插件包', 'MCP', 'CLI 集成', 'API & Webhook', '即将上线']) {
       rec(`类型维度 chip/segment「${label}」渲染`, chipText.includes(label));
     }
+    rec('连接器标签不混入纯 Skill', !chipText.includes('Skill'));
 
     // 组合包(PPT/公文)归「插件包」组:chip 存在;筛选后只显示组合包
     rec('点击「插件包」chip', await clickChip(page, '插件包'));
@@ -146,10 +149,13 @@ async function clickChip(page, text) {
     // 自定义上传的 MCP（后端合成卡带 userUploaded + mcpServer）必须归 MCP 组
     // （二轮评审：旧判定顺序把 userUploaded 先短路进 Skill 组）。
     rec('自定义上传 MCP 出现在 MCP 筛选', await page.evaluate(() => document.body.innerText.includes('my-uploaded-mcp')));
-    rec('点击「Skill」chip', await clickExact(page, 'Skill'));
+    await page.click('[data-testid="capability-tab-skills"]');
     await sleep(300);
-    rec('Skill 筛选不含自定义上传 MCP', await page.evaluate(() => !document.body.innerText.includes('my-uploaded-mcp')));
-    rec('点击「全部」chip 复位', await clickExact(page, '全部'));
+    rec('技能标签只展示纯技能', await page.evaluate(() => {
+      const text = document.body.innerText;
+      return text.includes('数据分析可视化') && !text.includes('my-uploaded-mcp') && !text.includes('高德天气') && !text.includes('党政机关公文写作');
+    }));
+    await page.click('[data-testid="capability-tab-connectors"]');
     await sleep(300);
 
     // 切主维度=业务
@@ -159,9 +165,10 @@ async function clickChip(page, text) {
     for (const label of ['全部', '沟通协作', '文档知识', '研发', '金融数据', '生活实用', '其他']) {
       rec(`业务维度 chip「${label}」渲染`, bizChips.includes(label));
     }
-    rec('业务维度 chip 不含「技能」', !bizChips.includes('技能'));
+    rec('业务维度 chip 不含「技能」', !await page.evaluate(() => [...document.querySelectorAll('button')]
+      .some(b => !b.dataset.testid?.startsWith('capability-tab-') && (b.textContent || '').trim() === '技能')));
     const sectionsByBiz = await page.evaluate(() => [...document.querySelectorAll('h3')].map(h => (h.textContent || '').trim()));
-    for (const label of ['插件包', 'MCP', 'Skill', 'CLI 集成', 'API & Webhook', '即将上线']) {
+    for (const label of ['插件包', 'MCP', 'CLI 集成', 'API & Webhook', '即将上线']) {
       rec(`按业务时类型分区「${label}」渲染`, sectionsByBiz.includes(label));
     }
 

@@ -134,7 +134,7 @@ function injectSource() {
       kb_model_status:function(){return null;},
       list_archived_sessions:function(){return null;},
       list_models:function(){return null;},
-      list_personas:function(){return null;},
+      list_personas:function(){return [];},
       list_scheduled_runs:function(){return null;},
       list_scheduled_tasks:function(){return null;},
       list_sessions:function(){return null;},
@@ -186,9 +186,11 @@ async function dismiss(page) {
     page = await browser.newPage();
     await page.evaluateOnNewDocument(injectSource());
     await page.goto(url, { waitUntil: 'networkidle0' });
-    await page.waitForFunction(() => document.querySelector('[data-nav="toolstore"]'), { timeout: 20000 });
-    await page.evaluate(() => { document.querySelector('[data-nav="toolstore"]').dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })); });
-    await page.waitForFunction(() => document.body.innerText.includes('插件中心'), { timeout: 10000 });
+    await page.waitForFunction(() => document.querySelector('[data-nav="capabilities"]'), { timeout: 20000 });
+    await page.evaluate(() => { document.querySelector('[data-nav="capabilities"]').dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })); });
+    await page.waitForSelector('[data-testid="capability-tab-skills"]', { timeout: 10000 });
+    await page.click('[data-testid="capability-tab-skills"]');
+    await page.waitForFunction(() => document.body.innerText.includes('能力中心'), { timeout: 10000 });
 
     // 1. 回收站入口按钮存在(chips 行「仅显示已安装」旁)
     rec('回收站入口按钮渲染', await page.evaluate(() => !!document.querySelector('[data-testid="tool-store-recycle-bin"]')));
@@ -237,6 +239,8 @@ async function dismiss(page) {
     // 3b. 预置目录包经伴随技能卡呈现(MCP 卡被列表过滤):详情页不渲染「导出」按钮。
     //     后端对 catalog id 一律拒绝导出,按钮不隐藏必然报错(与文档「市场预置包不导出」
     //     一致)。先证明详情弹窗确实打开且为伴随技能卡,避免「列表页本无导出按钮」的空真。
+    await page.click('[data-testid="capability-tab-connectors"]');
+    await sleep(300);
     await page.evaluate(() => {
       const rows = [...document.querySelectorAll('div')].filter(el =>
         (el.textContent || '').includes('blocked-catalog-skill') && el.querySelector('button'));
@@ -282,6 +286,8 @@ async function dismiss(page) {
     await sleep(300);
 
     // 4. 上传技能卸载提示「移入回收站」(预置/普通卸载不出现该文案)
+    await page.click('[data-testid="capability-tab-skills"]');
+    await sleep(300);
     await page.evaluate(() => {
       const rows = [...document.querySelectorAll('div')].filter(el =>
         (el.textContent || '').includes('my-test-skill') && el.querySelector('button'));
@@ -296,6 +302,8 @@ async function dismiss(page) {
 
     // 4b. 手写自定义 MCP(source:'preset')卸载不进回收站:提示为普通卸载文案,
     //     不得出现「移入回收站」(后端保留目录,回收站找不到,文案不能说谎)
+    await page.click('[data-testid="capability-tab-connectors"]');
+    await sleep(300);
     await page.click('[data-testid="tool-store-action"][data-tool-id="my-preset-mcp"]');
     await sleep(600);
     rec('preset 自定义 MCP 卸载提示不含移入回收站', await page.evaluate(() =>

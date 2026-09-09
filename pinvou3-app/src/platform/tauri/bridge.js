@@ -2404,7 +2404,7 @@
       // lane 全局默认（work/design/code）是草稿态 mode chip 的事实源，启动即拉取。
       startupAwait("bridge:refresh_mode_defaults", refreshModeDefaults);
     }
-    if (!isDetachedWindow || detachedWindowKind === "session" || detachedWindowKind === "cardpool") {
+    if (!isDetachedWindow || detachedWindowKind === "session" || detachedWindowKind === "cardpool" || detachedWindowKind === "capabilities") {
       loadPersonas(); // 会话和卡池需要本窗口自己的卡牌投影，fire-and-forget
       startupMark("bridge:personas_load_started");
     }

@@ -2,7 +2,7 @@ import { lazy, startTransition as scheduleViewTransition, Suspense, useCallback,
 import { createPortal } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import '../styles/base.css';
-import { Edit2, BarChart2, Settings, Smartphone, Clock, Package, Search, ChevronDown, Menu, MoreHorizontal, Check, Filter, Layers, MessageSquare, X, XIcon, Globe, BookOpen, Puzzle, PetPawIcon } from '../components/icons.jsx';
+import { Edit2, BarChart2, Settings, Smartphone, Clock, Package, Search, ChevronDown, Menu, MoreHorizontal, Check, Filter, Layers, MessageSquare, X, XIcon, Globe, BookOpen, PetPawIcon } from '../components/icons.jsx';
 import { ArchiveConfirmDialog, ArchiveToast, NavItem, RecentItem } from '../components/layout/NavigationComponents.jsx';
 import { SidePanelLayoutProvider } from '../components/layout/ResizableSidePanel.jsx';
 import {
@@ -98,8 +98,7 @@ import { VIEW_LOADERS, prefetchView } from './view-loaders.js';
 // adds an in-place retry boundary for chunk fetch failures.
 // ChatView and Lanyard render at startup and stay statically imported.
 const LazySettingsView = lazy(() => VIEW_LOADERS.settings().then(m => ({ default: m.SettingsView })));
-const LazyToolStoreView = lazy(() => VIEW_LOADERS.toolStore().then(m => ({ default: m.ToolStoreView })));
-const LazyCardPoolView = lazy(() => VIEW_LOADERS.cardpool().then(m => ({ default: m.CardPoolView })));
+const LazyCapabilityCenterView = lazy(() => VIEW_LOADERS.capabilities().then(m => ({ default: m.CapabilityCenterView })));
 const LazyScheduledTasksView = lazy(() => VIEW_LOADERS.scheduled().then(m => ({ default: m.ScheduledTasksView })));
 const LazyKnowledgeView = lazy(() => VIEW_LOADERS.knowledge().then(m => ({ default: m.KnowledgeView })));
 const LazyMonitorView = lazy(() => VIEW_LOADERS.monitor().then(m => ({ default: m.MonitorView })));
@@ -1109,6 +1108,7 @@ function workspaceDisplayName(path) {
       const [personaEditor, setPersonaEditor] = useState(null); // 聊天里"存入卡牌池"草稿 → App 级编辑器
       const [savedConfirm, setSavedConfirm] = useState(null); // 存入成功 → iOS 确认窗 {name}
       const [poolMyOnly, setPoolMyOnly] = useState(false); // 跳卡池时是否直接落「我的卡牌」筛选(从确认窗"去查看"进来=true)
+      const [capabilityTab, setCapabilityTab] = useState('experts');
       const [webAccessOpen, setWebAccessOpen] = useState(false);
       const [publishedBrowserOverlayIntent, setPublishedBrowserOverlayIntent] = useState('');
       const [settingsInitialSection, setSettingsInitialSection] = useState('general');
@@ -2538,12 +2538,12 @@ function workspaceDisplayName(path) {
         ? ((((chatHistory || []).find(c => c.id === activeChat)) || {}).title || t.appTitle)
         : currentView === 'codex'
           ? ((((codexHistory || []).find(c => c.id === activeCodexId)) || {}).title || t.sidebarTaskFilterCode)
-        : ({ search: t.searchChats, scheduled: t.scheduledPlans, monitor: t.monitor, cardpool: t.cardPool, toolStore: t.toolStore, outputs: t.outputs, knowledge: t.knowledge, settings: t.settings, browser: t.browser }[currentView] || t.appTitle);
+        : ({ search: t.searchChats, scheduled: t.scheduledPlans, monitor: t.monitor, capabilities: t.capabilityCenter, cardpool: t.cardPool, toolStore: t.toolStore, outputs: t.outputs, knowledge: t.knowledge, settings: t.settings, browser: t.browser }[currentView] || t.appTitle);
       const mobileNavigate = (view, beforeNavigate) => {
         setMobileMoreOpen(false);
         navigateFromScheduledRun(view, beforeNavigate);
       };
-      const mobileMoreViews = ['search', 'outputs', 'knowledge', 'toolStore', 'settings', 'browser'];
+      const mobileMoreViews = ['search', 'outputs', 'knowledge', 'settings', 'browser'];
       const mobileMoreActive = mobileMoreViews.includes(currentView)
         || (currentView === 'scheduled' && !(bs && bs.scheduledRunContext));
 
@@ -2586,7 +2586,7 @@ function workspaceDisplayName(path) {
               : chat.scheduledRun
                 ? !!(bs && bs.scheduledRunContext && bs.scheduledRunContext.sessionId === chat.id)
                 : activeChat === chat.id && currentView === 'chat'}
-            personaTarget={chat.taskKind !== 'codex' && !chat.scheduledRun && activeChat === chat.id && currentView === 'cardpool'}
+            personaTarget={chat.taskKind !== 'codex' && !chat.scheduledRun && activeChat === chat.id && currentView === 'capabilities' && capabilityTab === 'experts'}
             onSelect={chat.taskKind === 'codex'
               ? handleSwitchCodexSession
               : chat.scheduledRun
@@ -2696,7 +2696,7 @@ function workspaceDisplayName(path) {
         setJustInstalledTool,
         onGotoSettings: () => openSettingsSection('general'),
         onGotoModelSettings: () => openSettingsSection('model'),
-        onGotoTools: () => navigateFromScheduledRun('toolStore'),
+        onGotoTools: () => navigateFromScheduledRun('capabilities', () => setCapabilityTab('connectors')),
         browserDockOpen: browserPaneOpen,
         onOpenBrowserDock: openBrowserDock,
       };
@@ -2927,22 +2927,13 @@ function workspaceDisplayName(path) {
                 dragKind={canDetachWindows ? 'monitor' : undefined} dragging={canDetachWindows && !!dragAvatar && dragAvatar.key === 'monitor:'} onPickUp={canDetachWindows ? (geom) => beginTearOff('monitor', undefined, t.monitor, geom) : undefined}
               />
               <NavItem
-                icon={<Puzzle size={18} />} label={t.toolStore}
-                active={currentView === 'toolStore'}
+                icon={<Layers size={18} />} label={t.capabilityCenter}
+                active={currentView === 'capabilities'}
                 theme={activeTheme}
                 isSidebarOpen={isSidebarOpen}
-                onClick={() => navigateFromScheduledRun('toolStore')}
-                onPointerEnter={() => prefetchView('toolStore')} onFocus={() => prefetchView('toolStore')}
-                dragKind={canDetachWindows ? 'toolstore' : undefined} dragging={canDetachWindows && !!dragAvatar && dragAvatar.key === 'toolstore:'} onPickUp={canDetachWindows ? (geom) => beginTearOff('toolstore', undefined, t.toolStore, geom) : undefined}
-              />
-              <NavItem
-                icon={<Layers size={18} />} label={t.cardPool}
-                active={currentView === 'cardpool'}
-                theme={activeTheme}
-                isSidebarOpen={isSidebarOpen}
-                onClick={() => navigateFromScheduledRun('cardpool', () => setPoolMyOnly(false))}
-                onPointerEnter={() => prefetchView('cardpool')} onFocus={() => prefetchView('cardpool')}
-                dragKind={canDetachWindows ? 'cardpool' : undefined} dragging={canDetachWindows && !!dragAvatar && dragAvatar.key === 'cardpool:'} onPickUp={canDetachWindows ? (geom) => beginTearOff('cardpool', undefined, t.cardPool, geom) : undefined}
+                onClick={() => navigateFromScheduledRun('capabilities')}
+                onPointerEnter={() => prefetchView('capabilities')} onFocus={() => prefetchView('capabilities')}
+                dragKind={canDetachWindows ? 'capabilities' : undefined} dragging={canDetachWindows && !!dragAvatar && dragAvatar.key === 'capabilities:'} onPickUp={canDetachWindows ? (geom) => beginTearOff('capabilities', undefined, t.capabilityCenter, geom) : undefined}
               />
               <NavItem
                 icon={<BookOpen size={18} />} label={t.knowledge}
@@ -3362,8 +3353,7 @@ function workspaceDisplayName(path) {
                 nativeSurfaceSuspended={compactBrowserSurfaceSuspended}
               />
             )}
-            {currentView === 'toolStore' && <LazyToolStoreView theme={activeTheme} t={t} onNewChat={handleNewChat} />}
-            {currentView === 'cardpool' && <LazyCardPoolView theme={activeTheme} t={t} bs={bs} onEquipped={() => { setCodeModeOn(false); setCurrentView('chat'); }} onAICreate={startAICard} initialMyOnly={poolMyOnly} />}
+            {currentView === 'capabilities' && <LazyCapabilityCenterView theme={activeTheme} t={t} bs={bs} activeTab={capabilityTab} onTabChange={setCapabilityTab} onEquipped={() => { setCodeModeOn(false); setCurrentView('chat'); }} onAICreate={startAICard} initialMyOnly={poolMyOnly} onNewChat={handleNewChat} />}
             {currentView === 'chat' && (
               <ChatView
                 {...chatViewBaseProps}
@@ -3393,7 +3383,7 @@ function workspaceDisplayName(path) {
                 bs={bs}
                 onGotoModelSettings={() => openSettingsSection('model')}
                 onGotoSettings={() => openSettingsSection('general')}
-                onGotoTools={() => navigateFromScheduledRun('toolStore')}
+                onGotoTools={() => navigateFromScheduledRun('capabilities', () => setCapabilityTab('connectors'))}
               />
             )}
             {SCHEDULED_TASKS_ENTRY_ENABLED && currentView === 'scheduled' && (
@@ -3408,7 +3398,7 @@ function workspaceDisplayName(path) {
             {(currentView === 'chat' || (currentView === 'scheduled' && bs && bs.scheduledRunContext)) && bs && (
               <Lanyard persona={bs.activeSessionId ? (bs.activePersona || null) : null} isDark={activeTheme === 'dark'} t={t}
                 onRemove={() => bridge.available && bridge.personas.unequipPersona()}
-                onOpenPicker={() => navigateFromScheduledRun('cardpool', () => setPoolMyOnly(false))} />
+                onOpenPicker={() => navigateFromScheduledRun('capabilities', () => { setCapabilityTab('experts'); setPoolMyOnly(false); })} />
             )}
             {currentView === 'search' && (
               <LazySearchView
@@ -3472,7 +3462,7 @@ function workspaceDisplayName(path) {
                   <div className="flex" style={{ borderTop: '0.5px solid ' + (activeTheme === 'dark' ? 'rgba(84,84,88,.65)' : 'rgba(60,60,67,.29)') }}>
                     <button type="button" onClick={() => setSavedConfirm(null)} className="flex-1 h-11 text-[17px]" style={{ color: activeTheme === 'dark' ? '#0A84FF' : '#007AFF' }}>{t.cpSavedLater}</button>
                     <div style={{ width:'0.5px', background: activeTheme === 'dark' ? 'rgba(84,84,88,.65)' : 'rgba(60,60,67,.29)' }} />
-                    <button type="button" onClick={() => { setPoolMyOnly(true); setSavedConfirm(null); setCurrentView('cardpool'); }} className="flex-1 h-11 text-[17px] font-semibold" style={{ color: activeTheme === 'dark' ? '#0A84FF' : '#007AFF' }}>{t.cpSavedView}</button>
+                    <button type="button" onClick={() => { setPoolMyOnly(true); setCapabilityTab('experts'); setSavedConfirm(null); setCurrentView('capabilities'); }} className="flex-1 h-11 text-[17px] font-semibold" style={{ color: activeTheme === 'dark' ? '#0A84FF' : '#007AFF' }}>{t.cpSavedView}</button>
                   </div>
                 </div>
               </div>
@@ -3685,8 +3675,8 @@ function workspaceDisplayName(path) {
               { key: 'chat', label: t.currentChat, icon: <MessageSquare size={18} />,
                 active: currentView === 'chat' || !!(currentView === 'scheduled' && bs && bs.scheduledRunContext),
                 onClick: () => mobileNavigate('chat') },
-              { key: 'cardpool', label: t.cardPool, icon: <Layers size={18} />,
-                active: currentView === 'cardpool', onClick: () => mobileNavigate('cardpool', () => setPoolMyOnly(false)) },
+              { key: 'capabilities', label: t.capabilityCenter, icon: <Layers size={18} />,
+                active: currentView === 'capabilities', onClick: () => mobileNavigate('capabilities') },
               { key: 'monitor', label: t.monitor, icon: <BarChart2 size={18} />,
                 active: currentView === 'monitor',
                 onClick: () => mobileNavigate('monitor', () => {
@@ -3712,8 +3702,6 @@ function workspaceDisplayName(path) {
                 active: currentView === 'outputs', onClick: () => mobileNavigate('outputs') },
               { key: 'knowledge', label: t.knowledge, icon: <BookOpen size={18} />,
                 active: currentView === 'knowledge', onClick: () => mobileNavigate('knowledge') },
-              { key: 'toolStore', label: t.toolStore, icon: <Puzzle size={18} />,
-                active: currentView === 'toolStore', onClick: () => mobileNavigate('toolStore') },
               { key: 'settings', label: t.settings, icon: <Settings size={18} />,
                 active: currentView === 'settings', dot: hasUpdate, onClick: () => mobileNavigate('settings') },
             ]} />

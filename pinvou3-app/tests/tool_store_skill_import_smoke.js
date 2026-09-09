@@ -72,7 +72,7 @@ function injectSource() {
       kb_model_status:function(){return null;},
       list_archived_sessions:function(){return null;},
       list_models:function(){return null;},
-      list_personas:function(){return null;},
+      list_personas:function(){return [];},
       list_scheduled_runs:function(){return null;},
       list_scheduled_tasks:function(){return null;},
       list_sessions:function(){return null;},
@@ -117,9 +117,11 @@ async function clickExact(page, text) {
     page = await browser.newPage();
     await page.evaluateOnNewDocument(injectSource());
     await page.goto(url, { waitUntil: 'networkidle0' });
-    await page.waitForFunction(() => document.querySelector('[data-nav="toolstore"]'), { timeout: 20000 });
-    await page.evaluate(() => { document.querySelector('[data-nav="toolstore"]').dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })); });
-    await page.waitForFunction(() => document.body.innerText.includes('插件中心'), { timeout: 10000 });
+    await page.waitForFunction(() => document.querySelector('[data-nav="capabilities"]'), { timeout: 20000 });
+    await page.evaluate(() => { document.querySelector('[data-nav="capabilities"]').dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })); });
+    await page.waitForSelector('[data-testid="capability-tab-skills"]', { timeout: 10000 });
+    await page.click('[data-testid="capability-tab-skills"]');
+    await page.waitForFunction(() => document.body.innerText.includes('能力中心'), { timeout: 10000 });
 
     // 1. header 上传按钮存在
     const hasBtn = await page.evaluate(() => !!document.querySelector('[data-testid="tool-store-upload-btn"]'));

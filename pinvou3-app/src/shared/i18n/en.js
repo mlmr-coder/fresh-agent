@@ -173,6 +173,10 @@ const acpProvidersEn = {
 export const dictEn = {
   ...browserEn,
         langTag: 'en',
+        capabilityCenter: 'Capabilities',
+        capabilityExperts: 'Experts',
+        capabilitySkills: 'Skills',
+        capabilityConnectors: 'Connectors',
         acpAgent: 'ACP Agent',
         newChat: 'New chat', currentChat: 'Current chat', searchChats: 'Search chats', scheduledPlans: 'Scheduled tasks', monitor: 'Status', workflow: 'Workflow', multiAgent: 'Multi-agent', multiAgentDesktopOnly: 'This multi-agent conversation is currently available only in the desktop app.', toolStore: 'Plugin Center', cardPool: 'Card Deck', recent: 'History', pinnedTasks: 'Pinned tasks', regularTasks: 'Tasks', sidebarTaskList: 'Tasks', sidebarTaskFilter: 'Filter', sidebarTaskFilterAll: 'All', sidebarTaskFilterPinned: 'Pinned', sidebarTaskFilterCode: 'Code', sidebarTaskFilterCodeSessions: 'Code sessions', sidebarTaskFilterScheduled: 'Scheduled tasks', sidebarTaskSort: 'Sort', sidebarTaskSortPinnedFirst: 'Pinned first', sidebarTaskSortRecent: 'Recent', sidebarTaskEmpty: 'No tasks', sidebarViewAll: 'View all', sidebarSection: 'Task list', sidebarDateGrouping: 'Group by date', sidebarDateGroupingDesc: 'Group tasks by date; today stays expanded', sidebarNavExpand: 'Expand navigation', sidebarNavCollapse: 'Collapse navigation', sidebarCollapseAll: 'Collapse', sidebarExpandAll: 'Expand', sidebarTaskStyle: 'Style', sidebarResize: 'Drag to resize the sidebar; double-click to reset', settings: 'Settings', localEnv: 'Local Env', megacubeSite: 'Open MegaCube site', tearoffTitle: 'Detached', tearoffHint: 'Pop out to its own window', mobileMore: 'More',
         previewTaskDailyBrief: 'Daily Briefing', previewTaskFollowUp: 'Follow-up Monitor', previewTaskSalesWeekly: 'Sales Leads Weekly',
@@ -931,7 +935,7 @@ s5: { title:'Visual Design', subtitle:'Design-system-grade webpages / banners / 
 } });
 
 Object.assign(dictEn.uiToolStore, {
-  groupByType:'By Type', groupByBusiness:'By Domain',
+  groupByType:'By Type', groupByTypeHint:'Group by technical form: bundle, MCP, Skill, CLI, API, and more', groupByBusiness:'By Domain', groupByBusinessHint:'Group by use case: collaboration, documents, development, finance, lifestyle, and more',
   typeGroups:{ bundle:'Plugin Bundles', mcp:'MCP', skill:'Skills', cli:'CLI Integrations', api:'API & Webhook', upcoming:'Coming Soon' },
   recycleBin:'Recycle Bin', recycleBinTitle:'Plugin Recycle Bin', recycleBinEmpty:'Recycle bin is empty', recycleBinEmptyHint:'Uploaded plugins you uninstall are moved here; you can restore or permanently delete them.',
   recycleBinLoadFailed:'Failed to load the recycle bin. Please retry.', recycleBinLoading:'Loading recycle bin…', recycledAt:time=>`Recycled at ${time}`,

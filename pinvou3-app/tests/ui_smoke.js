@@ -1676,7 +1676,9 @@ async function expand(page) {
   });
 
   // ② 工具商店关键连接器卡
-  await page.evaluate(() => document.querySelector('[data-nav="toolstore"]')?.click());
+  await page.evaluate(() => document.querySelector('[data-nav="capabilities"]')?.click());
+  await page.waitForSelector('[data-testid="capability-tab-connectors"]', { timeout: 10000 });
+  await page.click('[data-testid="capability-tab-connectors"]');
   await sleep(1500);
   const connectors = await page.evaluate(() => {
     const text = document.body.innerText;
@@ -1983,10 +1985,10 @@ async function expand(page) {
   await sleep(100);
   const draftEntered = await page.evaluate((value) =>
     document.querySelector('[data-testid="chat-composer-input"]')?.value === value, composerDraft);
-  await page.evaluate(() => document.querySelector('[data-nav="toolstore"]')?.click());
+  await page.evaluate(() => document.querySelector('[data-nav="capabilities"]')?.click());
   await sleep(700);
   const draftViewChanged = await page.evaluate(() =>
-    document.querySelector('[data-testid="app-root"]')?.getAttribute('data-current-view') === 'toolStore');
+    document.querySelector('[data-testid="app-root"]')?.getAttribute('data-current-view') === 'capabilities');
   await clickText(page, '第三季度财报分析');
   await sleep(900);
   const restoredDraft = await page.evaluate(() =>

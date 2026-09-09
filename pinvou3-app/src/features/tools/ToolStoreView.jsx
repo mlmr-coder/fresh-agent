@@ -12,6 +12,7 @@ import { invokeTauri, isTauriAvailable, tauriEvents } from '../../platform/tauri
 import { can } from '../../shared/platform.js';
 import { isImeComposing } from '../../shared/ime-guard.mjs';
 import { pathBasename } from '../../shared/path-utils.js';
+import { capabilityKindForEntry, resolveLiveCapabilitySelection } from '../capabilities/capability-model.mjs';
 
 const OAUTH_UI_TIMEOUT_MS = 90_000;
 
@@ -873,7 +874,7 @@ const withUiTimeout = (promise, timeoutMs, fallbackResult) => {
     );
 
     /* eslint-disable sonarjs/cognitive-complexity -- tool store main view (list/detail/install/OAuth flows);legacy view; tracked separately */
-    const ToolStoreView = ({ theme, t, onNewChat }) => {
+    const ToolStoreView = ({ theme, t, onNewChat, capabilityKind = null, embedded = false }) => {
       const storeCopy = t.uiToolStore;
       const detailCopy = t.uiToolDetails;
       // 数据文件(tool-common.jsx)里技能/分类/精选的中文 label/title/subtitle/desc:
@@ -1446,7 +1447,16 @@ const withUiTimeout = (promise, timeoutMs, fallbackResult) => {
       // 组合包的 MCP 连接器卡不进列表:包由 companion 合成卡唯一代表(取代已删的 LOCAL_TOOLS 硬编码)。
       // 条目数据仍保留在 tsToolsData(详情/安装/配置流程经 findLocalizedTool 消费)。
       const connectorTools = tools.filter(t => !bundleMcpIds.includes(t.backendId) && isToolVisibleOnPlatform(t));
-      const listItems = [...connectorTools, ...skillCards]; // 连接器 + 技能全放一起
+      const allListItems = [
+        ...connectorTools.map(tool => ({ ...tool, capabilityKind: capabilityKindForEntry(tool, 'connector') })),
+        ...skillCards.map(tool => ({ ...tool, capabilityKind: capabilityKindForEntry(tool, 'skill') })),
+      ];
+      // 能力中心按事实源自动分流：marketplace tools → 连接器，纯 skills → 技能；
+      // companion skill 由连接器认领，只保留组合包连接器卡。capabilityKind=null
+      // 保留独立工具商店/旧撕离窗口的全量兼容视图。
+      const listItems = capabilityKind
+        ? allListItems.filter(tool => tool.capabilityKind === capabilityKind)
+        : allListItems;
       // 搜索全局:有搜索词时跨「连接器 + 全部技能」检索,不受分类限制(「我的工具」内搜索仍限已安装)
       const searching = searchQuery.trim() !== '';
       const isLaunchedTool = tool => !!tool.backendId || !!tool.builtin || !!tool.userUploaded;
@@ -1513,6 +1523,10 @@ const withUiTimeout = (promise, timeoutMs, fallbackResult) => {
           setActiveCategory('all'); // eslint-disable-line react-hooks/set-state-in-effect -- pre-existing category reset when the active chip disappears from the list (surfaced after connector-flow dedup)
         }
       }, [activeCategory, installedOnly, searching, groupChips]);
+
+      // 弹窗只保存选择身份；安装、授权和 readiness 均从当前列表重新合并。
+      // 这样任一连接器完成连接后，详情顶部按钮、卡片与绿色状态提示同帧更新。
+      const detailTool = resolveLiveCapabilitySelection(selectedTool, listItems);
 
       const beginOAuthRequest = (backendId) => {
         // OAuth 请求关联 ID 需不可预测，避免用 Math.random()（CodeQL js/insecure-randomness）。
@@ -2054,11 +2068,11 @@ const withUiTimeout = (promise, timeoutMs, fallbackResult) => {
       // Detail page "Connected" banner (five connectors, one shared visual shell): CLI connectors need the connection
       // state ready and the flow card collapsed; ima has no flow card, connection state only. Mutually exclusive, at most one shows.
       const connectedBanners = [
-        { show: !!selectedTool?.feishuCli && feishuConnected && !feishuFlow, text: storeCopy.connectedBanner(storeCopy.toolNames.feishu) },
-        { show: !!selectedTool?.wecomCli && wecomConnected && !wecomFlow, text: storeCopy.connectedBanner(storeCopy.toolNames.wecom) },
-        { show: !!selectedTool?.dingtalkCli && dingtalkConnected && !dingtalkFlow, text: storeCopy.connectedBanner(storeCopy.toolNames.dingtalk) },
-        { show: !!selectedTool?.tmeetCli && tmeetConnected && !tmeetFlow, text: storeCopy.connectedBanner(storeCopy.toolNames.tmeet) },
-        { show: !!selectedTool?.imaOpenapi && imaConnected, text: storeCopy.connectedBannerIma },
+        { show: !!detailTool?.feishuCli && feishuConnected && !feishuFlow, text: storeCopy.connectedBanner(storeCopy.toolNames.feishu) },
+        { show: !!detailTool?.wecomCli && wecomConnected && !wecomFlow, text: storeCopy.connectedBanner(storeCopy.toolNames.wecom) },
+        { show: !!detailTool?.dingtalkCli && dingtalkConnected && !dingtalkFlow, text: storeCopy.connectedBanner(storeCopy.toolNames.dingtalk) },
+        { show: !!detailTool?.tmeetCli && tmeetConnected && !tmeetFlow, text: storeCopy.connectedBanner(storeCopy.toolNames.tmeet) },
+        { show: !!detailTool?.imaOpenapi && imaConnected, text: storeCopy.connectedBannerIma },
       ];
 
       return (
@@ -2262,7 +2276,7 @@ const withUiTimeout = (promise, timeoutMs, fallbackResult) => {
               <div className="max-w-[1400px] mx-auto border-b border-slate-200/50 pb-6 dark:border-white/10">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                   <div className="flex items-center justify-between sm:block sm:shrink-0">
-                    <h1 className="shrink-0 text-[26px] font-normal tracking-tight">{storeCopy.title}</h1>
+                    {!embedded && <h1 className="shrink-0 text-[26px] font-normal tracking-tight">{storeCopy.title}</h1>}
                   </div>
                   <div className="flex min-w-0 flex-wrap items-center justify-end gap-3 sm:ml-8 sm:flex-1 sm:flex-nowrap">
                     <IosSearchField
@@ -2336,8 +2350,8 @@ const withUiTimeout = (promise, timeoutMs, fallbackResult) => {
                     <div className="flex flex-col gap-3">
                         {/* 主维度切换:按类型 / 按业务,决定二级筛选集合;下方列表始终按另一维度分区 */}
                         <div className="flex h-9 shrink-0 items-center self-start rounded-full bg-slate-100 p-1 shadow-sm dark:bg-[#2C2C2E]">
-                          {[{ key: 'type', label: storeCopy.groupByType }, { key: 'business', label: storeCopy.groupByBusiness }].map(seg => (
-                            <button type="button" key={seg.key} onClick={() => { setGroupBy(seg.key); setActiveCategory('all'); }}
+                          {[{ key: 'type', label: storeCopy.groupByType, hint: storeCopy.groupByTypeHint }, { key: 'business', label: storeCopy.groupByBusiness, hint: storeCopy.groupByBusinessHint }].map(seg => (
+                            <button type="button" key={seg.key} title={seg.hint} aria-label={`${seg.label}：${seg.hint}`} onClick={() => { setGroupBy(seg.key); setActiveCategory('all'); }}
                               className={`inline-flex h-7 items-center rounded-full px-3 text-[13px] font-semibold transition-colors whitespace-nowrap ${
                                 groupBy === seg.key
                                   ? 'bg-white text-slate-900 shadow-sm dark:bg-[#3A3A3C] dark:text-white'
@@ -2542,7 +2556,7 @@ const withUiTimeout = (promise, timeoutMs, fallbackResult) => {
 
           {/* Detail modal — portal 到 body：否则被主内容区 backdrop-blur 祖先造的包含块困住，
               fixed inset-0 只盖住右侧内容区、盖不到左侧栏。portal 后蒙层铺满整个视口。 */}
-          {selectedTool && createPortal((
+          {detailTool && createPortal((
             // biome-ignore lint/a11y/useKeyWithClickEvents: backdrop click-to-close layer; the keyboard path is covered by the dialog header close button
             // biome-ignore lint/a11y/noStaticElementInteractions: backdrop click-to-close layer, non-interactive container
             <div
@@ -2566,15 +2580,15 @@ const withUiTimeout = (promise, timeoutMs, fallbackResult) => {
 
                 <div className="overflow-y-auto p-6 sm:p-10 no-scrollbar pt-12">
                   <div className="flex flex-col sm:flex-row items-start gap-6 sm:gap-8 mb-8">
-                    <TsToolIcon tool={selectedTool} className="h-28 w-28 flex-shrink-0 rounded-[28px] border border-black/5 shadow-md sm:h-32 sm:w-32 sm:rounded-[32px] dark:border-white/5" imageClassName="h-20 w-20 sm:h-24 sm:w-24" fallbackSize={56} />
+                    <TsToolIcon tool={detailTool} className="h-28 w-28 flex-shrink-0 rounded-[28px] border border-black/5 shadow-md sm:h-32 sm:w-32 sm:rounded-[32px] dark:border-white/5" imageClassName="h-20 w-20 sm:h-24 sm:w-24" fallbackSize={56} />
                     <div className="flex-1">
-                      <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white mb-2 tracking-tight">{selectedTool.title}</h2>
-                      <p className="text-[17px] text-slate-500 dark:text-slate-400 mb-5 font-medium">{selectedTool.subtitle}</p>
+                      <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white mb-2 tracking-tight">{detailTool.title}</h2>
+                      <p className="text-[17px] text-slate-500 dark:text-slate-400 mb-5 font-medium">{detailTool.subtitle}</p>
                       <div className="flex flex-col items-end gap-1.5">
-                        {(() => { const sf = selectedTool.feishuCli ? feishuFlow : selectedTool.wecomCli ? wecomFlow : selectedTool.dingtalkCli ? dingtalkFlow : selectedTool.tmeetCli ? tmeetFlow : null; return (externalAuthAvailable && sf && (sf.phase === 'running' || sf.phase === 'qr'))
+                        {(() => { const sf = detailTool.feishuCli ? feishuFlow : detailTool.wecomCli ? wecomFlow : detailTool.dingtalkCli ? dingtalkFlow : detailTool.tmeetCli ? tmeetFlow : null; return (externalAuthAvailable && sf && (sf.phase === 'running' || sf.phase === 'qr'))
                           ? <FeishuMini flow={sf} onClick={() => {}} copy={storeCopy.mini} />
-                          : <PlatformToolAction tool={selectedTool} busy={busyId === selectedTool.backendId} onAction={handleAction} onUpdate={handleSkillUpdate} onEditDisplay={handleEditDisplay} onExport={handleExportInstalled} size="lg" copy={storeCopy} t={t} />; })()}
-                        {((selectedTool.feishuCli && !feishuConnected) || (selectedTool.wecomCli && !wecomConnected) || (selectedTool.dingtalkCli && !dingtalkConnected) || (selectedTool.tmeetCli && !tmeetConnected)) && <span className="text-[11px] text-slate-400">{storeCopy.firstUseOnlineInstall}</span>}
+                          : <PlatformToolAction tool={detailTool} busy={busyId === detailTool.backendId} onAction={handleAction} onUpdate={handleSkillUpdate} onEditDisplay={handleEditDisplay} onExport={handleExportInstalled} size="lg" copy={storeCopy} t={t} />; })()}
+                        {((detailTool.feishuCli && !feishuConnected) || (detailTool.wecomCli && !wecomConnected) || (detailTool.dingtalkCli && !dingtalkConnected) || (detailTool.tmeetCli && !tmeetConnected)) && <span className="text-[11px] text-slate-400">{storeCopy.firstUseOnlineInstall}</span>}
                       </div>
                     </div>
                   </div>
@@ -2582,33 +2596,33 @@ const withUiTimeout = (promise, timeoutMs, fallbackResult) => {
                   <div className="flex items-center justify-between py-5 mb-8 border-y border-slate-100 dark:border-white/5 overflow-x-auto no-scrollbar gap-8">
                     <div className="flex flex-col flex-shrink-0">
                       <span className="text-[11px] text-slate-500 font-semibold uppercase tracking-wider mb-1">{storeCopy.detailInterfaceType}</span>
-                      <span className="text-xl font-bold text-slate-800 dark:text-slate-200">{selectedTool.type}</span>
+                      <span className="text-xl font-bold text-slate-800 dark:text-slate-200">{detailTool.type}</span>
                       <span className="text-[12px] text-slate-400 mt-1 flex items-center gap-1"><Server size={12}/> {storeCopy.detailOfficialSupport}</span>
                     </div>
                     <div className="w-px h-12 bg-slate-200 dark:bg-slate-800 flex-shrink-0" />
                     <div className="flex flex-col flex-shrink-0">
                       <span className="text-[11px] text-slate-500 font-semibold uppercase tracking-wider mb-1">{storeCopy.detailVersion}</span>
-                      <span className="text-xl font-bold text-slate-800 dark:text-slate-200">{selectedTool.version}</span>
+                      <span className="text-xl font-bold text-slate-800 dark:text-slate-200">{detailTool.version}</span>
                       <span className="text-[12px] text-slate-400 mt-1">{storeCopy.detailStableRelease}</span>
                     </div>
                     <div className="w-px h-12 bg-slate-200 dark:bg-slate-800 flex-shrink-0" />
                     <div className="flex flex-col flex-shrink-0 pr-4">
                       <span className="text-[11px] text-slate-500 font-semibold uppercase tracking-wider mb-1">{storeCopy.detailLatency}</span>
-                      <span className="text-xl font-bold text-slate-800 dark:text-slate-200">{selectedTool.latency}</span>
+                      <span className="text-xl font-bold text-slate-800 dark:text-slate-200">{detailTool.latency}</span>
                       <span className="text-[12px] text-slate-400 mt-1 flex items-center gap-1"><Globe size={12}/> {storeCopy.detailGlobalAccel}</span>
                     </div>
                   </div>
 
-                  {externalAuthAvailable && selectedTool.feishuCli && feishuFlow && (
+                  {externalAuthAvailable && detailTool.feishuCli && feishuFlow && (
                     <FeishuFlowCard flow={feishuFlow} steps={storeCopy.feishuSteps} name={storeCopy.toolNames.feishu} copy={detailCopy.flow} onRetry={() => retryConnector('feishu')} onCancel={() => resetConnectorFlow('feishu')} onBrowserOpenError={browserOpenFailed} />
                   )}
-                  {externalAuthAvailable && selectedTool.wecomCli && wecomFlow && (
+                  {externalAuthAvailable && detailTool.wecomCli && wecomFlow && (
                     <FeishuFlowCard flow={wecomFlow} steps={storeCopy.wecomSteps} name={storeCopy.toolNames.wecom} copy={detailCopy.flow} twoStep={false} onRetry={() => retryConnector('wecom')} onCancel={() => resetConnectorFlow('wecom')} onBrowserOpenError={browserOpenFailed} />
                   )}
-                  {externalAuthAvailable && selectedTool.dingtalkCli && dingtalkFlow && (
+                  {externalAuthAvailable && detailTool.dingtalkCli && dingtalkFlow && (
                     <FeishuFlowCard flow={dingtalkFlow} steps={storeCopy.dingtalkSteps} name={storeCopy.toolNames.dingtalk} copy={detailCopy.flow} twoStep={false} onRetry={() => retryConnector('dingtalk')} onCancel={() => resetConnectorFlow('dingtalk')} onBrowserOpenError={browserOpenFailed} />
                   )}
-                  {externalAuthAvailable && selectedTool.tmeetCli && tmeetFlow && (
+                  {externalAuthAvailable && detailTool.tmeetCli && tmeetFlow && (
                     <FeishuFlowCard flow={tmeetFlow.phase === 'error' && !detailCopy.showRawErrors ? { ...tmeetFlow, err: detailCopy.actions.operationFailed } : tmeetFlow} steps={detailCopy.tmeetSteps} name={detailCopy.tools.tmeet.title} copy={detailCopy.flow} twoStep={false} browserAuth={!!tmeetFlow.browserAuth} onRetry={() => retryConnector('tmeet')} onCancel={() => resetConnectorFlow('tmeet')} onBrowserOpenError={browserOpenFailed} />
                   )}
                   {connectedBanners.filter(b => b.show).map((banner, i) => (
@@ -2621,7 +2635,7 @@ const withUiTimeout = (promise, timeoutMs, fallbackResult) => {
                   <div>
                     <h3 className="text-[19px] font-bold text-slate-900 dark:text-white mb-4">{storeCopy.aboutTitle}</h3>
                     <div className="text-slate-600 dark:text-slate-300 leading-relaxed text-[15px] space-y-4 font-medium">
-                      <p>{selectedTool.desc}</p>
+                      <p>{detailTool.desc}</p>
                     </div>
                   </div>
                 </div>

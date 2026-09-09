@@ -6,6 +6,7 @@
 export const VIEW_LOADERS = {
   settings: () => import('../features/settings/SettingsView.jsx'),
   codex: () => import('../features/codex/CodexAcpView.jsx'),
+  capabilities: () => import('../features/capabilities/CapabilityCenterView.jsx'),
   cardpool: () => import('../features/personas/Personas.jsx'),
   toolStore: () => import('../features/tools/ToolStoreView.jsx'),
   scheduled: () => import('../features/scheduled/ScheduledTasksView.jsx'),

@@ -172,6 +172,10 @@ const acpProvidersZh = {
 export const dictZh = {
   ...browserZh,
         langTag: 'zh',
+        capabilityCenter: '能力中心',
+        capabilityExperts: '专家',
+        capabilitySkills: '技能',
+        capabilityConnectors: '连接器',
         acpAgent: 'ACP Agent',
         newChat: '新对话', currentChat: '当前对话', searchChats: '搜索对话', scheduledPlans: '定时任务', monitor: '运行状态', workflow: '工作流', multiAgent: '多智能体', multiAgentDesktopOnly: '此多智能体对话当前仅在桌面端可用。', toolStore: '插件中心', cardPool: '专家池', recent: '历史对话', pinnedTasks: '置顶任务', regularTasks: '任务', sidebarTaskList: '任务列表', sidebarTaskFilter: '筛选', sidebarTaskFilterAll: '全部', sidebarTaskFilterPinned: '置顶', sidebarTaskFilterCode: '代码', sidebarTaskFilterCodeSessions: '代码会话', sidebarTaskFilterScheduled: '定时任务', sidebarTaskSort: '排序', sidebarTaskSortPinnedFirst: '置顶优先', sidebarTaskSortRecent: '最近更新', sidebarTaskEmpty: '暂无任务', sidebarViewAll: '查看全部', sidebarSection: '任务列表', sidebarDateGrouping: '按日期折叠', sidebarDateGroupingDesc: '任务列表按日期分组，今天默认展开', sidebarNavExpand: '展开导航', sidebarNavCollapse: '收起导航', sidebarCollapseAll: '折叠', sidebarExpandAll: '展开', sidebarTaskStyle: '样式', sidebarResize: '拖拽调整边栏宽度，双击复位', settings: '设置', localEnv: '本地环境', megacubeSite: '打开 MegaCube 官网', tearoffTitle: '撕离窗口', tearoffHint: '弹出为独立窗口', mobileMore: '更多',
         previewTaskDailyBrief: '每日早报', previewTaskFollowUp: '事项督办', previewTaskSalesWeekly: '销售线索周报',
@@ -967,7 +971,7 @@ s5: { title:'视觉设计', subtitle:'设计系统直出网页 / banner / 海报
 
 // 工具商店列表视图双维度分组（按类型/按业务 + 分组筛选）词条，中英文齐全。
 Object.assign(dictZh.uiToolStore, {
-  groupByType:'按类型', groupByBusiness:'按业务',
+  groupByType:'按类型', groupByTypeHint:'按技术形态分组：插件包、MCP、Skill、CLI、API 等', groupByBusiness:'按业务', groupByBusinessHint:'按使用场景分组：沟通协作、文档知识、研发、金融、生活等',
   typeGroups:{ bundle:'插件包', mcp:'MCP', skill:'Skill', cli:'CLI 集成', api:'API & Webhook', upcoming:'即将上线' },
   recycleBin:'回收站', recycleBinTitle:'插件回收站', recycleBinEmpty:'回收站是空的', recycleBinEmptyHint:'上传的插件卸载后会移到这里，可恢复或彻底删除。',
   recycleBinLoadFailed:'回收站读取失败，请重试', recycleBinLoading:'正在加载回收站…', recycledAt:time=>`回收于 ${time}`,

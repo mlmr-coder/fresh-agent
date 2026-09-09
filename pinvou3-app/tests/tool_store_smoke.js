@@ -282,22 +282,24 @@ async function visibilityBox(page, cardText, modeLabel, click) {
   await page.evaluateOnNewDocument(injectSource());
   await page.setViewport({width:1440,height:1000});
   await page.goto(url,{waitUntil:'networkidle0'});
-  await page.waitForFunction(() => window.TauriBridge && document.querySelector('[data-nav="toolstore"]'), { timeout: 20000 }).catch(() => {});
+  await page.waitForFunction(() => window.TauriBridge && document.querySelector('[data-nav="capabilities"]'), { timeout: 20000 }).catch(() => {});
   await sleep(500);
   const results=[];
   const rec=(name,pass,detail='')=>{results.push({name,pass});console.log(`${pass?'✅':'❌'} ${name}${detail?'  '+detail:''}`);};
 
   const navClicked = await page.evaluate(()=>{
-    const el=document.querySelector('[data-nav="toolstore"]');
+    const el=document.querySelector('[data-nav="capabilities"]');
     if(!el)return false;
     el.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true}));
     return true;
   });
+  await page.waitForSelector('[data-testid="capability-tab-connectors"]', { timeout: 10000 }).catch(() => {});
+  await page.click('[data-testid="capability-tab-connectors"]').catch(() => {});
   await page.waitForFunction((selector) => (
     !!document.querySelector(selector)
     || [...document.querySelectorAll('input')].some(el => (el.getAttribute('placeholder') || '').includes('搜索'))
   ), { timeout: 10000 }, TOOL_STORE_SEARCH_SELECTOR).catch(() => {});
-  const toolStoreLoaded = await page.evaluate((navClicked, selector)=>navClicked&&document.body.innerText.includes('插件中心')&&(
+  const toolStoreLoaded = await page.evaluate((navClicked, selector)=>navClicked&&document.body.innerText.includes('能力中心')&&(
     !!document.querySelector(selector)
     || [...document.querySelectorAll('input')].some(el => (el.getAttribute('placeholder') || '').includes('搜索'))
   ), navClicked, TOOL_STORE_SEARCH_SELECTOR);
@@ -426,8 +428,10 @@ async function visibilityBox(page, cardText, modeLabel, click) {
 
   await search(page,'党政机关公文写作');
   rec('公文配套技能与 MCP 安装态联动',await page.evaluate(()=>[...document.querySelectorAll('button')].some(b=>(b.textContent||'').trim()==='卸载')));
+  await page.click('[data-testid="capability-tab-skills"]'); await sleep(180);
   await action(page,'数据分析可视化','安装','visualizer'); await dismiss(page);
   rec('独立可视化技能经 UI 安装',await page.evaluate(()=>window.__TOOL_STORE_TEST__.skills.visualizer));
+  await page.click('[data-testid="capability-tab-connectors"]'); await sleep(180);
 
   await action(page,'高德天气','卸载','weather'); await dismiss(page);
   rec('MCP 经 UI 卸载并刷新状态',await page.evaluate(()=>!window.__TOOL_STORE_TEST__.installed.weather));
@@ -547,6 +551,8 @@ async function visibilityBox(page, cardText, modeLabel, click) {
     }
     await page.evaluate((id,event)=>{window.__TOOL_STORE_TEST__.connected[id]=true;return window.__emitTauri(event,{});},id,event);
     await sleep(180); await dismiss(page);
+    rec(`${query} 连接成功后详情按钮同步为断开`,await page.evaluate((id)=>
+      [...document.querySelectorAll(`button[data-tool-id="${id}"]`)].some(b=>(b.textContent||'').trim()==='断开'),id));
     const info=await page.evaluate(({commands})=>({calls:commands.every(c=>window.__TOOL_STORE_TEST__.calls.some(x=>x.cmd===c)),seen:window.__TOOL_STORE_TEST__.calls.map(x=>x.cmd)}),{commands});
     rec(`${query} 授权编排命令与成功事件`,info.calls,info.calls?'':JSON.stringify(info.seen.slice(-12)));
     await closeDetail(page,query);

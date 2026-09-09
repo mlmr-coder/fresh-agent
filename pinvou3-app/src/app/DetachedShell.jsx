@@ -16,6 +16,7 @@ import { VoiceShortcutRouter } from '../features/voice-composer/VoiceShortcutRou
 //   separate chunk, so statically import the same module from the main chunk.
 const LazyKnowledgeView = lazy(() => VIEW_LOADERS.knowledge().then(m => ({ default: m.KnowledgeView })));
 const LazyMonitorView = lazy(() => VIEW_LOADERS.monitor().then(m => ({ default: m.MonitorView })));
+const LazyCapabilityCenterView = lazy(() => VIEW_LOADERS.capabilities().then(m => ({ default: m.CapabilityCenterView })));
 const LazyToolStoreView = lazy(() => VIEW_LOADERS.toolStore().then(m => ({ default: m.ToolStoreView })));
 const LazyCardPoolView = lazy(() => VIEW_LOADERS.cardpool().then(m => ({ default: m.CardPoolView })));
 const DetachedViewFallback = () => <div className="p-6 text-sm opacity-60">…</div>;
@@ -159,11 +160,17 @@ const DETACHED_VIEWS = {
   session: ({ theme, t, bs }) => <ChatView theme={theme} t={t} bs={bs} prefill="" onPrefillConsumed={() => {}} onOpenEditor={() => {}} justInstalledTool={null} setJustInstalledTool={() => {}} onGotoSettings={() => {}} onGotoTools={() => {}} />,
   'codex-session': ({ id, theme, t, bs }) => <DetachedCodexSessionView id={id} theme={theme} t={t} bs={bs} />,
   monitor: ({ theme, t, bs }) => <LazyMonitorView theme={theme} t={t} bs={bs} />,
+  capabilities: ({ theme, t, bs }) => <DetachedCapabilityCenterView theme={theme} t={t} bs={bs} />,
   cardpool: ({ theme, t, bs }) => <LazyCardPoolView theme={theme} t={t} bs={bs} onEquipped={() => {}} onAICreate={() => {}} initialMyOnly={false} />,
   toolstore: ({ theme, t }) => <LazyToolStoreView theme={theme} t={t} onNewChat={() => {}} />,
   knowledge: ({ theme, t }) => <LazyKnowledgeView theme={theme} t={t} />,
   outputs: ({ theme, t }) => <LazyKnowledgeView theme={theme} t={t} mode="outputs" />,
 };
+
+function DetachedCapabilityCenterView({ theme, t, bs }) {
+  const [activeTab, setActiveTab] = useState('experts');
+  return <LazyCapabilityCenterView theme={theme} t={t} bs={bs} activeTab={activeTab} onTabChange={setActiveTab} onEquipped={() => {}} onAICreate={() => {}} initialMyOnly={false} onNewChat={() => {}} />;
+}
 
 export function DetachedShell({ kind, id }) {
   const { bs, activeTheme, t } = useDetachedBase();
