@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 /**
- * 会话中「打开」技能开关的 pending/锁死语义 smoke：
- * - 活动会话中打开技能 → 开关仍可改回（未提交，不锁死）；
- * - 真实发送一轮（bridge.chat.sendMessage，mock 后端受理）→ 开关锁死（只增不减）；
+ * 普通聊天能力开关与轮次提交 smoke：
+ * - 活动会话中的连接器与技能都能随时关闭；
+ * - 活动会话中打开技能，真实发送一轮后仍可关闭；
  * - 发送失败（mock 后端拒绝）→ 不派发提交事件，开关保持可改回；
- * - 菜单组件随切页卸载期间新一轮被受理（排队消息 flush 场景）→
- *   重挂载后未提交的「打开」已被转正锁死（模块级监听兜底清空 pending）。
+ * - 菜单组件随切页卸载期间新一轮被受理（排队消息 flush 场景）后，
+ *   重挂载仍保持正确的启用状态和可操作性。
  * 依赖先运行 `npm run build:ui`。
  */
 const fs = require('fs'), path = require('path'), os = require('os');
@@ -45,7 +45,7 @@ const PROFILE = fs.mkdtempSync(path.join(os.tmpdir(), 'pinvou-pending-enable-'))
 
 function injectSource() {
   return `(function(){
-    const state=window.__PENDING_ENABLE_TEST__={calls:[],disabled:['visualizer','doc-writer'],committedEvents:0,chatShouldFail:false,chatDoneScheduled:false};
+    const state=window.__PENDING_ENABLE_TEST__={calls:[],disabled:['visualizer','doc-writer'],committedEvents:0,chatShouldFail:false,chatDoneScheduled:false,holdChatDone:false};
     window.addEventListener('pinvou:chat-round-committed',()=>{state.committedEvents+=1;});
     function record(cmd,args){state.calls.push({cmd,args:args||{}});}
     // 真实事件注册表:mock 后端在 chat 受理后补发 chat:done,驱动 bridge 复位
@@ -54,13 +54,17 @@ function injectSource() {
     function emitTauri(name,payload){ (listeners.get(name)||[]).forEach(fn=>{try{fn({event:name,payload:payload});}catch(_){}}); }
     window.__EMIT_TAURI__=emitTauri;
     const session={id:'s1',title:'S1',created_at:1,updated_at:1};
+    const personas=[
+      {id:'expert-a',name:'专家甲',description:'甲领域专家',dept:'engineering',source:'builtin'},
+      {id:'expert-b',name:'专家乙',description:'乙领域专家',dept:'design',source:'builtin'},
+    ];
     function invoke(cmd,args){
       record(cmd,args);
       switch(cmd){
         case 'chat':
           if(state.chatShouldFail) return Promise.reject(new Error('mock_backend_unavailable'));
           // 受理后异步补一个 chat:done(真实后端语义:done 表示本轮跑完、busy 复位)。
-          if(!state.chatDoneScheduled){
+          if(!state.chatDoneScheduled&&!state.holdChatDone){
             state.chatDoneScheduled=true;
             Promise.resolve().then(()=>{state.chatDoneScheduled=false;emitTauri('chat:done',{session_id:(args&&args.sessionId)||'s1'});});
           }
@@ -70,7 +74,9 @@ function injectSource() {
         case 'list_sessions': return Promise.resolve([session]);
         case 'load_session': return Promise.resolve({metadata:session,messages:[],artifacts:[]});
         case 'get_super_permission_status': return Promise.resolve(false);
-        case 'list_personas': return Promise.resolve([]);
+        case 'list_personas': return Promise.resolve(personas);
+        case 'equip_persona': return Promise.resolve(personas.find(item=>item.id===(args&&args.personaId))||null);
+        case 'unequip_persona': return Promise.resolve(null);
         case 'get_backend_status': return Promise.resolve({online:true,ok:true,status:'online'});
         case 'check_for_update': return Promise.resolve({available:false});
         case 'find_resumable_run': return Promise.resolve(null);
@@ -78,7 +84,9 @@ function injectSource() {
         case 'get_mode_state': return Promise.resolve({mode:'yolo',plan_phase:'none'});
         case 'get_active_persona': return Promise.resolve(null);
         case 'detect_local_vllm_setup': return Promise.resolve({eligible:false});
-        case 'list_marketplace_tools': return Promise.resolve([]);
+        case 'list_marketplace_tools': return Promise.resolve([
+          {id:'gongwen',name:'公文写作',description:'公文工具',installed:true},
+        ]);
         case 'list_marketplace_skills': return Promise.resolve([
           {id:'visualizer',title:'数据分析可视化',description:'Chart.js 仪表盘',installed:true,user_uploaded:false},
           {id:'doc-writer',title:'文档撰写',description:'撰写文档',installed:true,user_uploaded:false},
@@ -118,16 +126,96 @@ const sleep = ms => new Promise(r => { setTimeout(r, ms); });
     const btn = document.querySelector('button[aria-label="visualizer"]');
     return btn ? { disabled: btn.disabled, on: btn.className.includes('bg-[#34C759]') } : null;
   });
-  const openMenu = async () => { await page.evaluate(() => document.querySelector('button[title="工具"]').click()); await sleep(300); };
-  const closeMenu = async () => { await page.evaluate(() => document.querySelector('button[title="工具"]').click()); await sleep(200); };
+  const openMenu = async () => { await page.evaluate(() => document.querySelector('[data-testid="composer-skill-menu-trigger"]').click()); await sleep(300); };
+  const closeMenu = async () => { await page.evaluate(() => document.querySelector('[data-testid="composer-skill-menu-trigger"]').click()); await sleep(200); };
+  const openConnectors = async () => { await page.evaluate(() => document.querySelector('[data-testid="composer-tool-menu-trigger"]').click()); await sleep(300); };
+  const closeConnectors = async () => { await page.evaluate(() => document.querySelector('[data-testid="composer-tool-menu-trigger"]').click()); await sleep(200); };
 
-  // 建立活动会话（只增不减守卫的前提）。
+  // 建立活动会话，覆盖用户截图里的“聊天已经开始”状态。
   await page.evaluate(() => window.TauriBridge.sessions.switchToSession('s1'));
   await sleep(600);
   const active = await page.evaluate(() => (window.TauriBridge.state.get('sessions') || {}).activeSessionId);
   rec('活动会话已建立', active === 's1', String(active));
 
-  // ---- 场景一：会话中打开 → 未提交可改回；发送受理 → 锁死 ----
+  const selectExpert = async (name) => {
+    await page.evaluate(() => document.querySelector('[data-testid="composer-expert-trigger"]').click());
+    await page.waitForSelector('[data-testid="capability-center"]');
+    await sleep(250);
+    await page.evaluate((expertName) => {
+      const heading = [...document.querySelectorAll('h2')].find(node => node.textContent.trim() === expertName);
+      const row = heading && heading.closest('.group');
+      const action = row && row.querySelector('button');
+      if (!action) throw new Error('expert action not found: ' + expertName);
+      action.click();
+    }, name);
+    await page.waitForSelector('[data-testid="chat-composer-input"]');
+    await sleep(250);
+  };
+  await selectExpert('专家甲');
+  const firstExpertReturn = await page.evaluate(() => document.querySelector('[data-testid="composer-expert-trigger"]')?.getAttribute('aria-label'));
+  rec('第一次选择专家后返回聊天', firstExpertReturn === '专家甲', String(firstExpertReturn));
+  await selectExpert('专家乙');
+  const secondExpertReturn = await page.evaluate(() => document.querySelector('[data-testid="composer-expert-trigger"]')?.getAttribute('aria-label'));
+  rec('再次选择专家后仍返回聊天', secondExpertReturn === '专家乙', String(secondExpertReturn));
+
+  const expertCloseBeforeHover = await page.evaluate(() => {
+    const button = document.querySelector('[data-testid="composer-expert-remove"]');
+    return button ? Number(getComputedStyle(button).opacity) : -1;
+  });
+  await page.hover('[data-testid="composer-expert-trigger"]');
+  await sleep(200);
+  const expertCloseAfterHover = await page.evaluate(() => {
+    const button = document.querySelector('[data-testid="composer-expert-remove"]');
+    return button ? Number(getComputedStyle(button).opacity) : -1;
+  });
+  rec('专家取消按钮默认隐藏并在悬停时显示', expertCloseBeforeHover === 0 && expertCloseAfterHover === 1, `${expertCloseBeforeHover} -> ${expertCloseAfterHover}`);
+  await page.evaluate(() => document.querySelector('[data-testid="composer-expert-remove"]').click());
+  await sleep(250);
+  const expertRemoved = await page.evaluate(() => {
+    const sessions = window.TauriBridge.state.get('sessions') || {};
+    return !sessions.activePersona && !document.querySelector('[data-testid="composer-expert-remove"]');
+  });
+  rec('专家取消按钮可卸下当前专家', expertRemoved);
+
+  await openConnectors();
+  const connectorBefore = await page.evaluate(() => {
+    const btn = document.querySelector('button[aria-label="gongwen"]');
+    return btn ? { disabled: btn.disabled, on: btn.className.includes('bg-[#34C759]') } : null;
+  });
+  rec('活动会话中的连接器可以关闭', !!connectorBefore && connectorBefore.on && !connectorBefore.disabled, JSON.stringify(connectorBefore));
+  await page.evaluate(() => document.querySelector('button[aria-label="gongwen"]').click());
+  await sleep(200);
+  const connectorAfter = await page.evaluate(() => {
+    const state = window.__PENDING_ENABLE_TEST__;
+    const btn = document.querySelector('button[aria-label="gongwen"]');
+    return btn ? { disabled: btn.disabled, on: btn.className.includes('bg-[#34C759]'), persisted: state.disabled.includes('gongwen') } : null;
+  });
+  rec('关闭连接器后立即生效并持久化', !!connectorAfter && !connectorAfter.on && !connectorAfter.disabled && connectorAfter.persisted, JSON.stringify(connectorAfter));
+  await closeConnectors();
+
+  // 当前轮次已提交后，能力表无法追回这一轮：处理中锁定连接器/技能，结束后恢复。
+  await page.evaluate(() => {
+    window.__PENDING_ENABLE_TEST__.holdChatDone = true;
+    return window.TauriBridge.chat.sendMessage('busy-capability-lock');
+  });
+  await sleep(300);
+  const busyCapabilityLock = await page.evaluate(() => ({
+    connectors: document.querySelector('[data-testid="composer-tool-menu-trigger"]')?.disabled,
+    skills: document.querySelector('[data-testid="composer-skill-menu-trigger"]')?.disabled,
+  }));
+  rec('当前轮次处理中连接器和技能不可修改', busyCapabilityLock.connectors === true && busyCapabilityLock.skills === true, JSON.stringify(busyCapabilityLock));
+  await page.evaluate(() => {
+    window.__PENDING_ENABLE_TEST__.holdChatDone = false;
+    window.__EMIT_TAURI__('chat:done', { session_id: 's1' });
+  });
+  await sleep(300);
+  const capabilityLockReleased = await page.evaluate(() => ({
+    connectors: document.querySelector('[data-testid="composer-tool-menu-trigger"]')?.disabled,
+    skills: document.querySelector('[data-testid="composer-skill-menu-trigger"]')?.disabled,
+  }));
+  rec('当前轮次结束后连接器和技能恢复可修改', capabilityLockReleased.connectors === false && capabilityLockReleased.skills === false, JSON.stringify(capabilityLockReleased));
+
+  // ---- 场景一：会话中打开 → 发送受理后仍可关闭 ----
   await openMenu();
   const before = await readSwitch();
   rec('初始为关且开关可点（允许打开）', !!before && !before.on && !before.disabled, JSON.stringify(before));
@@ -139,7 +227,7 @@ const sleep = ms => new Promise(r => { setTimeout(r, ms); });
     const state = window.__PENDING_ENABLE_TEST__;
     return btn ? { disabled: btn.disabled, on: btn.className.includes('bg-[#34C759]'), persisted: !state.disabled.includes('visualizer') } : null;
   });
-  rec('打开后未锁死（发送新一轮前可改回）', !!afterEnable && afterEnable.on && !afterEnable.disabled, JSON.stringify(afterEnable));
+  rec('打开后可以立即改回', !!afterEnable && afterEnable.on && !afterEnable.disabled, JSON.stringify(afterEnable));
   rec('打开已持久化到禁用集之外', !!afterEnable && afterEnable.persisted);
 
   await closeMenu();
@@ -150,11 +238,11 @@ const sleep = ms => new Promise(r => { setTimeout(r, ms); });
 
   await openMenu();
   const afterSend = await readSwitch();
-  rec('发送新一轮后开关锁死（只增不减）', !!afterSend && afterSend.on && afterSend.disabled, JSON.stringify(afterSend));
+  rec('普通聊天发送新一轮后技能仍可关闭', !!afterSend && afterSend.on && !afterSend.disabled, JSON.stringify(afterSend));
   await closeMenu();
 
   // ---- 场景二：发送失败（后端拒绝）→ 不派发提交事件，未提交的「打开」保持可改回 ----
-  // 用第二个工具（doc-writer）：场景一的 visualizer 已随受理转正锁死，不可再动。
+  // 用第二个技能（doc-writer）隔离发送失败场景。
   await page.evaluate(() => { window.__PENDING_ENABLE_TEST__.chatShouldFail = true; });
   await openMenu();
   const docBefore = await page.evaluate(() => {
@@ -169,7 +257,7 @@ const sleep = ms => new Promise(r => { setTimeout(r, ms); });
     const btn = document.querySelector('button[aria-label="doc-writer"]');
     return btn ? { disabled: btn.disabled, on: btn.className.includes('bg-[#34C759]') } : null;
   });
-  rec('打开后未锁死（发送新一轮前可改回）', !!docEnabled && docEnabled.on && !docEnabled.disabled, JSON.stringify(docEnabled));
+  rec('打开后仍可立即改回', !!docEnabled && docEnabled.on && !docEnabled.disabled, JSON.stringify(docEnabled));
   await closeMenu();
 
   const committedBeforeFail = await page.evaluate(() => window.__PENDING_ENABLE_TEST__.committedEvents);
@@ -185,7 +273,7 @@ const sleep = ms => new Promise(r => { setTimeout(r, ms); });
     const btn = document.querySelector('button[aria-label="doc-writer"]');
     return btn ? { disabled: btn.disabled, on: btn.className.includes('bg-[#34C759]') } : null;
   });
-  rec('发送失败后开关仍未锁死（可改回）', !!stillPending && stillPending.on && !stillPending.disabled, JSON.stringify(stillPending));
+  rec('发送失败后开关仍可改回', !!stillPending && stillPending.on && !stillPending.disabled, JSON.stringify(stillPending));
   await page.evaluate(() => document.querySelector('button[aria-label="doc-writer"]').click()); // 改回（关）→ pending 撤销
   await sleep(300);
   const docReverted = await page.evaluate(() => {
@@ -197,10 +285,10 @@ const sleep = ms => new Promise(r => { setTimeout(r, ms); });
   await closeMenu();
   await page.evaluate(() => { window.__PENDING_ENABLE_TEST__.chatShouldFail = false; });
 
-  // ---- 场景三：菜单组件随切页卸载期间新一轮被受理 → 重挂载后已锁死 ----
+  // ---- 场景三：菜单组件随切页卸载期间新一轮被受理 → 重挂载后状态正确 ----
   // 用户打开开关（pending）→ 切到设置页（ChatView 连带菜单卸载、组件级监听移除）
   // → 后台发送被受理（commit 事件落在无组件监听的 window 上）→ 切回聊天页
-  // → 重挂载后开关必须已锁死（模块级监听已清空 pending）。
+  // → 重挂载后启用状态保留，并且普通聊天仍可关闭。
   await openMenu();
   await page.evaluate(() => document.querySelector('button[aria-label="doc-writer"]').click());
   await sleep(300);
@@ -220,7 +308,7 @@ const sleep = ms => new Promise(r => { setTimeout(r, ms); });
     const btn = document.querySelector('button[aria-label="doc-writer"]');
     return btn ? { disabled: btn.disabled, on: btn.className.includes('bg-[#34C759]') } : null;
   });
-  rec('重挂载后未提交的「打开」已转正锁死（组件不在场也不漏清）', !!afterRemount && afterRemount.on && afterRemount.disabled, JSON.stringify(afterRemount));
+  rec('重挂载后技能保持启用且仍可关闭', !!afterRemount && afterRemount.on && !afterRemount.disabled, JSON.stringify(afterRemount));
   await closeMenu();
 
   rec('页面无未处理 JavaScript 异常', errors.length === 0, errors.slice(0, 2).join(' | '));

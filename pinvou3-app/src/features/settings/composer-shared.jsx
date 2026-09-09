@@ -5,14 +5,15 @@
 // 组件实现与 SettingsView.jsx 原版逐字节一致。
 import { useEffect, useReducer, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Check, ChevronDown, Cpu, Plus, Store, Users, Wrench, X } from '../../components/icons.jsx';
+import { Check, ChevronDown, Cpu, Plus, Sparkles, Store, Users, Wrench, X } from '../../components/icons.jsx';
 import { ComposerPopover } from '../../components/ComposerPopover.jsx';
 import { Toggle } from '../../components/Toggle.jsx';
-import { bridge, useBridgeState } from '../../hooks/useBridge.js';
+import { bridge } from '../../hooks/useBridge.js';
 import { visibleUserModels } from '../../shared/model-options.js';
 import { can } from '../../shared/platform.js';
-import { buildComposerToolMenuState } from './composer-tool-menu-logic.js';
+import { buildCapabilityPreview, buildComposerToolMenuState } from './composer-tool-menu-logic.js';
 import { invokeTauri } from '../../platform/tauri/client.js';
+import { THIRD_PARTY_TOOL_LOGOS } from '../tools/tool-visuals.js';
 import {
   artifactPreviewExternalUrlFromMessage,
   buildArtifactPreviewDocument,
@@ -25,7 +26,7 @@ import {
 import { ReasoningTierPicker, useLocalServerKindProbe } from './local-server-tiers.jsx';
 
 // 会话中「打开」是未提交态：新一轮对话发出前允许改回（误开可撤销），发出后
-// 该工具/技能才真正进入上下文并按「只增不减」锁死。挂模块级按 scope 存，
+// code scope 下该工具/技能才真正进入上下文并按「只增不减」锁死。挂模块级按 scope 存，
 // 菜单组件随切页重建时不丢未提交态；发送方通过 pinvou:chat-round-committed
 // 事件提交（见 tool-events.js / bridge doSendFor、acceptPlan、editLastTurn）。
 const pendingToolEnables = new Map(); // scope -> { ids: Set<string>, projectSkills: boolean }
@@ -170,7 +171,7 @@ window.addEventListener('pinvou:chat-round-committed', (event) => {
       }
       return (
         <div className="relative min-w-0">
-          <button type="button" ref={triggerRef} onClick={() => { if (!busy && canSwitchModels) setOpen(o => !o); }} disabled={busy || !canSwitchModels}
+          <button type="button" ref={triggerRef} data-testid="composer-model-selector-trigger" onClick={() => { if (!busy && canSwitchModels) setOpen(o => !o); }} disabled={busy || !canSwitchModels}
             title={(current ? selectorMainLabel(current, t) : t.modelNonePick) + (busy ? ' · ' + t.modelSwitchBusy : '')}
             className={`relative shrink-0 flex items-center justify-center ${multiAgentOn ? 'text-[#6d28d9] dark:text-[#c4b5fd]' : 'text-gray-700 dark:text-gray-200'} transition-colors border disabled:opacity-50 ${compact ? 'w-9 h-9 rounded-full bg-transparent hover:bg-black/5 dark:hover:bg-white/10 border-transparent' : 'h-8 gap-1.5 rounded-[12px] px-2.5 text-[12px] font-semibold min-w-0 max-w-full bg-black/[0.045] dark:bg-white/[0.055] hover:bg-black/[0.07] dark:hover:bg-white/[0.09] border-black/[0.045] dark:border-white/[0.06]'}`}>
             {compact ? (
@@ -424,28 +425,90 @@ window.addEventListener('pinvou:chat-round-committed', (event) => {
       );
     };
 
+    const CAPABILITY_AVATAR_TONES = [
+      'from-[#5B8CFF] to-[#315BEA]',
+      'from-[#AF7BFF] to-[#7847D9]',
+      'from-[#20C997] to-[#0B9E78]',
+      'from-[#FF9F43] to-[#EB6F20]',
+      'from-[#FF6B8A] to-[#D84468]',
+    ];
+
+    function capabilityAvatarTone(id) {
+      const value = String(id || '');
+      let hash = 0;
+      for (let index = 0; index < value.length; index += 1) hash = ((hash * 31) + value.codePointAt(index)) >>> 0;
+      return CAPABILITY_AVATAR_TONES[hash % CAPABILITY_AVATAR_TONES.length];
+    }
+
+    const CapabilityMiniAvatar = ({ row, kind }) => {
+      const logoSrc = kind === 'connectors' ? THIRD_PARTY_TOOL_LOGOS[row.id] : null;
+      const Fallback = kind === 'connectors' ? Wrench : Sparkles;
+      return (
+        <span
+          title={row.title}
+          className={`relative flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-white bg-gradient-to-br text-white shadow-sm dark:border-[#161618] ${capabilityAvatarTone(row.id)}`}
+        >
+          {logoSrc
+            ? <img src={logoSrc} alt="" className="h-full w-full object-cover" loading="lazy" />
+            : <Fallback size={13} strokeWidth={2} />}
+        </span>
+      );
+    };
+
+    const CapabilityAvatarTrigger = ({ buttonRef, kind, preview, label, testId, open, disabled, onClick }) => (
+      <button
+        ref={buttonRef}
+        type="button"
+        data-testid={testId}
+        data-capability-kind={kind}
+        aria-label={label}
+        aria-expanded={open}
+        disabled={disabled}
+        title={label + (preview.total > 0 ? ' · ' + preview.total : '')}
+        onClick={onClick}
+        className="flex h-9 shrink-0 items-center rounded-full px-1.5 transition-colors hover:bg-black/5 disabled:cursor-default disabled:opacity-45 disabled:hover:bg-transparent dark:hover:bg-white/10 dark:disabled:hover:bg-transparent"
+      >
+        <span className="flex -space-x-1.5">
+          {preview.rows.length > 0
+            ? preview.rows.map(row => <CapabilityMiniAvatar key={`${kind}:${row.id}`} row={row} kind={kind} />)
+            : (
+              <span className="flex h-7 w-7 items-center justify-center rounded-full border border-dashed border-black/15 text-gray-400 dark:border-white/20 dark:text-gray-500">
+                {kind === 'connectors' ? <Wrench size={13} /> : <Sparkles size={13} />}
+              </span>
+            )}
+          {preview.overflow > 0 && (
+            <span className="relative flex h-7 min-w-7 items-center justify-center rounded-full border-2 border-white bg-[#EEF1F5] px-1 text-[10px] font-bold text-[#5F6368] shadow-sm dark:border-[#161618] dark:bg-[#34363A] dark:text-[#DADCE0]">
+              +{preview.overflow}
+            </span>
+          )}
+        </span>
+      </button>
+    );
+
     // 输入框底栏:工具菜单(只展示已装工具 + 跳工具商店;无会话级开关——后端无此概念)。
     // 可选触发器变体：triggerVariant='pill' 时触发器渲染为代码页配置组同款 pill
     //（triggerLabel 为可选 10px 前缀文案；triggerTestId 覆盖默认 testid），
     // 下拉内容不变；不传变体时聊天页外观逐字节不变。
-    const ComposerToolMenu = ({ t, onGotoTools, compact, activeSkill, triggerVariant, triggerLabel, triggerTestId, scope, activeSessionId: activeSessionIdProp }) => {
+    const ComposerToolMenu = ({ t, onGotoTools, onGotoSkills, compact, activeSkill, triggerVariant, triggerLabel, triggerTestId, scope, activeSessionId: activeSessionIdProp, busy = false }) => {
       const [open, setOpen] = useState(false);
+      const [activeSection, setActiveSection] = useState('all');
       const triggerRef = useRef(null);
+      const connectorTriggerRef = useRef(null);
       const canMutateToolStore = can('toolStoreMutations');
-      // 只增不减：有活动会话时只阻隔「关闭」——已进入上下文的工具撤不回。
-      // 「打开」是未提交态：发送新一轮对话前可改回（误开可撤销），新一轮
-      // 被后端受理（pinvou:chat-round-committed）后才真正进入上下文并锁死。
-      const sessionsState = useBridgeState(['sessions']);
+      // 代码会话保持只增不减：有活动会话时只阻隔「关闭」——已进入上下文的
+      // 工具撤不回。普通聊天支持热刷能力目录与工具规则，因此允许随时开关。
+      // 代码 scope 的「打开」是未提交态：发送新一轮对话前可改回（误开可撤销），
+      // 新一轮被后端受理（pinvou:chat-round-committed）后才真正进入上下文并锁死。
       // scope='code'（原生代码车道）时由调用方传入该车道的活动会话 id——显式会话态
       // 驱动，绕开 bridge 聊天 active 绑定（二轮评审：code 门控不得读聊天域
       // activeSessionId）；plain 缺省沿用聊天侧。
-      const hasActiveSession = scope === 'code'
-        ? !!activeSessionIdProp
-        : !!(sessionsState && sessionsState.activeSessionId);
       // 无权限才全局禁用；会话中的「关闭」阻隔是逐行判断（只有已开 = enabled 才禁）。
-      const toolSwitchDisabled = !canMutateToolStore;
+      // 当前轮次的模型工具表与技能目录已经提交，执行中修改无法追回本轮。
+      // 处理完成后恢复开关，变更从下一轮起生效。
+      const toolSwitchDisabled = !canMutateToolStore || busy;
       // scope: 'code' = 原生代码会话(独立开关,默认全关),缺省 = 普通会话(plain)。
       const toolScope = scope === 'code' ? 'code' : 'plain';
+      const removalLocked = toolScope === 'code' && !!activeSessionIdProp;
       const [marketplaceTools, setMarketplaceTools] = useState([]);
       const [marketplaceSkills, setMarketplaceSkills] = useState([]);
       const [disabled, setDisabled] = useState(() => new Set()); // 被关掉的包 id(开关 off，按 scope 持久)
@@ -529,16 +592,17 @@ window.addEventListener('pinvou:chat-round-committed', (event) => {
         return () => window.removeEventListener('keydown', onKey);
       }, [projectSkillsHelp]);
       function toggleTool(id, enabled) {
-        // 只增不减：会话中允许「打开」（enabled=false），只阻隔「关闭」（enabled=true）；
-        // 但本会话内刚打开、尚未随新一轮对话进入上下文的（pending）允许改回。
+        // code scope 只增不减：活动会话中只阻隔已进入上下文的「关闭」；
+        // plain scope 允许热刷关闭。本轮刚打开的 code 项在提交前仍可改回。
         const pending = pendingEnablesFor(toolScope);
-        if (toolSwitchDisabled || (hasActiveSession && enabled && !pending.ids.has(id))) return;
+        if (toolSwitchDisabled || (removalLocked && enabled && !pending.ids.has(id))) return;
         // scope 收敛后：工具/技能/CLI 开关统一为包 id 单一禁用集（后端
         // disabled_bundles.json），技能行 id 即包 id，不再带 `skill:` 前缀。
         const next = new Set(disabled);
         next.has(id) ? next.delete(id) : next.add(id);
         setDisabled(next);
-        // 记录/撤销未提交的「打开」：发送新一轮后由 pinvou:chat-round-committed 转正锁死。
+        // 记录/撤销未提交的「打开」：code scope 发送新一轮后由
+        // pinvou:chat-round-committed 转正锁死；plain scope 记录不影响随时开关。
         if (enabled) pending.ids.delete(id); else pending.ids.add(id);
         // 按 scope 持久:落盘 + 广播给所有在跑引擎,关一次该 scope 所有新对话/新窗口都继承。
         if (bridge.available) {
@@ -549,7 +613,7 @@ window.addEventListener('pinvou:chat-round-committed', (event) => {
       function toggleProjectSkills() {
         // 与 toggleTool 同一规则：pending 的「打开」在发送新一轮前可改回。
         const pending = pendingEnablesFor(toolScope);
-        if (toolSwitchDisabled || (hasActiveSession && projectSkillsEnabled && !pending.projectSkills)) return;
+        if (toolSwitchDisabled || (removalLocked && projectSkillsEnabled && !pending.projectSkills)) return;
         const next = !projectSkillsEnabled;
         setProjectSkillsEnabled(next);
         pending.projectSkills = next;
@@ -576,6 +640,16 @@ window.addEventListener('pinvou:chat-round-committed', (event) => {
       const localizedSkillRows = skillRows.map(row => (row.kind === 'builtin-skill' && row.skillId === 'visual-design')
         ? { ...row, title: t.uiSettingsView.visualDesignSkillName, description: t.uiSettingsView.visualDesignSkillDesc }
         : row);
+      const connectorRows = [...connectedServices, ...toolRows];
+      const connectorPreview = buildCapabilityPreview(connectorRows);
+      const skillPreview = buildCapabilityPreview(localizedSkillRows);
+      const avatarGroups = triggerVariant === 'capability-groups';
+      const showConnectors = !avatarGroups || activeSection === 'connectors';
+      const showSkills = !avatarGroups || activeSection === 'skills';
+      const openSection = (section) => {
+        setActiveSection(section);
+        setOpen(current => (current && activeSection === section ? false : true));
+      };
       const statusBadge = (label, tone = 'green') => {
         const cls = tone === 'blue'
           ? 'text-[#007AFF] dark:text-[#5AC8FA] bg-[#007AFF]/10 dark:bg-[#0A84FF]/15'
@@ -585,7 +659,7 @@ window.addEventListener('pinvou:chat-round-committed', (event) => {
       const switchRow = (row) => {
         // 未提交的「打开」（pending）不锁：发送新一轮前允许改回。
         const rowDisabled = toolSwitchDisabled
-          || (hasActiveSession && row.enabled && !pendingEnablesFor(toolScope).ids.has(row.id));
+          || (removalLocked && row.enabled && !pendingEnablesFor(toolScope).ids.has(row.id));
         return (
         <div key={row.id} className="flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl font-medium">
           <span className="min-w-0 flex items-center gap-1.5">
@@ -619,15 +693,38 @@ window.addEventListener('pinvou:chat-round-committed', (event) => {
       );
       return (
         <div className="relative shrink-0">
-          {triggerVariant === 'pill' ? (
+          {avatarGroups ? (
+            <div ref={triggerRef} className="flex items-center" data-testid="composer-capability-groups">
+              <CapabilityAvatarTrigger
+                buttonRef={connectorTriggerRef}
+                kind="connectors"
+                preview={connectorPreview}
+                label={t.composerConnectors}
+                testId={triggerTestId || 'composer-tool-menu-trigger'}
+                open={open && activeSection === 'connectors'}
+                disabled={busy}
+                onClick={() => openSection('connectors')}
+              />
+              <CapabilityAvatarTrigger
+                kind="skills"
+                preview={skillPreview}
+                label={t.composerSkills}
+                testId="composer-skill-menu-trigger"
+                open={open && activeSection === 'skills'}
+                disabled={busy}
+                onClick={() => openSection('skills')}
+              />
+            </div>
+          ) : triggerVariant === 'pill' ? (
             <button
               ref={triggerRef}
               type="button"
               data-testid={triggerTestId || 'composer-tool-menu-trigger'}
               onClick={() => setOpen(o => !o)}
+              disabled={busy}
               title={t.composerTools}
               aria-expanded={open}
-              className="inline-flex h-8 min-w-0 max-w-[220px] items-center gap-1.5 overflow-hidden rounded-xl border px-2.5 transition-all cursor-pointer hover:-translate-y-px hover:shadow-sm focus-within:border-[#007AFF]/45 focus-within:ring-2 focus-within:ring-[#007AFF]/10 border-black/[0.07] bg-black/[0.025] text-[#1F1F1F] dark:border-white/[0.09] dark:bg-white/[0.055] dark:text-[#E8EAED]"
+              className="inline-flex h-8 min-w-0 max-w-[220px] items-center gap-1.5 overflow-hidden rounded-xl border px-2.5 transition-all cursor-pointer hover:-translate-y-px hover:shadow-sm disabled:cursor-default disabled:opacity-45 disabled:hover:translate-y-0 disabled:hover:shadow-none focus-within:border-[#007AFF]/45 focus-within:ring-2 focus-within:ring-[#007AFF]/10 border-black/[0.07] bg-black/[0.025] text-[#1F1F1F] dark:border-white/[0.09] dark:bg-white/[0.055] dark:text-[#E8EAED]"
             >
               {triggerLabel && (
                 <span className="pointer-events-none shrink-0 text-[10px] font-medium text-gray-400 dark:text-gray-500">
@@ -647,8 +744,8 @@ window.addEventListener('pinvou:chat-round-committed', (event) => {
               />
             </button>
           ) : (
-          <button type="button" ref={triggerRef} data-testid={triggerTestId || 'composer-tool-menu-trigger'} onClick={() => setOpen(o => !o)} title={t.composerTools}
-            className={`relative shrink-0 flex items-center justify-center text-gray-700 dark:text-gray-200 transition-colors border ${compact ? 'w-9 h-9 rounded-full bg-transparent hover:bg-black/5 dark:hover:bg-white/10 border-transparent' : 'h-8 gap-1.5 rounded-[12px] px-2.5 text-[12px] font-semibold whitespace-nowrap bg-black/[0.045] dark:bg-white/[0.055] hover:bg-black/[0.07] dark:hover:bg-white/[0.09] border-black/[0.045] dark:border-white/[0.06]'}`}>
+          <button type="button" ref={triggerRef} data-testid={triggerTestId || 'composer-tool-menu-trigger'} onClick={() => setOpen(o => !o)} disabled={busy} title={t.composerTools}
+            className={`relative shrink-0 flex items-center justify-center text-gray-700 disabled:cursor-default disabled:opacity-45 dark:text-gray-200 transition-colors border ${compact ? 'w-9 h-9 rounded-full bg-transparent hover:bg-black/5 disabled:hover:bg-transparent dark:hover:bg-white/10 dark:disabled:hover:bg-transparent border-transparent' : 'h-8 gap-1.5 rounded-[12px] px-2.5 text-[12px] font-semibold whitespace-nowrap bg-black/[0.045] dark:bg-white/[0.055] hover:bg-black/[0.07] disabled:hover:bg-black/[0.045] dark:hover:bg-white/[0.09] dark:disabled:hover:bg-white/[0.055] border-black/[0.045] dark:border-white/[0.06]'}`}>
             <Wrench size={compact ? 18 : 13} className="opacity-80" />
             {!compact && t.composerTools}
             {enabledCount > 0 && (compact
@@ -660,12 +757,17 @@ window.addEventListener('pinvou:chat-round-committed', (event) => {
           <ComposerPopover open={open} onClose={() => setOpen(false)} triggerRef={triggerRef} compact={compact}
             menuProps={{ 'data-testid': 'composer-tool-menu' }}
             desktopClassName="absolute bottom-full left-0 mb-2 w-72 max-h-[420px] z-50 overflow-y-auto custom-scrollbar bg-white dark:bg-[#1E1E20] border border-black/5 dark:border-white/10 rounded-2xl shadow-xl p-1.5">
-                {connectedServices.map(switchRow)}
-                {toolRows.map(switchRow)}
-                {localizedSkillRows.length === 0 ? (
-                  (connectedServices.length === 0 && toolRows.length === 0) ? (
-                    <div className="px-3 py-2 text-[13px] text-gray-400 dark:text-gray-500">{t.composerModeNone}</div>
-                  ) : null
+                {avatarGroups && (
+                  <div className="px-3 pb-1 pt-1.5 text-[11px] font-semibold text-gray-400 dark:text-gray-500">
+                    {activeSection === 'skills' ? t.composerSkills : t.composerConnectors}
+                  </div>
+                )}
+                {showConnectors && connectorRows.map(switchRow)}
+                {showConnectors && connectorRows.length === 0 && (
+                  <div className="px-3 py-2 text-[13px] text-gray-400 dark:text-gray-500">{t.composerNoConnectors}</div>
+                )}
+                {showSkills && (localizedSkillRows.length === 0 ? (
+                  <div className="px-3 py-2 text-[13px] text-gray-400 dark:text-gray-500">{t.composerModeNone}</div>
                 ) : (
                   <>
                     {localizedSkillRows.map(row => row.switchable
@@ -678,7 +780,7 @@ window.addEventListener('pinvou:chat-round-committed', (event) => {
                       <div className="px-3 pt-1 pb-1 text-[11px] text-gray-400 dark:text-gray-500">{t.composerSkillAllDisabled}</div>
                     )}
                   </>
-                )}
+                ))}
                 {toolScope === 'code' && (
                   <>
                     <div className="h-px bg-black/5 dark:bg-white/10 my-1.5 mx-2" />
@@ -692,7 +794,7 @@ window.addEventListener('pinvou:chat-round-committed', (event) => {
                           </span>
                           <span className="block text-[10px] text-gray-400 dark:text-gray-500">{t.composerProjectSkillsDesc}</span>
                         </span>
-                        <Toggle checked={projectSkillsEnabled} onChange={toggleProjectSkills} aria-label="project-skills" disabled={toolSwitchDisabled || (hasActiveSession && projectSkillsEnabled && !pendingEnablesFor(toolScope).projectSkills)} size="sm" />
+                        <Toggle checked={projectSkillsEnabled} onChange={toggleProjectSkills} aria-label="project-skills" disabled={toolSwitchDisabled || (removalLocked && projectSkillsEnabled && !pendingEnablesFor(toolScope).projectSkills)} size="sm" />
                       </div>
                       {projectSkillsEnabled && (
                         <div className="mt-1.5 text-[11px] leading-snug text-amber-600 dark:text-amber-400">{t.composerProjectSkillsWarning}</div>
@@ -701,10 +803,16 @@ window.addEventListener('pinvou:chat-round-committed', (event) => {
                   </>
                 )}
                 <div className="h-px bg-black/5 dark:bg-white/10 my-1.5 mx-2" />
-                <button type="button" onClick={() => { setOpen(false); if (onGotoTools) onGotoTools(); }}
+                <button type="button" onClick={() => {
+                  setOpen(false);
+                  if (avatarGroups && activeSection === 'skills' && onGotoSkills) onGotoSkills();
+                  else if (onGotoTools) onGotoTools();
+                }}
                   className="w-full flex items-center gap-2.5 px-3 py-2.5 text-[13px] text-gray-700 dark:text-gray-200 hover:bg-[#007AFF] hover:text-white rounded-xl transition-colors group">
-                  <Store size={15} className="text-gray-400 group-hover:text-white/90" />
-                  {t.composerManageTools}
+                  {avatarGroups
+                    ? <Plus size={15} className="text-gray-400 group-hover:text-white/90" />
+                    : <Store size={15} className="text-gray-400 group-hover:text-white/90" />}
+                  {avatarGroups && activeSection === 'skills' ? t.composerAddSkills : avatarGroups ? t.composerAddConnectors : t.composerManageTools}
                 </button>
           </ComposerPopover>
           {projectSkillsHelp && createPortal(

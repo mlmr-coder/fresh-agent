@@ -2697,6 +2697,8 @@ function workspaceDisplayName(path) {
         onGotoSettings: () => openSettingsSection('general'),
         onGotoModelSettings: () => openSettingsSection('model'),
         onGotoTools: () => navigateFromScheduledRun('capabilities', () => setCapabilityTab('connectors')),
+        onGotoSkills: () => navigateFromScheduledRun('capabilities', () => setCapabilityTab('skills')),
+        onGotoExperts: () => navigateFromScheduledRun('capabilities', () => { setCapabilityTab('experts'); setPoolMyOnly(false); }),
         browserDockOpen: browserPaneOpen,
         onOpenBrowserDock: openBrowserDock,
       };

@@ -14,6 +14,16 @@ function asArray(value) {
   return Object.entries(value).map(([id, state]) => ({ id, ...state }));
 }
 
+function buildCapabilityPreview(rows, limit = 3) {
+  const enabledRows = (Array.isArray(rows) ? rows : []).filter(row => row && row.enabled);
+  const safeLimit = Math.max(0, Number.isFinite(limit) ? Math.floor(limit) : 3);
+  return {
+    rows: enabledRows.slice(0, safeLimit),
+    total: enabledRows.length,
+    overflow: Math.max(0, enabledRows.length - safeLimit),
+  };
+}
+
 function buildComposerToolMenuState({
   marketplaceTools = [],
   marketplaceSkills = [],
@@ -111,4 +121,4 @@ function buildComposerToolMenuState({
   };
 }
 
-export { buildComposerToolMenuState };
+export { buildCapabilityPreview, buildComposerToolMenuState };

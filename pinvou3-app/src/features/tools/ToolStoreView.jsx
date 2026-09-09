@@ -13,6 +13,7 @@ import { can } from '../../shared/platform.js';
 import { isImeComposing } from '../../shared/ime-guard.mjs';
 import { pathBasename } from '../../shared/path-utils.js';
 import { capabilityKindForEntry, resolveLiveCapabilitySelection } from '../capabilities/capability-model.mjs';
+import { THIRD_PARTY_TOOL_LOGOS } from './tool-visuals.js';
 
 const OAUTH_UI_TIMEOUT_MS = 90_000;
 
@@ -72,29 +73,6 @@ const PlatformToolAction = ({ copy, t, ...props }) => {
       {exportBtn}
     </div>
   );
-};
-
-const THIRD_PARTY_TOOL_LOGOS = {
-  weather: 'assets/tool-icons/amap-user-v3.png',
-  iwencai: 'assets/tool-icons/iwencai-user-v3.png',
-  feishu: 'assets/tool-icons/wb-feishu.svg',
-  wecom: 'assets/tool-icons/wecom-user.png',
-  'wecom-bot': 'assets/tool-icons/wecom-user.png',
-  dingtalk: 'assets/tool-icons/dingtalk-user-v2.png',
-  tmeet: 'assets/tool-icons/wb-tencent-meeting.png',
-  qcc: 'assets/tool-icons/qcc-user.png',
-  'patsnap-search': 'assets/tool-icons/wb-patsnap-search.png',
-  'tencent-docs': 'assets/tool-icons/wb-tencent-docs.png',
-  ima: 'assets/tool-icons/wb-ima-mcp.png',
-  obsidian: 'assets/tool-icons/obsidian.ico',
-  'yuandian-mcp': 'assets/tool-icons/wb-yuandian-mcp.svg',
-  3: 'assets/tool-icons/wb-qq-mail.png',
-  4: 'assets/tool-icons/wb-ima-mcp.png',
-  5: 'assets/tool-icons/wb-lexiang.png',
-  6: 'assets/tool-icons/wb-tencent-docs.png',
-  8: 'assets/tool-icons/wecom-user.png',
-  11: 'assets/tool-icons/wb-tapd.png',
-  12: 'assets/tool-icons/wb-cnb-api.svg',
 };
 
 const FULL_TILE_LOGOS = new Set(['assets/tool-icons/amap-user-v3.png', 'assets/tool-icons/dingtalk-user-v2.png', 'assets/tool-icons/iwencai-user-v3.png', 'assets/tool-icons/qcc-user.png', 'assets/tool-icons/wb-ima-mcp.png', 'assets/tool-icons/wb-tencent-meeting.png', 'assets/tool-icons/wb-yuandian-mcp.svg', 'assets/tool-icons/wecom-user.png']);

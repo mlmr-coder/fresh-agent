@@ -299,7 +299,7 @@ const ComposerModeChip = ({ t, bs, compact, mode: modeProp, busy: busyProp, onSw
   const optCls = COMPOSER_MENU_ENTRY_OPTION_CLASS;
   return (
     <div className="relative">
-      <button type="button" ref={triggerRef} onClick={() => setOpen(!open)} title={t.modeSwitchTitle + ' · ' + (isPlan ? t.modePlan : t.modeYolo)}
+      <button type="button" ref={triggerRef} data-testid="composer-mode-trigger" onClick={() => setOpen(!open)} title={t.modeSwitchTitle + ' · ' + (isPlan ? t.modePlan : t.modeYolo)}
         className={`${COMPOSER_ICON_BUTTON_CLASS} font-semibold ${isPlan ? 'text-[#1A73E8] dark:text-[#A8C7FA]' : ''}`}>
         {isPlan
           ? <ClipboardList size={18} className="shrink-0" />

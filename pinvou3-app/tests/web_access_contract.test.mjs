@@ -718,11 +718,12 @@ assert.match(settingsView, /const canManageModels = can\('modelManagement'\);/);
 const composerShared = readSource(path.join(root, 'src', 'features', 'settings', 'composer-shared.jsx'), 'utf8');
 assert.match(composerShared, /const canSwitchModels = can\('sessionModelSwitch'\);/);
 assert.match(composerShared, /const canMutateToolStore = can\('toolStoreMutations'\);/);
-assert.match(composerShared, /const toolSwitchDisabled = !canMutateToolStore;/);
-// 只增不减 + 未提交可撤销：会话中阻隔「关闭」，但本会话内刚打开（pending）、
-// 尚未随新一轮对话进入上下文的允许改回；新一轮被后端受理后才锁死。
-assert.match(composerShared, /if \(toolSwitchDisabled \|\| \(hasActiveSession && enabled && !pending\.ids\.has\(id\)\)\) return;/);
-assert.match(composerShared, /if \(toolSwitchDisabled \|\| \(hasActiveSession && projectSkillsEnabled && !pending\.projectSkills\)\) return;/);
+assert.match(composerShared, /const toolSwitchDisabled = !canMutateToolStore \|\| busy;/);
+// code scope 保持只增不减 + 未提交可撤销；普通聊天由后端热刷能力目录和规则，
+// 因此不套活动会话的关闭锁。
+assert.match(composerShared, /const removalLocked = toolScope === 'code' && !!activeSessionIdProp;/);
+assert.match(composerShared, /if \(toolSwitchDisabled \|\| \(removalLocked && enabled && !pending\.ids\.has\(id\)\)\) return;/);
+assert.match(composerShared, /if \(toolSwitchDisabled \|\| \(removalLocked && projectSkillsEnabled && !pending\.projectSkills\)\) return;/);
 assert.match(composerShared, /if \(enabled\) pending\.ids\.delete\(id\); else pending\.ids\.add\(id\);/);
 assert.match(composerShared, /window\.addEventListener\('pinvou:chat-round-committed', onCommitted\)/);
 assert.match(composerShared, /pending\.ids\.clear\(\);\s*\n\s*pending\.projectSkills = false;/);

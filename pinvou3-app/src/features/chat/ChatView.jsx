@@ -4,7 +4,7 @@ import {
   invokeObservedPanelSelection,
   isSubagentPanelPublicationCurrent,
 } from './subagent-panel-publication.mjs';
-import { AlertTriangle, ArrowLeft, BarChart2, Brain, Briefcase, Check, ChevronDown, ChevronRight, ClipboardList, Copy, Edit2, FileText, Globe, ImageIcon, Monitor, Package, Paperclip, PinIcon, Presentation, Send, Sparkles, StopCircle, Terminal, Upload, X, Zap } from '../../components/icons.jsx';
+import { AlertTriangle, ArrowLeft, BarChart2, Brain, Briefcase, Check, ChevronDown, ChevronRight, ClipboardList, Copy, Edit2, FileText, Globe, ImageIcon, Monitor, Package, PinIcon, Plus, Presentation, Send, Sparkles, StopCircle, Terminal, Upload, Users, X, Zap } from '../../components/icons.jsx';
 import { bridge } from '../../hooks/useBridge.js';
 import { can, isWeb } from '../../shared/platform.js';
 import { isImeComposing } from '../../shared/ime-guard.mjs';
@@ -347,8 +347,8 @@ const ToolWelcomeCard = ({ toolId, _theme, t, onSend }) => {
       }
       return (
         <div className="relative">
-          <button type="button" ref={triggerRef} onClick={onTriggerClick} title={t.attachAdd} className={COMPOSER_ICON_BUTTON_CLASS}>
-            <Paperclip size={18} />
+          <button type="button" ref={triggerRef} data-testid="composer-attach-trigger" onClick={onTriggerClick} title={t.attachAdd} className={COMPOSER_ICON_BUTTON_CLASS}>
+            <Plus size={20} />
           </button>
           <input ref={fileInputRef} type="file" multiple className="hidden" data-testid="device-file-input" onChange={onFilesChosen} />
           <ComposerPopover open={open} onClose={() => setOpen(false)} triggerRef={triggerRef} compact={compact}
@@ -362,6 +362,40 @@ const ToolWelcomeCard = ({ toolId, _theme, t, onSend }) => {
               {t.attachFromHost}
             </button>
           </ComposerPopover>
+        </div>
+      );
+    };
+
+    const ComposerExpertChip = ({ t, persona, compact, onOpen, onRemove }) => {
+      const copy = persona ? personaText(persona, t) : null;
+      const label = copy ? copy.name : t.capabilityExperts;
+      return (
+        <div className="group relative shrink-0">
+          <button
+            type="button"
+            data-testid="composer-expert-trigger"
+            onClick={onOpen}
+            aria-label={label}
+            title={copy ? t.cpLanyardSwap : t.capabilityExperts}
+            className={`flex h-9 items-center rounded-full text-gray-700 transition-colors hover:bg-black/5 dark:text-gray-200 dark:hover:bg-white/10 ${compact ? 'w-9 justify-center' : 'max-w-[180px] gap-1.5 px-1.5 pr-2.5'}`}
+          >
+            {persona
+              ? <AppIcon card={persona} cls="h-7 w-7 rounded-full" fb={14} />
+              : <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#EEF1F5] text-[#69717D] dark:bg-[#34363A] dark:text-[#DADCE0]"><Users size={14} /></span>}
+            {!compact && <span className="truncate text-[12px] font-medium">{label}</span>}
+          </button>
+          {persona && (
+            <button
+              type="button"
+              data-testid="composer-expert-remove"
+              onClick={onRemove}
+              aria-label={t.cpLanyardRemove}
+              title={t.cpLanyardRemove}
+              className="pointer-events-none absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full border border-black/10 bg-white text-[#7A7F87] opacity-0 shadow-sm transition-[opacity,color,background-color] group-hover:pointer-events-auto group-hover:opacity-100 focus:pointer-events-auto focus:opacity-100 hover:bg-[#FCE8E6] hover:text-[#C5221F] dark:border-white/15 dark:bg-[#303134] dark:text-[#DADCE0] dark:hover:bg-[#4A2424]"
+            >
+              <X size={9} strokeWidth={2.5} />
+            </button>
+          )}
         </div>
       );
     };
@@ -720,7 +754,7 @@ const ToolWelcomeCard = ({ toolId, _theme, t, onSend }) => {
     };
 
     // eslint-disable-next-line sonarjs/cognitive-complexity -- legacy main view: session/mode/artifact/browser state is highly cohesive; split refactor tracked separately
-    const ChatView = ({ theme, t, bs, prefill, prefillAppend = false, focusComposerTick = 0, onPrefillConsumed, onOpenEditor, justInstalledTool, setJustInstalledTool, onGotoSettings, onGotoModelSettings, onGotoTools, onBackScheduledRun, codeModeAvailable = false, onSwitchHomeMode, browserDockAvailable = false, browserDockOpen = false, rightDockActivePanelId = null, onRightDockPanelSelectionChange, onOpenBrowserDock }) => {
+    const ChatView = ({ theme, t, bs, prefill, prefillAppend = false, focusComposerTick = 0, onPrefillConsumed, onOpenEditor, justInstalledTool, setJustInstalledTool, onGotoSettings, onGotoModelSettings, onGotoTools, onGotoSkills, onGotoExperts, onBackScheduledRun, codeModeAvailable = false, onSwitchHomeMode, browserDockAvailable = false, browserDockOpen = false, rightDockActivePanelId = null, onRightDockPanelSelectionChange, onOpenBrowserDock }) => {
       const chatCopy = t.uiChat;
       const chatViewCopy = t.uiChatView;
       const sceneCopy = chatCopy.sceneModes;
@@ -2758,13 +2792,29 @@ const ToolWelcomeCard = ({ toolId, _theme, t, onSend }) => {
                 </div>
               )}
               <div className="flex items-center justify-between mt-1.5 gap-2">
-                <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                <div className="flex min-w-0 flex-1 items-center gap-1 overflow-visible">
                   <ComposerAttachButton t={t} compact={composerCompact} />
-                                    <ComposerModeChip t={t} bs={bs} compact={composerCompact} />
-                  <ComposerModelSelector t={t} bs={bs} onGotoSettings={onGotoModelSettings || onGotoSettings} compact={composerCompact} />
-                  <ComposerToolMenu t={t} onGotoTools={onGotoTools} sessionId={bs && bs.activeSessionId} compact={composerCompact} activeSkill={bs && bs.activeSkill} />
+                  <ComposerModeChip t={t} bs={bs} compact={composerCompact} />
+                  <ComposerExpertChip
+                    t={t}
+                    persona={bs && bs.activeSessionId ? bs.activePersona : null}
+                    compact={composerCompact}
+                    onOpen={onGotoExperts}
+                    onRemove={() => bridge.available && bridge.personas.unequipPersona()}
+                  />
+                  <ComposerToolMenu
+                    t={t}
+                    onGotoTools={onGotoTools}
+                    onGotoSkills={onGotoSkills}
+                    activeSessionId={bs && bs.activeSessionId}
+                    compact={composerCompact}
+                    activeSkill={bs && bs.activeSkill}
+                    triggerVariant="capability-groups"
+                    busy={busy}
+                  />
                   <ComposerKbSelector t={t} bs={bs} compact={composerCompact} />
                 </div>
+                <ComposerModelSelector t={t} bs={bs} onGotoSettings={onGotoModelSettings || onGotoSettings} compact={composerCompact} />
                 <VoiceComposerButton
                   refProp={voiceAsrPopoverRef}
                   voiceInput={voiceInput}

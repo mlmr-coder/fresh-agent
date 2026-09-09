@@ -214,7 +214,7 @@ import { deptLabelFor, personaText, DEPT_ORDER, ALL_DEPT, DEPT_OPTIONS, deptColo
         </div>
       );
     };
-    const CardPoolView = ({ theme, t, bs, onAICreate, initialMyOnly }) => {
+    const CardPoolView = ({ theme, t, bs, onEquipped, onAICreate, initialMyOnly }) => {
       const isDark = theme === 'dark';
       const pool = (bs && bs.personaPool) || { loadState: 'idle' };
       // 268 张卡走模块级缓存(不进 notify 快照),loadState 变化驱动重渲染。
@@ -262,7 +262,11 @@ import { deptLabelFor, personaText, DEPT_ORDER, ALL_DEPT, DEPT_OPTIONS, deptColo
       // The card 3D hover effect (onMove/onLeave) and the resetFacets quick view reset are not wired up; the original implementation remains in git history
       function equip(card, e){ if(e) { e.stopPropagation(); }
         if (active && active.id===card.id) { bridge.personas.unequipPersona(); setToast(t.cpToastUnequipped(personaText(card, t).name)); }
-        else { Promise.resolve(bridge.personas.equipPersona(card.id)).then(s => { if (s) setToast(t.cpToastEquipped(targetTitle || t.cpCurrentChat, personaText(s, t).name)); }); } }
+        else { Promise.resolve(bridge.personas.equipPersona(card.id)).then(s => {
+          if (!s) return;
+          setToast(t.cpToastEquipped(targetTitle || t.cpCurrentChat, personaText(s, t).name));
+          if (onEquipped) onEquipped(s);
+        }); } }
       function openDetail(card, e){ const r=e.currentTarget.getBoundingClientRect();
         setDetail({ card, rect:{ left:r.left, top:r.top, width:r.width, height:r.height } }); }
 

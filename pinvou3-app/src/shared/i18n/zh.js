@@ -507,7 +507,7 @@ export const dictZh = {
         voiceIntroStart: '知道了，开始语音输入',
         voiceIntroEnable: '启用并继续',
         voiceShortcutEnableTitle: '启用快捷键唤醒语音',
-        composerTools: '工具', composerModelLabel: name => `模型：${name}`, composerConnectedServices: '已连接服务', composerConnected: '已连接', composerInstalledTools: '已接入工具', composerInstalledSkills: '技能', composerNoTools: '暂无已装工具', composerToolOn: '已启用', composerManageTools: '管理工具',
+        composerTools: '工具', composerConnectors: '连接器', composerSkills: '技能', composerModelLabel: name => `模型：${name}`, composerConnectedServices: '已连接服务', composerConnected: '已连接', composerInstalledTools: '已接入工具', composerInstalledSkills: '技能', composerNoTools: '暂无已装工具', composerNoConnectors: '暂无已接入连接器', composerToolOn: '已启用', composerManageTools: '管理工具', composerAddConnectors: '添加连接器', composerAddSkills: '添加技能',
         composerMode: '技能', composerModeNone: '暂无可用技能',
         composerBuiltinAuto: '内置·自动', composerSkillInUse: '使用中', composerSkillAllDisabled: '该会话类型的所有技能已关闭，可在上方打开', composerModeControlled: '受模式控制', composerReadonlySwitch: '受模式控制，不可手动切换',
         composerProjectSkills: '项目技能', composerProjectSkillsDesc: '扫描项目内置skills', composerProjectSkillsWarning: '项目内技能文本可能包含恶意指令（提示注入），仅对可信项目开启', composerProjectSkillsHelpTitle: '项目技能说明', composerProjectSkillsHelpBody: '开启后，绑定项目的代码会话会扫描项目内约定目录中的技能文件，模型即可加载并使用这些技能。', composerProjectSkillsHelpDirsLabel: '扫描目录（优先级从高到低）', composerProjectSkillsHelpDirs: '.agents/skills\n.pinvou/skills\nskills\n.opencode/skills\n.claude/skills\n.cursor/skills\n.codewhale/skills',

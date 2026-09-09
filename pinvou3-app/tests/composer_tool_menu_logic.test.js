@@ -10,11 +10,27 @@ const code = fs.readFileSync(logicPath, 'utf8')
   .replace(/\bexport\s+/g, '');
 const ctx = {};
 vm.createContext(ctx);
-vm.runInContext(`${code}\nthis.buildComposerToolMenuState = buildComposerToolMenuState;`, ctx, {
+vm.runInContext(`${code}\nthis.buildCapabilityPreview = buildCapabilityPreview; this.buildComposerToolMenuState = buildComposerToolMenuState;`, ctx, {
   filename: logicPath,
 });
 
-const { buildComposerToolMenuState } = ctx;
+const { buildCapabilityPreview, buildComposerToolMenuState } = ctx;
+
+// 输入框头像组只展示前三个已启用项，其余用 +N 表示。
+let preview = buildCapabilityPreview([
+  { id: 'a', enabled: true },
+  { id: 'off', enabled: false },
+  { id: 'b', enabled: true },
+  { id: 'c', enabled: true },
+  { id: 'd', enabled: true },
+]);
+assert.deepStrictEqual(Array.from(preview.rows, row => row.id), ['a', 'b', 'c']);
+assert.strictEqual(preview.total, 4);
+assert.strictEqual(preview.overflow, 1);
+
+preview = buildCapabilityPreview([{ id: 'a', enabled: true }]);
+assert.strictEqual(preview.rows.length, 1);
+assert.strictEqual(preview.overflow, 0);
 
 // ── 开关（disabled）与可见性（hidden）正交 ────────────────────────────
 let state = buildComposerToolMenuState({
