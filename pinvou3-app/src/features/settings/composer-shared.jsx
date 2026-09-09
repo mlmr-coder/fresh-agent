@@ -182,7 +182,7 @@ window.addEventListener('pinvou:chat-round-committed', (event) => {
             ) : (
               <>
                 <span className="w-1.5 h-1.5 shrink-0 rounded-full bg-[#34C759]"></span>
-                <span className="max-w-[116px] truncate">{t.composerModelLabel(current ? selectorMainLabel(current, t) : t.modelNonePick)}</span>
+                <span className="max-w-[116px] truncate">{current ? selectorMainLabel(current, t) : t.modelNonePick}</span>
                 <ChevronDown size={13} className="opacity-50 shrink-0" />
               </>
             )}

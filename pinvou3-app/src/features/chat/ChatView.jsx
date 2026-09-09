@@ -377,12 +377,12 @@ const ToolWelcomeCard = ({ toolId, _theme, t, onSend }) => {
             onClick={onOpen}
             aria-label={label}
             title={copy ? t.cpLanyardSwap : t.capabilityExperts}
-            className={`flex h-9 items-center rounded-full text-gray-700 transition-colors hover:bg-black/5 dark:text-gray-200 dark:hover:bg-white/10 ${compact ? 'w-9 justify-center' : 'max-w-[180px] gap-1.5 px-1.5 pr-2.5'}`}
+            className={`flex h-9 items-center rounded-full text-gray-700 transition-colors hover:bg-black/5 dark:text-gray-200 dark:hover:bg-white/10 ${compact || !persona ? 'w-9 justify-center' : 'max-w-[180px] gap-1.5 px-1.5 pr-2.5'}`}
           >
             {persona
               ? <AppIcon card={persona} cls="h-7 w-7 rounded-full" fb={14} />
               : <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#EEF1F5] text-[#69717D] dark:bg-[#34363A] dark:text-[#DADCE0]"><Users size={14} /></span>}
-            {!compact && <span className="truncate text-[12px] font-medium">{label}</span>}
+            {!compact && persona && <span className="truncate text-[12px] font-medium">{label}</span>}
           </button>
           {persona && (
             <button
