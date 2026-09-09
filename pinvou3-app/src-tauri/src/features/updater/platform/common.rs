@@ -18,6 +18,7 @@ const UPDATE_MANIFEST_URL: &str =
 const UPDATE_MANIFEST_ENV: &str = "PINVOU3_UPDATE_URL";
 const GITHUB_RELEASE_PREFIX: &str = "https://github.com/mlmr-coder/fresh-agent/releases/download/";
 const MAX_DOWNLOAD_BYTES: u64 = 4 * 1024 * 1024 * 1024;
+const UPDATE_MANIFEST_NOT_FOUND: &str = "UPDATE_MANIFEST_NOT_FOUND";
 
 #[derive(Debug, Clone, Deserialize)]
 struct LatestManifest {
@@ -56,6 +57,16 @@ fn validate_manifest_schema(manifest: &LatestManifest) -> Result<(), String> {
     }
 }
 
+fn validate_update_source_status(status: reqwest::StatusCode) -> Result<(), String> {
+    if status.is_success() {
+        Ok(())
+    } else if status == reqwest::StatusCode::NOT_FOUND {
+        Err(UPDATE_MANIFEST_NOT_FOUND.to_string())
+    } else {
+        Err(format!("The update source returned HTTP status {status}"))
+    }
+}
+
 pub(super) fn platform_key(os: &str, arch: &str) -> Option<&'static str> {
     match (os, arch) {
         ("macos", _) => Some("macos-universal"),
@@ -80,14 +91,14 @@ pub(super) async fn check_for_update_info(
         )
     })?;
     let (source, source_overridden) = manifest_url();
-    let manifest: LatestManifest = client
+    let response = client
         .get(&source)
         .header(reqwest::header::CACHE_CONTROL, "no-cache")
         .send()
         .await
-        .map_err(|error| format!("Failed to connect to the update source: {error}"))?
-        .error_for_status()
-        .map_err(|error| format!("The update source returned an error: {error}"))?
+        .map_err(|error| format!("Failed to connect to the update source: {error}"))?;
+    validate_update_source_status(response.status())?;
+    let manifest: LatestManifest = response
         .json()
         .await
         .map_err(|error| format!("Failed to parse latest.json: {error}"))?;
@@ -424,5 +435,18 @@ mod tests {
         )
         .unwrap();
         assert!(validate_manifest_schema(&manifest).is_err());
+    }
+
+    #[test]
+    fn missing_release_manifest_has_a_stable_error_code() {
+        assert_eq!(
+            validate_update_source_status(reqwest::StatusCode::NOT_FOUND),
+            Err(UPDATE_MANIFEST_NOT_FOUND.to_string())
+        );
+        assert!(validate_update_source_status(reqwest::StatusCode::OK).is_ok());
+        assert_eq!(
+            validate_update_source_status(reqwest::StatusCode::INTERNAL_SERVER_ERROR),
+            Err("The update source returned HTTP status 500 Internal Server Error".to_string())
+        );
     }
 }

@@ -2742,12 +2742,14 @@ const SCard = React.forwardRef( // eslint-disable-line react/display-name -- for
         const updateReady = !!(bs && bs.updateReady);
         const updateProgress = (bs && bs.updateProgress) || 0;
         const installerTakesOver = upd && upd.platform === 'windows';
-        const updateError = (bs && bs.updateError) || (bs && bs.updateCheckError && bs.updateCheckError !== 'latest' ? bs.updateCheckError : '');
+        const updateCheckError = bs && bs.updateCheckError;
+        const updateManifestMissing = updateCheckError === 'manifest_missing';
+        const updateError = (bs && bs.updateError) || (updateCheckError && updateCheckError !== 'latest' && !updateManifestMissing ? updateCheckError : '');
         const updateStatusDesc = updateDownloading
           ? (updateProgress >= 100 ? t.uiSettings.installingUpdate : t.uiSettings.downloading(updateProgress))
           : updateReady
             ? (installerTakesOver ? t.updateInstallerStarted : t.updateComplete)
-            : (upd && upd.available ? `v${upd.latest_version}` : (bs && bs.updateCheckError === 'latest' ? t.upToDate : ''));
+            : (upd && upd.available ? `v${upd.latest_version}` : (updateCheckError === 'latest' ? t.upToDate : (updateManifestMissing ? t.updateManifestUnavailable : '')));
         const updateButtonLabel = updateChecking
           ? t.checking
           : updateDownloading

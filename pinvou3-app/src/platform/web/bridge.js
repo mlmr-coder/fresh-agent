@@ -8876,6 +8876,14 @@
       if (info) { state.updateInfo = info; notify(); }
     } catch { /* 静默 */ }
   }
+  function normalizeUpdateCheckError(error) {
+    const message = String(error || "");
+    if (message.includes("UPDATE_MANIFEST_NOT_FOUND")
+        || (/404 Not Found/i.test(message) && /latest\.json/i.test(message))) {
+      return "manifest_missing";
+    }
+    return message;
+  }
   // 设置页手动检查: 错误和「已是最新」都要反馈。
   async function checkForUpdate() {
     state.updateChecking = true; state.updateCheckError = null; notify();
@@ -8885,7 +8893,7 @@
       state.updateInfo = info;
       if (!info.available) state.updateCheckError = "latest"; // 前端按 i18n 显示「已是最新」
     } catch (e) {
-      state.updateCheckError = String(e);
+      state.updateCheckError = normalizeUpdateCheckError(e);
     }
     state.updateChecking = false; notify();
   }

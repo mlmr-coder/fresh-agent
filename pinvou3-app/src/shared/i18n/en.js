@@ -373,7 +373,7 @@ export const dictEn = {
         cancel: 'Cancel', cancelling: 'Cancelling…',
         updateComplete: 'Update complete, restart to apply', restartNow: 'Restart Now',
         updateInstallerStarted: 'Installer started, the app will close automatically',
-        updateCheckFailed: 'Check failed',
+        updateCheckFailed: 'Check failed', updateManifestUnavailable: 'No published update is available yet. Try again later.',
         depCheckTitle: 'Dependency Check', depChecking: 'Checking…', depRecheck: 'Check again',
         depAllOk: 'All dependencies ready', depMissingSuffix: ' dependency(ies) missing (those features will be unavailable)',
         depInstalling: 'Installing…', depInstallBtn: 'Install', depGoInstall: 'Install', depInstallNote: 'Installs missing deps via elevated apt (needs network or an apt source)', depInstallNoteWindows: 'Downloads missing models; installs LibreOffice through elevated winget (requires network)', depInstallNoteMac: 'Installs missing deps via Homebrew (needs network; install Homebrew first from brew.sh if missing)',

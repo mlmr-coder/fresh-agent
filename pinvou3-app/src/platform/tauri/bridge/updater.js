@@ -24,6 +24,15 @@
   let updateCheckInFlight = false;
   let periodicUpdateChecksStarted = false;
 
+  function normalizeUpdateCheckError(error) {
+    const message = String(error || "");
+    if (message.includes("UPDATE_MANIFEST_NOT_FOUND")
+        || (/404 Not Found/i.test(message) && /latest\.json/i.test(message))) {
+      return "manifest_missing";
+    }
+    return message;
+  }
+
   function cancelScheduledUpdateProgressNotification() {
     if (updateProgressNotifyTimer === null) return;
     root.clearTimeout(updateProgressNotifyTimer);
@@ -131,7 +140,7 @@
       if (info.available) stopPeriodicUpdateChecks();
       else state.updateCheckError = "latest"; // 前端按 i18n 显示「已是最新」
     } catch (e) {
-      state.updateCheckError = String(e);
+      state.updateCheckError = normalizeUpdateCheckError(e);
     }
     state.updateChecking = false; notify();
   }

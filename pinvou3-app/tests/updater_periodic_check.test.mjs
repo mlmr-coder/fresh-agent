@@ -69,3 +69,38 @@ test('hourly checks stop as soon as a newer version is found', async () => {
   assert.equal(clearedTimer, 41);
   assert.equal(state.updateInfo.available, true);
 });
+
+test('manual check classifies a missing release manifest without exposing the raw GitHub error', async () => {
+  const window = {
+    setTimeout() { return 1; },
+    clearTimeout() {},
+  };
+  const context = vm.createContext({ window });
+  vm.runInContext(source, context, { filename: 'updater.js' });
+  const install = window.__PINVOU_TAURI_BRIDGE_FEATURES__.updater;
+  const state = {
+    updateDownloading: false,
+    updateReady: false,
+    updateProgress: 0,
+    sessions: [],
+  };
+  const feature = install({
+    state,
+    notify() {},
+    async invoke(command) {
+      if (command === 'check_for_update') {
+        throw new Error('The update source returned an error: HTTP status client error (404 Not Found) for url (https://github.com/mlmr-coder/fresh-agent/releases/latest/download/latest.json)');
+      }
+      return null;
+    },
+    listen() {},
+    refreshHistoryList: async () => {},
+    getBuffer() {},
+    bt() { return ''; },
+  });
+
+  await feature.checkForUpdate();
+
+  assert.equal(state.updateCheckError, 'manifest_missing');
+  assert.doesNotMatch(state.updateCheckError, /github|404|latest\.json/i);
+});
