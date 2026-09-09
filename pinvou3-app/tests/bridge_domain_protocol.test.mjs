@@ -117,12 +117,15 @@ const expectedProtocolHashes = {
   personas: 'd16d99104c45bb3e7a6585862b0ba30936bf31a4fef2238453a0a0a35e3c1806',
   // Recomputed for the voice error-code relay: web_access_rpc_respond gains
   // errorCode/errorCategory so structured VoiceCommandError identity reaches
-  // the browser lane's trilingual mapping instead of only the message text.
-  remoteControl: '0f3bbabae65f0551e335354019de7f97578fde257829505ad74c13196b173fc5',
+  // the browser lane's bilingual mapping instead of only the message text.
+  remoteControl: 'c8eb6ece7e5eac8349420282b0ae5487567f5863186df9a8fdeaea488e278b80',
   scheduled: '7d6ca9783925a5071a364097ebdf0112511f9503b5e4534346b9fda6873ec036',
   sessions: '7dd63b9cb4ab7b7e03f81abc0822baa9bd1dd61f27fa8b8d2df009126d1c6c60',
   settings: 'a44929caff59641eb059f28885f1674d4e277412526d31c1d3ddfd75e44d0496',
-  updater: '86412d40999a268d3d92dc4fe97e3fe465de08745423be820f38a462d79aaced',
+  // Recomputed for the hourly update checker and the complete platform
+  // download/install flow. The updater now binds one immutable manifest
+  // snapshot to both IPC calls and stops polling once an update is found.
+  updater: 'ede2e648dae4374d119d3691451af5205460498f50c391494b88f51d923ce625',
   // Recomputed for the comment-only English translation of the voice bridge
   // (PR-added Chinese comments inside the postprocess_voice_text invoke
   // span are part of the hashed source; no invoke/listen surface changed).

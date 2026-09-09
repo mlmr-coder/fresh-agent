@@ -3,7 +3,7 @@
 //! Boss 主动召唤 → 从 session messages 投影出「需求 vs 应对」→ 单次独立 LLM
 //! 审查 → 返回 personas/issues。Pinvou 只检阅、不替 Boss 决策。
 //!
-//! 设计与实证：`docs/品悟v4-常驻检阅助手设计.md` / `docs/品悟v4-召唤式实测报告.md`。
+//! 设计约束与行为边界由本模块测试固定。
 //! 上下文策略（§4.1，实测背书）：能全喂就全喂（真实 1.2 万 token、94% 噪音不崩、
 //! 还能事实核查），超过 `FULL_FEED_CHAR_LIMIT` 才降级到确定性投影。
 
@@ -19,7 +19,7 @@ use serde_json::{Value, json};
 
 use crate::features::assistant::platform::bridge::{Pinvou3Bridge, prefs::ModelPreset};
 
-const PROMPT: &str = r#"你是 Pinvou，Boss 身边的独立检阅顾问，召之即来。
+const PROMPT: &str = r#"你是 鲜小助，Boss 身边的独立检阅顾问，召之即来。
 
 Boss 刚刚召唤你，让你检阅前面主 AI 的工作。给你的材料分两部分：
 - 【Boss 需求】：Boss 在整个过程里说过的意图、约束、做过的选择。这是你的立场起点。
@@ -53,7 +53,7 @@ B. recommendations = 需 **Boss 拿主意**的决策点/缺信息：选项、偏
 
 /// 核账模式 prompt（§3，sim 验证收敛）：对同一产出物的复审，只核账、禁新增、终态。
 /// 治 tejz7cxrd5jd0 的不收敛——暴增/翻案/永久挂账/无终态。
-const RECONCILE_PROMPT: &str = r#"你是 Pinvou，Boss 身边的独立检阅顾问。这是对**同一产出物**的复审（核账模式），不是重新自由批评。
+const RECONCILE_PROMPT: &str = r#"你是 鲜小助，Boss 身边的独立检阅顾问。这是对**同一产出物**的复审（核账模式），不是重新自由批评。
 给你【上轮账目】（上次立的问题）+【当前产物】（已修订版本）。严格按规则核账：
 1. 逐条核对账目对照产物：**已改好的不要再列进 issues**（视为闭合）；只把**没改/没改对**的留在 issues 里，说明还差什么。
 2. **禁止新增问题**。唯一例外：本次修订在它改动的段落内新引入的错误（issue 里注明"修订引入"）。不要提上轮没提过的新角度。
@@ -64,7 +64,7 @@ const RECONCILE_PROMPT: &str = r#"你是 Pinvou，Boss 身边的独立检阅顾�
 
 /// 覆盖镜头 prompt（§coverage，多场景 sim 4abe9ae 背书）：不挑错，查"全不全"。领域无关——
 /// 让模型自判专家身份临场列该类产物的完整性维度框架，再标缺/薄弱维度。收敛靠框架有限。
-const COVERAGE_PROMPT: &str = r#"你是 Pinvou，Boss 身边的独立检阅顾问。这次专做【覆盖度检查】——不挑已有内容的对错，只看产物"全不全"。
+const COVERAGE_PROMPT: &str = r#"你是 鲜小助，Boss 身边的独立检阅顾问。这次专做【覆盖度检查】——不挑已有内容的对错，只看产物"全不全"。
 
 给你 Boss 的需求 + 主 AI 的产物。两步走：
 1. 以你**自判的领域专家身份**，先想清楚：**这一类产物**要算完整、合格、能交付，行业惯例本该覆盖哪些维度？列出这个领域的完整性维度框架（贴合行业惯例，别硬套别的领域）。
@@ -467,7 +467,6 @@ fn output_language_directive(locale_tag: &str) -> Option<String> {
     }
     let lang = match locale_tag {
         "en" => "English",
-        "ja" => "Japanese (日本語)",
         _ => return None, // 未知 locale → prompt 原样中文
     };
     Some(format!(
@@ -487,8 +486,6 @@ fn default_trace(locale_tag: &str, clean: bool) -> String {
     match (locale_tag, clean) {
         ("en", true) => "Looked it over — no problems.",
         ("en", false) => "I've reviewed it; a few points for you to confirm.",
-        ("ja", true) => "確認しました。問題ありません。",
-        ("ja", false) => "確認しました。いくつか確認したい点があります。",
         (_, true) => "看过了，没问题。",
         (_, false) => "我看过了，有几个点你确认下。",
     }
@@ -547,7 +544,7 @@ async fn model_review(
             1600,
         )
         .await?;
-        return parse_model_review(&content).context("parse Pinvou review");
+        return parse_model_review(&content).context("parse 鲜小助 review");
     }
     let mut body = json!({
         "model": model_name,
@@ -583,7 +580,7 @@ async fn model_review(
         .and_then(|m| m.get("content"))
         .and_then(Value::as_str)
         .unwrap_or_default();
-    parse_model_review(content).context("parse Pinvou review")
+    parse_model_review(content).context("parse 鲜小助 review")
 }
 
 fn review_model_preset(bridge: &Pinvou3Bridge) -> ModelPreset {
@@ -752,12 +749,12 @@ fn full_transcript(messages: &[Message]) -> String {
 
 /// Section-header prefixes of B1 transfer messages (resolvePinvouReview: after
 /// the Pinvou review dialog checks "let AI fix" and similar actions, both
-/// frontend bridges assemble the message in the UI language — the three
+/// frontend bridges assemble the message in the UI language — the two
 /// BT_TABLE blocks are identical across the tauri/web bridges — and send it
 /// back to the main session as the Boss). The message is composed of up to
 /// five sections, one per checked action, and **any of them can lead**
 /// (checking only verify makes the message start with "以下几条涉及外部事实" /
-/// "The items below involve external facts" / "以下の項目は外部事実に関わります"),
+/// "The items below involve external facts"),
 /// so matching must cover all prefixes instead of a single starts_with, in
 /// every UI language. Keep in sync with resolvePinvouReview in
 /// `pinvou3-app/src/platform/tauri/bridge/chat.js` and
@@ -789,16 +786,6 @@ const B1_TRANSFER_PREFIXES: &[&str] = &[
     "For the pending items below, ask me formally",
     // en fill section header
     "The artifact is still missing the dimensions below",
-    // ja fix section header
-    "下のレビュー意見に従い",
-    // ja verify section header
-    "以下の項目は外部事実に関わります",
-    // ja adopt section header
-    "以下の事項は確定しました",
-    // ja ask section header
-    "以下の未確定項目については",
-    // ja fill section header
-    "成果物には以下の観点が不足しています",
 ];
 
 /// 确定性投影（§4.2，超长降级用）：Boss 原话全留 / request_user_input 决策 /
@@ -1163,11 +1150,6 @@ mod tests {
         let en = output_language_directive("en").expect("en 应有指令");
         assert!(en.contains("English") && en.contains("OVERRIDES"));
         assert!(
-            output_language_directive("ja")
-                .unwrap()
-                .contains("Japanese")
-        );
-        assert!(
             output_language_directive("zh-Hans")
                 .unwrap()
                 .contains("简体中文"),
@@ -1182,7 +1164,6 @@ mod tests {
         assert_eq!(default_trace("zh-Hans", true), "看过了，没问题。");
         assert!(default_trace("en", true).starts_with("Looked"));
         assert!(default_trace("en", false).contains("confirm"));
-        assert!(default_trace("ja", true).contains("問題ありません"));
     }
 
     fn user_text(t: &str) -> Message {
@@ -1305,7 +1286,7 @@ mod tests {
         // Both frontend bridges (tauri/chat.js, web/bridge.js) compose
         // resolvePinvouReview sections per checked action and any of the five
         // headers can lead — build one case per real prefix (strings taken
-        // verbatim from the bridge sources). Since the trilingual copy audit
+        // verbatim from the bridge sources). Since the bilingual copy audit
         // the bridges assemble the sections in the UI language, so every
         // localized header variant must be recognized too.
         let real_prefixes = [
@@ -1346,26 +1327,6 @@ mod tests {
                 "fill/en",
                 "The artifact is still missing the dimensions below — add them (keep everything else; add only, don't rewrite):",
             ),
-            (
-                "fix/ja",
-                "下のレビュー意見に従い、**該当するセクションのみを修正してください。全文の書き直しはしないでください**：",
-            ),
-            (
-                "verify/ja",
-                "以下の項目は外部事実に関わります。**必ず検証してから修正し、根拠を示してください（記憶に頼った編集はしないでください）**：",
-            ),
-            (
-                "adopt/ja",
-                "以下の事項は確定しました。この通り成果物を更新してください：",
-            ),
-            (
-                "ask/ja",
-                "以下の未確定項目については、推測せず request_user_input で正式に私に質問してください：",
-            ),
-            (
-                "fill/ja",
-                "成果物には以下の観点が不足しています。補足してください（既存部分は保持し、追記のみで書き換えないでください）：",
-            ),
         ];
         for (kind, prefix) in real_prefixes {
             let messages = vec![
@@ -1389,7 +1350,7 @@ mod tests {
     #[test]
     fn b1_transfer_prefixes_stay_in_sync_with_bridge_sources() {
         // The five section headers are owned by the frontend bridges
-        // (resolvePinvouReview, en/ja/zh BT_TABLE blocks). When a bridge copy
+        // (resolvePinvouReview, en/zh BT_TABLE blocks). When a bridge copy
         // changes its wording, this fails until B1_TRANSFER_PREFIXES follows;
         // the projection test above covers the reverse direction.
         let tauri_bridge = include_str!(concat!(

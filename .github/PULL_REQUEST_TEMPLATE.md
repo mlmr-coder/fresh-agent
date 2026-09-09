@@ -1,30 +1,11 @@
-## Summary
+## 改动说明
 
-<!-- What changed and what user or developer outcome does it provide? -->
+请说明要解决的问题和改动后的实际行为。
 
-## Background
+## 验证结果
 
-<!-- Why is this change needed? -->
+请列出已运行的测试、构建或人工验证。
 
-## Changes
+## 风险与兼容性
 
--
-
-## Verification
-
-<!-- List only checks that were actually run, with their results. -->
-
--
-
-## Impact and notes
-
-<!-- Affected features, platforms, compatibility, risks, or known limitations. Remove this section if none apply. -->
-
-## Submission checklist
-
-- [ ] I based this PR on the latest `main`.
-- [ ] The PR title and description are written in English, and the title follows the commit subject convention.
-- [ ] Every commit includes a matching `Signed-off-by` trailer (`git commit -s`).
-- [ ] I removed credentials, private data, internal URLs, and sensitive logs.
-- [ ] I updated tests and documentation where behavior changed.
-- [ ] If the `CodeWhale` gitlink or fork behavior changed, this PR also updates the fork inventory, fingerprints, and result-oriented tests.
+请说明平台差异、数据迁移、兼容性影响或尚未验证的场景；没有则填写“无”。

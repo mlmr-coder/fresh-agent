@@ -1,37 +1,19 @@
-# Support
+# 支持与反馈
 
-Pinvou Agent is maintained on a best-effort basis. Community support does not
-include guaranteed response times, resolution times, or a service-level
-agreement.
+鲜小助由本仓库独立维护，社区支持按尽力而为原则提供，不承诺响应时间、解决时间或服务等级协议。
 
-## Choose the right channel
+## 反馈渠道
 
-- Use [GitHub Issues](https://github.com/Pinvou/pinvou-agent/issues) for
-  reproducible bugs and focused feature requests.
-- Use [GitHub Discussions](https://github.com/Pinvou/pinvou-agent/discussions)
-  for setup questions, ideas, extension sharing, and community examples.
-- Use [GitHub Private Vulnerability Reporting](https://github.com/Pinvou/pinvou-agent/security/advisories/new)
-  for suspected vulnerabilities. Do not disclose unpatched vulnerabilities in
-  public issues or discussions.
-- Visit [pinvou.com](https://pinvou.com/) for commercial editions and enterprise
-  support.
+- 可复现的缺陷和具体功能需求请提交到 [GitHub Issues](https://github.com/mlmr-coder/fresh-agent/issues)。
+- 安装和使用问题也可通过 Issues 提出，并说明已尝试的步骤。
+- 潜在漏洞和敏感数据问题请按照 [安全政策](SECURITY.md) 私下报告，不要在公开 Issue 中披露未修复漏洞。
 
-## What to include in a bug report
+## 缺陷报告内容
 
-Please include:
+请提供应用版本或提交编号、操作系统和架构、清晰的复现步骤、预期与实际行为，以及最少量的脱敏日志。
 
-- the Pinvou Agent version or commit;
-- operating system and architecture;
-- clear reproduction steps;
-- expected and actual behavior;
-- the smallest relevant, redacted log excerpt.
+发布前移除 API 密钥、令牌、账号标识、私人文件、内部地址和其他敏感信息。
 
-Remove API keys, tokens, account identifiers, private files, internal URLs, and
-other sensitive data before posting.
+## 维护范围
 
-## Maintenance expectations
-
-The maintainers may close reports that cannot be reproduced, do not include the
-requested information, are outside the Community edition, or have been inactive
-for an extended period. Security reports follow [SECURITY.md](SECURITY.md), not
-the public support process.
+无法复现、缺少必要信息、超出本项目范围或长期没有进展的问题可能被关闭。鲜小助是独立维护的派生项目，不代表原项目提供商业支持、认证或安全审查。

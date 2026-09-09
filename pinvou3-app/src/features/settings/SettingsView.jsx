@@ -2499,7 +2499,7 @@ const SCard = React.forwardRef( // eslint-disable-line react/display-name -- for
         <>
           <IOSSection title={t.uiSettings.appearance}>
             <IOSRow label={t.uiSettings.language} desc={t.uiSettings.languageDesc}>
-              <SSegmented value={language} onChange={v => { setLanguage(v); setRestartDialog('language'); }} options={[{ key: 'zh', label: '中文' }, { key: 'en', label: 'English' }, { key: 'ja', label: '日本語' }]} />
+              <SSegmented value={language} onChange={v => { setLanguage(v); setRestartDialog('language'); }} options={[{ key: 'zh', label: '中文' }, { key: 'en', label: 'English' }]} />
             </IOSRow>
             <IOSRow label={t.uiSettings.theme} desc={t.uiSettings.themeDesc}>
               <SSegmented value={colorScheme} onChange={onColorSchemeChange} options={[{ key: 'system', label: t.followSystem }, { key: 'light', label: t.light }, { key: 'dark', label: t.dark }]} />
@@ -2721,7 +2721,7 @@ const SCard = React.forwardRef( // eslint-disable-line react/display-name -- for
                     <ChevronDown size={22} className="-rotate-90 opacity-35" />
                   </IOSRow>
                 </div>
-                <IOSRow label={settingsCopy.assistantNickname} desc={settingsCopy.assistantNameDesc} value={identity.assistant_alias || 'PINVOU'} onClick={() => editProfile('assistant_alias')}>
+                <IOSRow label={settingsCopy.assistantNickname} desc={settingsCopy.assistantNameDesc} value={identity.assistant_alias || t.appTitle} onClick={() => editProfile('assistant_alias')}>
                   <ChevronDown size={22} className="-rotate-90 opacity-35" />
                 </IOSRow>
               </IOSSection>
@@ -2741,21 +2741,21 @@ const SCard = React.forwardRef( // eslint-disable-line react/display-name -- for
         const updateCancelling = !!(bs && bs.updateCancelling);
         const updateReady = !!(bs && bs.updateReady);
         const updateProgress = (bs && bs.updateProgress) || 0;
-        const isWindowsUpdate = upd && upd.platform === 'windows';
+        const installerTakesOver = upd && upd.platform === 'windows';
         const updateError = (bs && bs.updateError) || (bs && bs.updateCheckError && bs.updateCheckError !== 'latest' ? bs.updateCheckError : '');
         const updateStatusDesc = updateDownloading
           ? (updateProgress >= 100 ? t.uiSettings.installingUpdate : t.uiSettings.downloading(updateProgress))
           : updateReady
-            ? (isWindowsUpdate ? t.updateInstallerStarted : t.updateComplete)
+            ? (installerTakesOver ? t.updateInstallerStarted : t.updateComplete)
             : (upd && upd.available ? `v${upd.latest_version}` : (bs && bs.updateCheckError === 'latest' ? t.upToDate : ''));
         const updateButtonLabel = updateChecking
           ? t.checking
           : updateDownloading
             ? (updateProgress >= 100 ? t.installing : (updateCancelling ? t.cancelling : t.uiSettings.cancelDownload))
             : updateReady
-              ? (isWindowsUpdate ? t.uiSettings.installerStarted : t.restartNow)
+              ? (installerTakesOver ? t.uiSettings.installerStarted : t.restartNow)
               : (upd && upd.available ? (upd.platform === 'linux' ? t.downloadInstallRestart : t.downloadInstall) : t.checkUpdate);
-        const updateButtonDisabled = !bridge.available || updateChecking || updateCancelling || (updateDownloading && updateProgress >= 100) || (updateReady && isWindowsUpdate);
+        const updateButtonDisabled = !bridge.available || updateChecking || updateCancelling || (updateDownloading && updateProgress >= 100) || (updateReady && installerTakesOver);
         const handleUpdateAction = () => {
           if (!bridge.available || updateChecking) return;
           if (updateDownloading) {
@@ -2763,7 +2763,7 @@ const SCard = React.forwardRef( // eslint-disable-line react/display-name -- for
             return;
           }
           if (updateReady) {
-            if (!isWindowsUpdate) bridge.updater.restartApp();
+            if (!installerTakesOver) bridge.updater.restartApp();
             return;
           }
           if (upd && upd.available) bridge.updater.downloadAndInstallUpdate();

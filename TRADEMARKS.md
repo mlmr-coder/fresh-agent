@@ -1,39 +1,22 @@
-# Trademark Policy
+# 商标说明
 
-The MIT License for Pinvou Agent covers the repository's source code and
-documentation. It does not grant permission to use Pinvou names, logos, product
-icons, or other brand identifiers as trademarks.
+本仓库的 MIT 许可证适用于源代码和文档，不授予将 Pinvou 名称、标志、产品图标或其他品牌标识用作商标的权利。
 
-## Pinvou marks
+## 原项目标识
 
-The following are Pinvou marks:
+Pinvou、Pinvou Agent、Pinvou Community、Pinvou Official，以及相关名称、标志、产品图标和视觉识别属于原项目标识。
 
-- Pinvou;
-- Pinvou Agent;
-- Pinvou Community;
-- Pinvou Official;
-- the Pinvou name, logo, product icon, and related visual identity.
+可以作真实、描述性的引用，例如“兼容 Pinvou Agent”或“基于 Pinvou Agent 派生”，也应保留必要的版权及归属声明。
 
-You may make truthful, descriptive references such as "compatible with Pinvou
-Agent" or "forked from Pinvou Agent." You may also retain required copyright
-and attribution notices.
+未经 Pinvou 书面许可，不应：
 
-Unless Pinvou gives written permission, you may not:
+- 将修改版或派生版表述为 Pinvou 官方发行版。
+- 在产品、公司、域名、应用或软件包名称中使用其标识，造成受其赞助或认可的误解。
+- 将 Pinvou 标志或产品图标作为再分发版本的主要品牌标识。
+- 暗示 Pinvou 为第三方发行版提供支持、认证或安全审查。
 
-- present a modified build or fork as an official Pinvou release;
-- use a Pinvou mark in a product, company, domain, application, or package name
-  in a way that implies sponsorship or endorsement;
-- use Pinvou logos or product icons as the primary identity of a redistributed
-  build;
-- state or imply that Pinvou provides support, certification, or security
-  review for a third-party distribution.
+## 鲜小助与第三方标识
 
-Forks and redistributed builds should use a clearly different name and visual
-identity, and should state that they are independently maintained.
+鲜小助采用独立名称和图标，由本仓库独立维护。为兼容现有配置和数据而保留的技术标识参见 [品牌与兼容性说明](docs/branding.md)。
 
-Third-party names and logos appearing in Pinvou Agent belong to their respective
-owners. Their appearance identifies compatible services and does not imply
-endorsement.
-
-For trademark permission questions, use the contact channel at
-[pinvou.com](https://pinvou.com/).
+应用中的第三方名称和标志属于各自所有者，仅用于标识兼容服务，不表示相关方背书，也不授予额外商标权利。原项目商标许可问题可通过 [Pinvou 官网](https://pinvou.com/) 的联系渠道咨询。

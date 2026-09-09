@@ -8,6 +8,8 @@ RELEASE_SCRIPTS = (
     REPO_ROOT / "scripts" / "release-deb.sh",
     REPO_ROOT / "scripts" / "release-macos.sh",
 )
+RELEASE_WORKFLOW = REPO_ROOT / ".github" / "workflows" / "release-packages.yml"
+MANIFEST_SCRIPT = REPO_ROOT / "scripts" / "generate-update-manifest.mjs"
 
 
 class CommunityReleaseContractTests(unittest.TestCase):
@@ -26,6 +28,19 @@ class CommunityReleaseContractTests(unittest.TestCase):
                 self.assertNotIn("ssh ", source)
                 self.assertNotIn("rsync ", source)
                 self.assertNotIn("pinvou.com", source)
+
+    def test_release_workflow_publishes_the_update_manifest(self):
+        workflow = RELEASE_WORKFLOW.read_text(encoding="utf-8")
+        self.assertIn("publish-release:", workflow)
+        self.assertIn("contents: write", workflow)
+        self.assertIn("scripts/generate-update-manifest.mjs", workflow)
+        self.assertIn('gh release create "$TAG" release-assets/*', workflow)
+        self.assertIn('gh release upload "$TAG" release-assets/* --clobber', workflow)
+
+    def test_manifest_generator_uses_fresh_agent_release_urls(self):
+        source = MANIFEST_SCRIPT.read_text(encoding="utf-8")
+        self.assertIn("https://github.com/${repository}/releases/download/", source)
+        self.assertNotIn("pinvou.com", source)
 
 
 if __name__ == "__main__":

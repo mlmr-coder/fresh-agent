@@ -1,110 +1,109 @@
 <div align="center">
 
-<img src="pinvou3-app/src-tauri/icons/icon.png" alt="Pinvou Agent ロゴ" width="120" />
+<img src="pinvou3-app/src-tauri/icons/icon.png" alt="鲜小助 图标" width="120" />
 
-# Pinvou Agent
+# 鲜小助
 
-**仕事、デザイン、コーディングのためのオープンソース・デスクトップ AI Agent ワークスペース。**
+**鲜小助** 由本仓库独立维护。为兼容升级和既有用户数据而保留的技术标识，参见[品牌与兼容性说明](docs/branding.md)。
 
-[English](README.md) · [简体中文](README.zh-CN.md) · [日本語](README.ja.md)
+**面向工作、设计与代码的开源桌面 AI Agent 工作台。**
 
-[![CI](https://github.com/Pinvou/pinvou-agent/actions/workflows/pr-check.yml/badge.svg)](https://github.com/Pinvou/pinvou-agent/actions/workflows/pr-check.yml)
-[![License: MIT](https://img.shields.io/github/license/Pinvou/pinvou-agent)](LICENSE)
-[![Version](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FPinvou%2Fpinvou-agent%2Fmain%2Fpinvou3-app%2Fpackage.json&query=%24.version&label=version&color=blue)](pinvou3-app/package.json)
-[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)](#-クイックスタート)
-[![GitHub Stars](https://img.shields.io/github/stars/Pinvou/pinvou-agent?style=flat)](https://github.com/Pinvou/pinvou-agent/stargazers)
+[![CI](https://github.com/mlmr-coder/fresh-agent/actions/workflows/pr-check.yml/badge.svg)](https://github.com/mlmr-coder/fresh-agent/actions/workflows/pr-check.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![Version](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fmlmr-coder%2Ffresh-agent%2Fmain%2Fpinvou3-app%2Fpackage.json&query=%24.version&label=version&color=blue)](pinvou3-app/package.json)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)](#-快速开始)
+[![GitHub Stars](https://img.shields.io/github/stars/mlmr-coder/fresh-agent?style=flat)](https://github.com/mlmr-coder/fresh-agent/stargazers)
 
-[プレビュー版をダウンロード](https://github.com/Pinvou/pinvou-agent/releases) · [ウェブサイト](https://pinvou.com/) · [QQ グループ](#-コミュニティとセキュリティ) · [Issues](https://github.com/Pinvou/pinvou-agent/issues) · [Discussions](https://github.com/Pinvou/pinvou-agent/discussions) · [セキュリティ](SECURITY.md)
+[下载预览版](https://github.com/mlmr-coder/fresh-agent/releases) · [问题反馈](https://github.com/mlmr-coder/fresh-agent/issues) · [讨论区](https://github.com/mlmr-coder/fresh-agent/discussions) · [安全政策](SECURITY.md)
 
 <p align="center">
-  <a href="https://pinvou.com/assets/videos/pinvou-agent-feature-update-2026-07.mp4">
-    <img src="docs/assets/screenshots/mode-work.webp" alt="Pinvou Agent 作業モード">
-  </a>
-</p>
-<p align="center">
-  <a href="https://pinvou.com/assets/videos/pinvou-agent-feature-update-2026-07.mp4"><strong>▶ 90秒の機能デモを見る（中国語）</strong></a>
+  <img src="docs/assets/screenshots/mode-work.webp" alt="鲜小助 工作模式">
 </p>
 
 </div>
 
-Pinvou Agent は、単なるチャットウィンドウではありません。日々の仕事、ビジュアルデザイン、ソフトウェア開発を 1 つのデスクトップワークスペースにまとめ、チャットの返事で終わらせるのではなく、**成果**で終わるべきタスクのために設計されています。ツールを使い、ファイルを操作し、個人の知識を蓄えられます。ACP 経由で専用のコーディング Agent を実際のプロジェクトに取り込んだり、プロンプトから後で編集を続けられるビジュアル成果物を生み出したりすることもできます。
+鲜小助 不只是一个聊天界面。它把通用工作、视觉设计和代码开发放进同一个桌面应用，让 AI 从“回答问题”进一步走到“**完成任务**”。你可以让它调用工具、处理文件和沉淀知识，也可以通过 ACP 驱动专业代码 Agent，或把一句描述变成可继续编辑的视觉产物。
 
-ローカルモデルを使えば完全にプライベートなループで動作し、OpenAI 互換のエンドポイントであれば自由に接続できます。MCP サーバー、CLI コネクター、スキル、ワークフローで Agent を拡張しましょう。
+模型既可以运行在本地，也可以接入任意 OpenAI-compatible 服务；工具、Skills 与连接器按需启用。
 
-## 🧭 ひとつのワークスペース、3つの働き方
+## 🌱 项目来源
 
-### 💼 作業：Agent に実際のタスクを任せる
+鲜小助基于开源项目 [Pinvou/pinvou-agent](https://github.com/Pinvou/pinvou-agent.git) 二次开发，并以独立仓库继续维护。Agent 底层能力依赖 [CodeWhale](https://github.com/Pinvou/CodeWhale)；上层产品名称、界面、提示词、发布地址和更新机制由鲜小助项目维护。原项目与第三方组件的许可信息见 [MIT 许可证](LICENSE) 和 [第三方许可声明](THIRD_PARTY_NOTICES.md)。
 
-添付ファイル、個人ナレッジ、専門ペルソナ、スキル、MCP ツール、ワークフローを組み合わせて、調査、分析、執筆を行い、再利用できるファイルとして成果を納品します。返ってくるのは、ただのチャット文章ではありません。
+## 🧭 一个工作台，三种工作方式
 
-### 🎨 デザイン：プロンプトから編集可能なビジュアルへ
+### 💼 工作：让 AI 处理真实任务
 
-自然言語でポスターやデータビジュアライゼーションを作成します。結果をデザインモードで開き、要素を直接選択して、コピー、フォント、色、サイズ、レイアウトを調整できます。変更を言葉で伝え続ければ、Agent が現在のデザインに沿って反復改善します。
+结合文件附件、个人知识、专家角色、Skills、MCP 工具和工作流，完成资料整理、公文写作、信息检索、业务分析等任务，并把结果交付为可继续使用的文件，而不只是一段聊天回复。
 
-### 💻 コード：実際のプロジェクトにコーディング Agent を取り込む
+### 🎨 设计：从一句描述到可编辑的视觉产物
 
-同じデスクトップワークスペース上で、[ACP](docs/multi-agent-acp.md) 経由で **Codex、Claude Code、Kimi** を利用できます。コーディング Agent は、実際のプロジェクトや隔離された一時ワークスペースの読み書き、コマンドの実行を行い、実行計画、ツールの実行手順、権限リクエスト、ファイル変更を可視化します。セッションはワークスペースに紐付いたまま保持され、アプリを再起動した後も続きから再開できます。
+用自然语言生成海报和数据可视化产物。生成后可以直接进入编辑模式，选中画面中的元素，调整文案、字体、颜色、尺寸和布局；也可以继续描述要求，让 AI 在当前设计上迭代。
 
-## ✨ 主な機能
+### 💻 代码：把代码 Agent 带进真实项目
 
-### 🎯 会話から成果物へ
+通过 [ACP](docs/multi-agent-acp.md) 在同一工作台中使用 **Codex、Claude Code 和 Kimi**。代码 Agent 可以在真实项目目录或隔离的临时工作区中阅读和修改代码、运行命令，并展示计划、工具步骤、权限请求和文件变化；会话与工作区绑定，可在应用重启后继续。
 
-- タイトル検索付きの**マルチセッションワークスペース** — メッセージ、ツール呼び出し、成果物は各セッションごとに保存されます
-- PDF、Office 文書、画像、テキストの**添付ファイル**に対応 — ドラッグ＆ドロップや貼り付けで追加できます
-- **成果物パネル**が Agent が作成・編集したすべてのファイルを自動で収集。1 箇所でプレビュー、検索、オープンできます
-- **編集可能な Markdown 成果物** — 直接編集できるほか、一節を選択して Agent に書き直してもらうこともできます
-- **Plan / YOLO モード** — 複雑な作業はまず計画を確認してから実行し、明確なタスクは直接実行できます
+## ✨ 功能特性
 
-### 🧠 知識とメモリ
+### 🎯 从对话到可交付产物
 
-- ファイル管理、全文検索、ベクトル検索を備えた**ローカルナレッジベース**。1 つのチャットに複数のコレクションを取り付け、それぞれを個別に有効化 / 無効化でき、回答にはコレクションとファイルの出所が保持されます
-- **メモリセンター**が長期的な好みや文脈を蓄積。保存する候補を明示的にレビュー・承認できます
-- **ペルソナカードプール** — 分野ごとの専門ロールを作成、保存し、切り替えて適用できます
-- **スキル、コマンド、ワークフロー**が、実績のあるやり方を安定して再利用できる能力に変えます
+- **多会话管理**与会话标题搜索，历史消息、工具调用和产物随会话持久化
+- 支持 **PDF、Office 文档、图片和文本附件**，可拖拽或粘贴导入
+- **产物面板**自动收集 AI 创建或修改的文件，集中预览、定位和打开
+- **Markdown 产物可直接编辑**，也可选中内容继续让 AI 修改
+- **Plan / YOLO 双模式**：复杂任务先确认方案，明确任务可直接执行
 
-### 🔌 実用的なツールとコネクター
+### 🧠 知识与记忆
 
-- ローカル MCP サーバー、リモート MCP サーバー、CLI ツール、API コネクターをまとめて管理する**統合ツールストア**
-- 対応サービスでは **OAuth / SSO 認証**を利用可能 — キーを手動で貼り付ける必要はありません
-- **Feishu (Lark)、DingTalk、WeCom、Tencent Meeting、Tencent ima、Obsidian**、企業ナレッジベース、法務 / 企業データサービス向けのすぐに使えるコネクター
-- **リモートコントロール** — スマートフォンで QR コードを読み取るだけで、実行中のワークスペースを確認・操作できます
+- **本地知识库**支持文件管理、全文检索与向量检索；同一对话可挂载多个知识库并分别启用、停用或移除，回答保留知识库与文件来源
+- **记忆中心**沉淀长期偏好和上下文，并提供候选确认与管理
+- **专家卡牌池**可创建、保存和加持不同领域角色
+- **Skills、Commands 与工作流**把可复用的方法固化为稳定能力
 
-### 🖥️ 日常の運用を支える機能
+### 🔌 连接真实业务工具
 
-- **ローカル音声入力**に対応。音声認識モデルは必要に応じてダウンロードします
-- GPU、メモリ、ディスク、モデルサービス、コンテキスト使用量の**一元モニタリング**
-- アップデートは **GitHub Releases** 経由 — アプリ内アップデートの確認はまだ有効ではありません
-- セッション、設定、知識、ランタイム拡張はすべて `~/.pinvou3/` の下に保存されます
+- **工具商店**统一管理本地 MCP、远程 MCP、CLI 和 API 连接器
+- 支持 **OAuth / SSO** 等免手填密钥的授权方式
+- 可按需连接**飞书、钉钉、企业微信、腾讯会议、腾讯 ima、Obsidian**、企业知识库、法律与企业数据等能力
+- **移动端扫码**后可远程查看和控制当前工作区
+
+### 🖥️ 面向实际运行
+
+- **本地语音输入**，语音模型按需下载
+- GPU、内存、磁盘、模型服务与上下文使用情况**集中监控**
+- 版本更新通过 GitHub Releases 分发；应用启动时检查一次，之后每小时检查，发现新版本后停止轮询并显示升级入口
+- 会话、设置、知识和运行时扩展统一保存在 `~/.pinvou3/`
 
 > [!NOTE]
-> データがマシンの外に出るかどうかは、有効にしたモデルとツールによって変わります。ローカルモデルとローカルツールの組み合わせなら、処理は完全にローカルに留まります。クラウドモデル、リモート MCP サーバー、サードパーティコネクターは、関連するリクエストをそれぞれのサービスに送信します。
+> 数据是否离开本机取决于你选择的模型服务和工具。使用本地模型与本地工具时可保持本地闭环；启用云模型、远程 MCP 或第三方连接器时，相关请求会发送给对应服务。
 
-## 📸 スクリーンショット
+## 📸 界面预览
 
 <table>
   <tr>
-    <td width="50%"><img src="docs/assets/screenshots/mode-design.webp" alt="Pinvou Agent デザインモード"></td>
-    <td width="50%"><img src="docs/assets/screenshots/mode-code.webp" alt="Pinvou Agent コードモード"></td>
+    <td width="50%"><img src="docs/assets/screenshots/mode-design.webp" alt="鲜小助 设计模式"></td>
+    <td width="50%"><img src="docs/assets/screenshots/mode-code.webp" alt="鲜小助 代码模式"></td>
   </tr>
   <tr>
-    <td align="center">ポスターやデータビジュアライゼーションのためのデザインモード</td>
-    <td align="center">Codex、Claude Code、Kimi を使えるコードモード</td>
+    <td align="center">设计模式：海报与数据可视化</td>
+    <td align="center">代码模式：Codex、Claude Code 与 Kimi</td>
   </tr>
   <tr>
-    <td width="50%"><img src="docs/assets/screenshots/tool-store.webp" alt="Pinvou Agent ツールストア"></td>
-    <td width="50%"><img src="docs/assets/screenshots/artifacts-preview.webp" alt="Pinvou Agent 成果物プレビュー"></td>
+    <td width="50%"><img src="docs/assets/screenshots/tool-store.webp" alt="工具商店"></td>
+    <td width="50%"><img src="docs/assets/screenshots/artifacts-preview.webp" alt="产物预览"></td>
   </tr>
   <tr>
-    <td align="center">ツールとコネクターで Agent を拡張</td>
-    <td align="center">生成した成果物をプレビューして納品</td>
+    <td align="center">工具与连接器按需扩展</td>
+    <td align="center">产物集中预览与交付</td>
   </tr>
 </table>
 
-## 🤖 モデル接続
+## 🤖 模型接入
 
-Pinvou Agent は**ローカル vLLM** と任意の **OpenAI 互換 API** で動作します。複数のモデル設定をアプリに保存でき、クラウド設定には任意の表示名（エイリアス）を付けられます。プロバイダーに送るモデル識別子を変えずに、セッションごとに切り替えられます。内蔵テンプレートは、ローカル vLLM、DeepSeek、Kimi、Qwen、Doubao、MiniMax、Zhipu (GLM)、MiMo、OpenAI、Anthropic、Gemini、xAI に対応 — その他のカスタム互換エンドポイントも入力できます。
+鲜小助 支持**本地 vLLM** 和任意 **OpenAI-compatible API**。应用内可保存多个模型配置，为云端配置设置可选显示别名，并在不改变实际请求模型 ID 的情况下于不同会话间快速切换；当前提供本地 vLLM、DeepSeek、Kimi、通义千问、豆包、MiniMax、智谱、MiMo、OpenAI、Anthropic、Gemini、xAI 等配置模板，也可以填写自定义兼容端点。
 
-ローカル vLLM の例:
+本地 vLLM 示例：
 
 ```bash
 export DEEPSEEK_BASE_URL="http://127.0.0.1:8000/v1"
@@ -112,37 +111,37 @@ export DEEPSEEK_API_KEY="local-no-auth"
 export DEEPSEEK_MODEL="your-model-name"
 ```
 
-エンドポイント、モデル名、API キーは、アプリケーション設定から直接管理することもできます。信頼できる開発ネットワーク内のループバック以外のプレーン HTTP エンドポイントを使う場合は、`DEEPSEEK_ALLOW_INSECURE_HTTP=1` を明示的に設定してください。
+模型地址、模型名和密钥也可以直接在应用设置中管理。对于可信开发网络内的非本机明文 HTTP 端点，开发环境还需显式设置 `DEEPSEEK_ALLOW_INSECURE_HTTP=1`。
 
-## 🚀 クイックスタート
+## 🚀 快速开始
 
-### 前提条件
+### 前置条件
 
-- サブモジュールに対応した Git
-- Node.js と npm
-- 最新の Rust ツールチェーン
-- お使いのプラットフォーム向けの [Tauri 2 のシステム依存関係](https://v2.tauri.app/start/prerequisites/)
-- アクセス可能な OpenAI 互換モデルエンドポイント
+- Git（支持 submodule）
+- Node.js 与 npm
+- Rust toolchain
+- [Tauri 2 系统依赖](https://v2.tauri.app/start/prerequisites/)
+- 一个可访问的 OpenAI-compatible 模型端点
 
-ソースツリーは **Linux、Windows、macOS** に対応しています。Linux のリリースパッケージは、x86_64 と arm64 の Ubuntu 22.04 以降（glibc 2.35+）を対象としており、deb はさらに WebKitGTK 2.40+ が必要です（標準の updates pocket を適用済みの 22.04 システムであれば条件を満たします）。macOS のリリースパッケージは、macOS 11 以降向けのユニバーサル（Apple Silicon と Intel）ビルドです。音声認識エンジンはビルド構成ごとにパッケージ化できます。ファイル解析（PDF / Office / OCR / アーカイブ）は、プラットフォームのパッケージマネージャーでインストールできるオプションの外部ツールに依存します（`pinvou3-app/INSTALL.md` を参照）。
+源码树支持 **Linux、Windows 和 macOS**；Linux 发布包的目标基线为 Ubuntu 22.04 及以上（glibc 2.35+，x86_64 与 arm64；deb 另要求 WebKitGTK 2.40+，已应用标准更新源的 22.04 系统均满足），macOS 发布包为 universal（Apple Silicon + Intel）构建、要求 macOS 11.0+。语音识别引擎可按构建配置打包；文件解析（PDF / Office / OCR / 压缩包等）依赖可选外部工具，可通过 Homebrew、apt 或各工具官网安装（见 `pinvou3-app/INSTALL.md`）。
 
-### ソースから実行
+### 启动应用
 
 ```bash
-git clone --recursive https://github.com/Pinvou/pinvou-agent.git
-cd pinvou-agent/pinvou3-app
+git clone --recursive https://github.com/mlmr-coder/fresh-agent.git
+cd fresh-agent/pinvou3-app
 npm ci
 cd ..
 ./pinvou3-app/run-dev.sh
 ```
 
-サブモジュールなしでクローンした場合は:
+如果仓库已经克隆但 submodule 尚未拉取：
 
 ```bash
 git submodule update --init --recursive
 ```
 
-## 🏗️ アーキテクチャ
+## 🏗️ 架构
 
 [![Tauri](https://img.shields.io/badge/Tauri-2.0-24C8D8?logo=tauri&logoColor=white)](https://v2.tauri.app/)
 [![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)](https://react.dev/)
@@ -152,42 +151,43 @@ git submodule update --init --recursive
 ```text
 React + Vite UI
        ↕ Tauri commands / events
-pinvou3-app (desktop orchestration)
+pinvou3-app（桌面编排层）
        ↕ EngineHandle / AgentHarness
-CodeWhale (agent engine submodule)
-       ├─ OpenAI-compatible model services
-       ├─ MCP servers and CLI connectors
-       └─ Skills, Commands, Hooks, and Compaction
+CodeWhale（Agent 底座 submodule）
+       ├─ OpenAI-compatible 模型服务
+       ├─ MCP servers / CLI connectors
+       └─ Skills / Commands / Hooks / Compaction
 ```
 
-[CodeWhale](https://github.com/Pinvou/CodeWhale) が Agent エンジンを提供します: モデル呼び出し、ストリーミング、ツール実行、セッション、MCP、スキル、フック、コンパクション。`pinvou3-app/` はデスクトップ UI、ランタイム設定、オーケストレーション、OS 統合を担い、エンジンの機能を再実装することはありません。
+模型调用、流式输出、工具循环、Session、MCP client、Skills、Hooks 和 Compaction 由 [CodeWhale](https://github.com/Pinvou/CodeWhale) 底座提供。`pinvou3-app/` 负责桌面 UI、运行时配置、业务编排和系统集成，不重复实现底座能力。
 
-| 拡張の目的 | 実装する場所 |
+扩展能力时按以下边界落位：
+
+| 需求 | 扩展位置 |
 |---|---|
-| ドメイン Agent やツールバンドルを追加する | `SKILL.md` パッケージ |
-| 外部 API につなぐ | 独立した MCP サーバーまたはコネクター |
-| モデルの振る舞いを導く | バンドルの指示ファイル（`instructions.md`） |
-| デスクトップ UI やシステム統合を変える | `pinvou3-app/` |
-| 再利用可能なエンジンの問題を修正する | [フォークポリシー](docs/fork-policy.md) に従う CodeWhale フォーク |
+| 增加领域 Agent 或工具组合 | `SKILL.md` |
+| 接入外部 API | 独立 MCP server 或连接器 |
+| 调整模型行为 | bundle 中的 `instructions.md` |
+| 桌面 UI、系统能力或 Engine 配置 | `pinvou3-app/` |
+| 修复底座通用问题 | CodeWhale fork，并按 [fork policy](docs/fork-policy.md) 维护 |
 
-## 📁 リポジトリ構成
+## 📁 仓库结构
 
 ```text
-pinvou3-app/          Tauri 2 + React/Vite デスクトップアプリケーション
-CodeWhale/            Agent エンジン（サブモジュール）
-pinvou-knowledge/     再利用可能なナレッジコアとスタンドアロンサーバー
-remote-control-relay/ QR コードによるリモートコントロール用の任意設置（セルフホスト）中継
+pinvou3-app/          Tauri 2 + React/Vite 桌面应用
+CodeWhale/            Agent 底座 submodule
+pinvou-knowledge/     可复用知识库核心与自包含服务器
+remote-control-relay/ 扫码远控的可选自托管 relay
 pinvou3-app/resources/mcp-servers/
-                      独立したローカル MCP サーバー
-scripts/              テスト、ガード、ビルド、リリース用の補助スクリプト
-docs/                 アーキテクチャと保守のドキュメント
+                      独立 MCP 服务
+scripts/              测试、守卫、构建与发布脚本
+docs/                 架构设计、验证报告与维护文档
 ```
 
-## 🧪 開発チェック
-
-以下のコマンドをリポジトリのルートから実行します:
+## 🧪 常用验证
 
 ```bash
+# 以下命令均从仓库根目录执行
 (cd pinvou3-app && npm run lint:ui)
 (cd pinvou3-app && npm run build:ui)
 (cd pinvou3-app && npm test)
@@ -197,43 +197,29 @@ docs/                 アーキテクチャと保守のドキュメント
 ./scripts/fork-guard.sh --fast
 ```
 
-## 🤝 コントリビュート
+## 🤝 参与贡献
 
-コントリビューションを歓迎します! コントリビューションのワークフローと CI ゲートについては [CONTRIBUTING.md](CONTRIBUTING.md) を、CodeWhale のメンテナンスルールについては [fork ポリシー](docs/fork-policy.md) と [現在のフォーク変更一覧](docs/fork-modifications.md) を参照してください。参加することで、[行動規範](CODE_OF_CONDUCT.md) に同意したものとみなされます。
+欢迎贡献！提交前请阅读 [贡献指南](CONTRIBUTING.md) 了解流程与 CI 门控；涉及 CodeWhale 底座的改动请遵循 [fork 策略](docs/fork-policy.md) 与 [当前 fork 修改清单](docs/fork-modifications.md)。
 
-## 💬 コミュニティとセキュリティ
+## 💬 社区与安全
 
-- 🐧 **QQ ユーザーグループ（中国語 / Chinese）: 1108909346** — 下の QR コードを読み取るか、QQ でグループ番号を検索してください
-- 🐛 [GitHub Issues](https://github.com/Pinvou/pinvou-agent/issues) — 再現手順のあるバグや、焦点の定まった機能リクエスト
-- 💡 [GitHub Discussions](https://github.com/Pinvou/pinvou-agent/discussions) — 質問やアイデア（コミュニティサポートはベストエフォートです。[SUPPORT.md](SUPPORT.md) を参照）
-- 🔒 **セキュリティの脆弱性を公開イシューで報告しないでください** — [SECURITY.md](SECURITY.md) の非公開チャネルか、`security@pinvou.com` 宛のメールを利用してください
+- 🐛 [GitHub Issues](https://github.com/mlmr-coder/fresh-agent/issues) — 可复现的 bug 与聚焦的功能建议
+- 💡 [GitHub Discussions](https://github.com/mlmr-coder/fresh-agent/discussions) — 问题与想法交流
+- 🔒 **请勿在公开 Issue 中报告安全漏洞** — 请使用 [SECURITY.md](SECURITY.md) 中的私有渠道
 
-<p align="center">
-  <img src="pinvou3-app/src/assets/community/qq-group-1108909346.png" alt="Pinvou Agent 公式 QQ ユーザーグループ（グループ番号 1108909346）の QR コード" width="260" />
-</p>
+## 📖 进一步阅读
 
-ライセンス、サードパーティの帰属表示、SBOM、ブランド利用の範囲、拡張マーケットの概要は、[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)、[docs/sbom.md](docs/sbom.md)、[TRADEMARKS.md](TRADEMARKS.md)、[docs/工具市场.md](docs/工具市场.md) にまとめられています。
-
-## 🔗 フレンドリーリンク
-
-- [LINUX DO](https://linux.do/)
-
-## ⭐ Star History
-
-<a href="https://www.star-history.com/?repos=pinvou%2Fpinvou-agent&type=date">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=pinvou%2Fpinvou-agent&type=date&theme=dark&sealed_token=k7dkorBV3gOYRbA3ai0hCjYhzSjr1TFHk6Z9Lxdr5i_rhBGio7qlD80ERUfWzofzxF8394-zl1QwsZJEhzGPELvh9_Fm4xXR5Jm4xdEAfAENh8uizuoqey8O1_1aY5b-IZZsqiZjk3VyNn3v8sAgDQmveN9oz2jtOlYmwOYMYZYOhJp8mTouzJQyRCAB" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=pinvou%2Fpinvou-agent&type=date&sealed_token=k7dkorBV3gOYRbA3ai0hCjYhzSjr1TFHk6Z9Lxdr5i_rhBGio7qlD80ERUfWzofzxF8394-zl1QwsZJEhzGPELvh9_Fm4xXR5Jm4xdEAfAENh8uizuoqey8O1_1aY5b-IZZsqiZjk3VyNn3v8sAgDQmveN9oz2jtOlYmwOYMYZYOhJp8mTouzJQyRCAB" />
-   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=pinvou%2Fpinvou-agent&type=date&sealed_token=k7dkorBV3gOYRbA3ai0hCjYhzSjr1TFHk6Z9Lxdr5i_rhBGio7qlD80ERUfWzofzxF8394-zl1QwsZJEhzGPELvh9_Fm4xXR5Jm4xdEAfAENh8uizuoqey8O1_1aY5b-IZZsqiZjk3VyNn3v8sAgDQmveN9oz2jtOlYmwOYMYZYOhJp8mTouzJQyRCAB" />
- </picture>
-</a>
+- [第三方许可声明](THIRD_PARTY_NOTICES.md)
+- [应用更新机制](docs/application-updates.md)
+- [品牌与兼容性说明](docs/branding.md)
+- [工具市场概览](docs/工具市场.md)
 
 ---
 
 <div align="center">
 
-Pinvou Agent は現在も活発に開発が進んでいます。現在の動作に関する正しい情報源は、`main` ブランチと最新のリリースノートです。
+鲜小助 正在持续迭代中，功能状态以 `main` 分支和当前发布版本为准。
 
-**[MIT ライセンス](LICENSE)** · Pinvou チームとコントリビューターが ❤️ を込めて開発しています
+**[MIT License](LICENSE)** · 由 鲜小助 团队与社区贡献者用 ❤️ 打造
 
 </div>

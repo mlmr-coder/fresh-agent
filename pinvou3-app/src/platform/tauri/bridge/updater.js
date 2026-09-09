@@ -16,8 +16,13 @@
     const getBuffer = context.getBuffer;
     const bt = context.bt;
   const UPDATE_PROGRESS_NOTIFY_INTERVAL_MS = 200;
+  const UPDATE_CHECK_INTERVAL_MS = 60 * 60 * 1000;
   /** @type {number | null} */
   let updateProgressNotifyTimer = null;
+  /** @type {number | null} */
+  let updateCheckTimer = null;
+  let updateCheckInFlight = false;
+  let periodicUpdateChecksStarted = false;
 
   function cancelScheduledUpdateProgressNotification() {
     if (updateProgressNotifyTimer === null) return;
@@ -81,11 +86,40 @@
   // 启动静默检查: 失败全吞(网络差/更新源挂了不打扰用户)。结果不管新旧都存——
   // available 驱动红点,current_version 给设置页显示当前版本用。
   async function checkForUpdateSilently() {
+    if (updateCheckInFlight || state.updateDownloading || state.updateReady) return;
+    updateCheckInFlight = true;
     try {
       const info = await invoke("check_for_update");
       if (info && info.current_version) state.appVersion = info.current_version;
       if (info) { state.updateInfo = info; notify(); }
+      if (info && info.available) stopPeriodicUpdateChecks();
     } catch { /* 静默 */ }
+    finally { updateCheckInFlight = false; }
+  }
+  function scheduleNextUpdateCheck() {
+    if (!periodicUpdateChecksStarted || updateCheckTimer !== null
+        || (state.updateInfo && state.updateInfo.available)
+        || typeof root.setTimeout !== "function") return;
+    updateCheckTimer = root.setTimeout(async function () {
+      const firedTimer = updateCheckTimer;
+      await checkForUpdateSilently();
+      if (updateCheckTimer === firedTimer) updateCheckTimer = null;
+      scheduleNextUpdateCheck();
+    }, UPDATE_CHECK_INTERVAL_MS);
+  }
+  // Check immediately and then one hour after each completed check while the installed
+  // version remains current. Finding a newer version stops the pending work.
+  function startPeriodicUpdateChecks() {
+    if (periodicUpdateChecksStarted || (state.updateInfo && state.updateInfo.available)
+        || typeof root.setTimeout !== "function") return;
+    periodicUpdateChecksStarted = true;
+    checkForUpdateSilently().finally(scheduleNextUpdateCheck);
+  }
+  function stopPeriodicUpdateChecks() {
+    periodicUpdateChecksStarted = false;
+    if (updateCheckTimer === null) return;
+    if (typeof root.clearTimeout === "function") root.clearTimeout(updateCheckTimer);
+    updateCheckTimer = null;
   }
   // 设置页手动检查: 错误和「已是最新」都要反馈。
   async function checkForUpdate() {
@@ -94,28 +128,27 @@
       const info = await invoke("check_for_update");
       if (info && info.current_version) state.appVersion = info.current_version;
       state.updateInfo = info;
-      if (!info.available) state.updateCheckError = "latest"; // 前端按 i18n 显示「已是最新」
+      if (info.available) stopPeriodicUpdateChecks();
+      else state.updateCheckError = "latest"; // 前端按 i18n 显示「已是最新」
     } catch (e) {
       state.updateCheckError = String(e);
     }
     state.updateChecking = false; notify();
   }
-  // 下载+安装一条龙: Linux 下载 deb 后 pkexec apt 并自动重启;Windows 下载 zip 后解析 MSI,
-  // 安装器启动成功后 Windows 退出当前进程；Linux/macOS 在安装后由前端重启。
+  // 下载+安装一条龙:Linux 通过 pkexec apt 安装 deb；Windows 启动 NSIS 后退出；
+  // macOS 从 dmg 替换应用包。Linux/macOS 安装完成后由前端重启。
   async function downloadAndInstallUpdate() {
     if (!state.updateInfo || !state.updateInfo.available || state.updateDownloading) return false;
     // 入口捕获发起时的更新信息：下载/安装期间静默检查可能替换 updateInfo，
-    // download/install 参数须仍指向发起时的版本（审计）。当前基线的 install_update
-    // 为 unsupported 桩（info 未参与行为），此配对为面向完整平台实现的防御性修复。
-    // invoke 文本保持原样。
+    // download/install 参数须始终指向发起时的版本，避免元数据漂移。
     const info = state.updateInfo;
-    const shouldRestartAfterInstall = info.platform !== "windows";
+    const shouldRestartAfterInstall = info.platform === "linux" || info.platform === "macos";
     let installed = false;
     cancelScheduledUpdateProgressNotification();
     state.updateDownloading = true; state.updateCancelling = false;
     state.updateProgress = 0; state.updateError = null; notify();
     try {
-      const downloadResult = await invoke("download_update", { info: state.updateInfo });
+      const downloadResult = await invoke("download_update", { info });
       cancelScheduledUpdateProgressNotification();
       state.updateProgress = 100; notify();
       state.updateInfo = info; // 复原：install 用发起时的版本元数据，不随静默检查漂移
@@ -154,6 +187,7 @@
     return {
       loadAppVersion,
       checkForUpdateSilently,
+      startPeriodicUpdateChecks,
       checkForUpdate,
       downloadAndInstallUpdate,
       cancelUpdate,

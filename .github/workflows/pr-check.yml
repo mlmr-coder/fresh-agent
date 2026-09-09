@@ -194,8 +194,10 @@ jobs:
             release_contract:
               - 'VERSION'
               - 'scripts/sync-version.mjs'
+              - 'scripts/generate-update-manifest.mjs'
               - 'scripts/check-linux-glibc-floor.sh'
               - 'scripts/tests/sync-version.test.mjs'
+              - 'scripts/tests/generate-update-manifest.test.mjs'
               - 'scripts/tests/test_ci_gate_policy.py'
               - 'scripts/tests/test_release_arm64_policy.py'
               - 'scripts/tests/test_release_linux_floor_policy.py'
@@ -520,6 +522,7 @@ jobs:
       # 此处不重复;仅跑 Tauri overlay、各平台打包与知识宿主契约。
       - name: Tauri 打包与发布配置契约
         run: |
+          node --test scripts/tests/generate-update-manifest.test.mjs
           npm --prefix pinvou3-app run test:tauri-layout
           npm --prefix pinvou3-app run test:tauri-effective-config
           npm --prefix pinvou3-app run test:macos-phase2

@@ -1,20 +1,9 @@
-//! 应用内升级（当前未实施）：各平台更新检查与安装均为 unsupported 占位——
-//! `check_for_update_info` 恒返回无更新，下载/安装返回不支持；应用内更新能力规划中。
+//! GitHub Release based application updates.
 //!
-//! 以下为历史设计（未实施，仅作背景保留）：
-//! - Linux：检查 latest.json → 下载 deb（sha256 校验）→ pkexec apt 安装 → 重启。
-//! - Windows：社区版首发暂不提供应用内更新，安装包由 GitHub Releases 分发。
-//!
-//! 设计要点（未实施）：
-//! - **更新源是静态 HTTP**：服务器只托管 `latest.json` + deb 文件，零服务端逻辑。
-//!   Tauri 官方 updater plugin 不支持 deb，所以这里自建轻量机制。
-//! - **URL 不进 settings.json**：更新源是基础设施不是用户偏好，可改会成攻击面。
-//!   `PINVOU3_UPDATE_URL` env 可覆盖（e2e 测试指本地 http server）。
-//! - **下载目录用 `~/.pinvou3/updates/`** 而非 /tmp：tmpfs 受内存限制且重启清空。
-//! - **安装走 pkexec**（弹系统密码框），与 super_permission.rs 同套路；但这里用
-//!   `.output()` 捕 stderr 透传 apt 真实报错（lock 占用 / 磁盘不足等）。
-//! - **inode 语义**：apt 替换 `/usr/bin/pinvou3` 后老进程持旧 inode 继续跑无害，
-//!   `app.restart()` 按路径 exec 才换到新版。所以装完不强制重启，前端给按钮。
+//! The client reads `latest.json`, selects the asset for the current platform,
+//! compares SemVer versions, downloads with progress reporting, verifies SHA-256,
+//! and starts the platform installer. Linux installs the deb through `pkexec`,
+//! Windows starts NSIS, and macOS replaces the verified application with rollback.
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
@@ -50,14 +39,12 @@ pub struct UpdateInfo {
     pub size: u64,
     #[serde(default)]
     pub platform: String,
-    /// 多平台清单:`{ "macos-universal": PlatformAsset, "linux-arm64": ..., ... }`。
-    /// 旧版 latest.json 没这字段 → 空 map → 调用方回退到顶层 url/sha256/size。
+    /// Assets from the multi-platform release manifest.
     #[serde(default)]
     pub platforms: std::collections::HashMap<String, PlatformAsset>,
 }
 
-/// 多平台更新清单的单平台资产。`latest.json` 的 `platforms` map 每个值用这个类型。
-/// 客户端按平台 key（如 `macos-universal`、`linux-arm64`）选自己平台的资产;缺失则回退到顶层 url/sha256/size。
+/// One platform asset from the `latest.json` `platforms` map.
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct PlatformAsset {
     pub url: String,
@@ -71,10 +58,7 @@ pub struct PlatformAsset {
     pub restart_after_install: bool,
     #[serde(default)]
     pub notes: String,
-    /// 本平台资产自己的版本号。各平台独立发版(Mac 先发 0.7.0、Linux 还在 0.6.3)时,
-    /// 客户端用**本平台**版本判要不要升级,而不是读顶层 .version —— 后者代表「最近一次
-    /// Linux 发版」,Mac 客户端读它会被误导。旧 manifest / 旧 platform 条目无此字段 → 空
-    /// 串 → 调用方回退到顶层 version(向后兼容)。
+    /// Asset-specific version. Empty values fall back to the manifest version.
     #[serde(default)]
     pub version: String,
 }
@@ -128,7 +112,7 @@ pub async fn download_update(
     platform::download_update_package(&info, app, &DOWNLOAD_CANCEL, DOWNLOAD_STALL_TIMEOUT).await
 }
 
-/// 安装下载好的更新包。Linux 走 pkexec apt；macOS 打开已校验的安装镜像。
+/// 安装下载好的更新包。Linux 走 pkexec apt；macOS 从已校验镜像替换应用包。
 pub async fn install_update(
     deb_path: Option<String>,
     installer_path: Option<String>,

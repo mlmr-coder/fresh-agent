@@ -285,7 +285,7 @@ fn acp_recovery_record(
     temporary_workspace: &Path,
 ) -> Result<SessionAgentRecord> {
     if state["pinvouSessionId"].as_str() != Some(pinvou_session_id) {
-        bail!("acp-state.json 的 Pinvou 会话 ID 不匹配");
+        bail!("acp-state.json 的 鲜小助 会话 ID 不匹配");
     }
     if !expected_backend.is_acp() {
         bail!("会话元数据不是 ACP Agent");
@@ -830,7 +830,7 @@ impl AcpSession {
     }
 }
 
-/// “代码”模块原生（品悟 Engine）会话的工作区信息。
+/// “代码”模块原生（鲜小助 Engine）会话的工作区信息。
 ///
 /// 临时会话执行目录与 ACP 临时会话一样由 `SessionStore::session_roots` 推导；
 /// 项目会话返回绑定的项目目录，available 语义与 ACP 项目分支一致（目录存在即可用）。
@@ -1239,7 +1239,7 @@ impl AcpPool {
                     .context("原生项目会话缺少工作目录记录")?;
                 return validate_codex_project_workspace(&path).with_context(|| {
                     format!(
-                        "品悟会话绑定的项目目录已不可用: {}。请恢复该目录，或新建会话选择其他项目",
+                        "鲜小助会话绑定的项目目录已不可用: {}。请恢复该目录，或新建会话选择其他项目",
                         path.display()
                     )
                 });
@@ -1737,13 +1737,13 @@ impl AcpPool {
         self.refresh_runtime_probe(false).await;
         let status = self.status_async().await;
         if !status.bridge_ready {
-            bail!("Pinvou 安装包缺少可用的 Codex ACP Bridge，请重新安装或重新生成 Bridge Runtime");
+            bail!("鲜小助 安装包缺少可用的 Codex ACP Bridge，请重新安装或重新生成 Bridge Runtime");
         }
         if status.update_required {
             bail!("当前 Codex CLI 已无法支持所选模型，请先升级到官方最新版后重试");
         }
         if !status.codex_available {
-            bail!("未检测到兼容的 Codex CLI，请先通过 Pinvou 运行官方安装或升级后重试");
+            bail!("未检测到兼容的 Codex CLI，请先通过 鲜小助 运行官方安装或升级后重试");
         }
         Ok(status)
     }

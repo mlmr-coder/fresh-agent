@@ -132,11 +132,11 @@ fn transient_read_error_keeps_authoritative_target_untouched() {
     let root = recovery_test_root("transient-read-guard");
     let target = root.join("profile.json");
     let backup = target.with_extension("bak");
-    let authoritative = "{\"version\":1,\"revision\":9,\"identity\":{\"call_name\":\"权威\",\"assistant_alias\":\"品悟\"}}\n";
+    let authoritative = "{\"version\":1,\"revision\":9,\"identity\":{\"call_name\":\"权威\",\"assistant_alias\":\"鲜小助\"}}\n";
     fs::write(&target, authoritative).unwrap();
     fs::write(
         &backup,
-        "{\"version\":1,\"revision\":1,\"identity\":{\"call_name\":\"旧值\",\"assistant_alias\":\"品悟\"}}\n",
+        "{\"version\":1,\"revision\":1,\"identity\":{\"call_name\":\"旧值\",\"assistant_alias\":\"鲜小助\"}}\n",
     )
     .unwrap();
 
@@ -267,7 +267,7 @@ fn corrupted_authoritative_file_self_heals_from_backup() {
     let root = recovery_test_root("corrupt-self-heal");
     let target = root.join("profile.json");
     let backup = target.with_extension("bak");
-    let authoritative = "{\"version\":1,\"revision\":9,\"identity\":{\"call_name\":\"权威\",\"assistant_alias\":\"品悟\"}}\n";
+    let authoritative = "{\"version\":1,\"revision\":9,\"identity\":{\"call_name\":\"权威\",\"assistant_alias\":\"鲜小助\"}}\n";
     // The authoritative file is deterministically corrupted (invalid
     // UTF-8) while a valid older backup exists. The deterministic error
     // must still fall through to recovery so the file self-heals.
@@ -963,7 +963,7 @@ fn writes_memory_snapshot_document_for_debugging() {
 
     assert_eq!(path, snapshot_path());
     let doc = fs::read_to_string(path).unwrap();
-    assert!(doc.contains("# PINVOU 设备记忆快照"));
+    assert!(doc.contains("# 鲜小助 设备记忆快照"));
     assert!(doc.contains("用户称呼"));
     assert!(doc.contains("回答先给结论"));
     assert!(doc.contains("pinvou-memory-snapshot/v1"));
@@ -1100,8 +1100,8 @@ fn llm_review_prompt_matches_supported_actions() {
 
 /// The memory review prompt body carries no language constraint of its own; the
 /// output-language directive is appended per locale (`content` / `reason` follow
-/// the UI language, enum values stay ASCII); zh-Hans/unknown → no-op. The en/ja
-/// branches are defense-in-depth (memory is disabled for non-Chinese UIs by
+/// the UI language, enum values stay ASCII); zh-Hans/unknown → no-op. The en
+/// branch is defense-in-depth (memory is disabled for non-Chinese UIs by
 /// enforce_memory_locale_policy), mirroring the review-side precedent.
 #[test]
 fn memory_review_output_language_directive_follows_locale() {
@@ -1118,11 +1118,6 @@ fn memory_review_output_language_directive_follows_locale() {
     assert!(
         en.contains("Keep") && en.contains("JSON keys") && en.contains("exactly as"),
         "en directive must keep JSON keys/enum values ASCII: {en}"
-    );
-    let ja = memory_output_language_directive("ja").expect("ja must have a directive");
-    assert!(
-        ja.contains("Japanese"),
-        "ja directive must name Japanese: {ja}"
     );
     let zh = memory_output_language_directive("zh-Hans").expect("zh-Hans must have a directive");
     assert!(

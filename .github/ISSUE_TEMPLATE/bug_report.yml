@@ -1,67 +1,66 @@
-name: Bug report
-description: Report a reproducible problem in Pinvou Agent Community
-title: "[Bug]: "
+name: 缺陷报告
+description: 报告鲜小助中可以稳定复现的问题
+title: "[缺陷] "
 labels:
   - bug
 body:
   - type: markdown
     attributes:
       value: |
-        Thanks for helping improve Pinvou Agent. Remove credentials, private data, account identifiers, and internal URLs before submitting.
-        Do not report security vulnerabilities here. Use the private security link in the template chooser.
+        感谢你帮助改进鲜小助。提交前请删除凭据、私人数据、账号标识和内部地址。
+        安全漏洞请使用私密安全报告入口，不要在这里公开。
   - type: input
     id: version
     attributes:
-      label: Version or commit
-      description: The release version or Git commit where the problem occurs.
-      placeholder: "0.7.0 or abc1234"
+      label: 版本或提交
+      description: 出现问题的发布版本或 Git 提交。
+      placeholder: "0.9.3 或 abc1234"
     validations:
       required: true
   - type: dropdown
     id: operating-system
     attributes:
-      label: Operating system
+      label: 操作系统
       options:
         - Linux x86_64
         - Linux ARM64
         - Windows x86_64
         - macOS Apple Silicon
-        - Other
+        - macOS Intel
+        - 其他
     validations:
       required: true
   - type: textarea
     id: description
     attributes:
-      label: Problem
-      description: What happened, and what did you expect instead?
+      label: 问题描述
+      description: 实际发生了什么？你期望的结果是什么？
     validations:
       required: true
   - type: textarea
     id: reproduction
     attributes:
-      label: Reproduction steps
-      description: Provide the smallest reliable sequence that reproduces the problem.
+      label: 复现步骤
+      description: 请提供可以稳定复现问题的最短步骤。
       placeholder: |
-        1. Start Pinvou Agent with ...
-        2. Open ...
-        3. Run ...
-        4. Observe ...
+        1. 启动鲜小助……
+        2. 打开……
+        3. 执行……
+        4. 观察到……
     validations:
       required: true
   - type: textarea
     id: logs
     attributes:
-      label: Redacted logs or screenshots
-      description: Include only relevant material and remove secrets and private information.
+      label: 已脱敏日志或截图
+      description: 只提供相关信息，并删除密钥和私人数据。
       render: shell
   - type: checkboxes
     id: checks
     attributes:
-      label: Submission checks
+      label: 提交前检查
       options:
-        - label: I searched existing issues and did not find the same problem.
+        - label: 我已搜索现有 Issue，没有发现相同问题。
           required: true
-        - label: I wrote the issue title and description in English.
-          required: true
-        - label: This report does not disclose an unpatched security vulnerability.
+        - label: 此报告不包含尚未修复的安全漏洞。
           required: true

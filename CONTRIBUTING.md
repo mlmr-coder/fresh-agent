@@ -1,149 +1,69 @@
-# Contributing to Pinvou Agent
+# 参与鲜小助开发
 
-[English](CONTRIBUTING.md) | [简体中文](CONTRIBUTING.zh-CN.md)
+感谢你参与鲜小助。提交改动前，请先确认需求边界、现有实现和 CodeWhale 已提供的能力，避免在应用层重复实现底座功能。
 
-Thank you for helping improve Pinvou Agent. Bug fixes, documentation, connectors, Skills, workflows, platform support, and focused product improvements are welcome.
+## 开发环境
 
-This document covers the contribution workflow. Project-wide implementation and quality boundaries are defined in [AGENTS.md](AGENTS.md).
+1. 安装 Git、Node.js、npm、Rust 工具链和 [Tauri 2 系统依赖](https://v2.tauri.app/start/prerequisites/)。
+2. 克隆仓库并初始化子模块：
 
-## Before you start
+   ```bash
+   git clone --recursive https://github.com/mlmr-coder/fresh-agent.git
+   cd fresh-agent
+   ```
 
-1. Search existing issues and pull requests to avoid duplicate work.
-2. Discuss large features, architecture changes, and breaking changes in an issue first.
-3. Follow [README.md](README.md) for development setup.
-4. Start from the latest official `main`.
+3. 安装前端依赖并启动开发环境：
 
-Maintainers may branch from `origin/main`. External contributors should configure the official repository once and branch from `upstream/main`:
+   ```bash
+   cd pinvou3-app
+   npm ci
+   cd ..
+   ./pinvou3-app/run-dev.sh
+   ```
 
-```bash
-git remote add upstream https://github.com/Pinvou/pinvou-agent.git
-git fetch upstream
-git switch -c feat/short-description upstream/main
-git submodule update --init --recursive
-```
+## 代码边界
 
-Sync the latest official `main` before opening a pull request. During review, do not
-repeatedly rebase only because `main` advances. When a pull request is ready, the
-merge queue validates its combined tree against the latest `main`; manually rebase
-again only to resolve a real conflict or when the queue reports an integration
-failure that requires a branch change.
+- 桌面界面、Tauri 集成和 Engine 配置放在 `pinvou3-app/`。
+- 领域 Agent 与工具组合优先放在 `SKILL.md`。
+- 外部 API 和独立能力使用 MCP 服务或连接器。
+- 模型行为指导放在 bundle 的 `instructions.md`。
+- CodeWhale 负责模型调用、流式输出、工具循环、会话、Skills、Commands、MCP、Hooks 与 Compaction。通用底座问题优先提交到上游。
+- 涉及 CodeWhale fork 行为时，同步更新 `docs/fork-modifications.md` 并运行 `./scripts/fork-guard.sh --fast`。
 
-When resolving conflicts, preserve compatible functionality and user changes from
-both sides. Do not choose between behaviorally different alternatives without
-explaining the options and their impact to the user.
+## 分支与提交
 
-## DCO
+- 从最新 `main` 创建分支，分支名应清楚表达任务，例如 `feat/application-update`。
+- 提交标题使用 `feat:`、`fix:`、`docs:`、`refactor:`、`test:`、`build:`、`ci:` 或 `chore:` 等常用类型。
+- 提交说明可以使用中文，内容应说明实际变化。
+- 人工提交使用 `git commit -s` 添加 `Signed-off-by`，具体含义见 [DCO 说明](DCO.md)。
+- 不得提交账号、密码、密钥、令牌、Cookie、客户数据、内部地址或本地私有文件。
 
-Every human-authored commit must include a valid `Signed-off-by`:
+## 验证
 
-```bash
-git commit -s
-```
-
-Use `--signoff` when amending or rebasing existing commits. See [DCO.md](DCO.md). CI rejects unsigned human commits; trusted Dependabot and GitHub Actions bot commits and merge commits (more than one parent) are exempt.
-
-## Where changes belong
-
-Pinvou Agent uses [CodeWhale](https://github.com/Pinvou/CodeWhale) as its agent engine. Do not reimplement engine capabilities in the desktop layer. The extension-boundary table is defined once in [AGENTS.md](AGENTS.md) §2; CodeWhale changes must follow it and [`docs/fork-policy.md`](docs/fork-policy.md), including the required same-PR documentation, fingerprints, and tests.
-
-## Commit messages
-
-Use:
-
-```text
-<type>: <English description>
-<type>(<scope>)!: <English description>
-```
-
-`scope` and `!` are optional. Allowed types are `feat`, `fix`, `refactor`, `perf`, `docs`, `style`, `test`, `build`, `ci`, `chore`, and `revert`. Write concise English descriptions of at most 50 characters without ending punctuation. CI validates the format, not the language.
-
-Use English for branches, issues, pull requests, commits, code comments, developer documentation, and diagnostics. Existing history and localized resources are exempt; UI copy follows [AGENTS.md](AGENTS.md).
-
-See [`docs/commit-message-convention.md`](docs/commit-message-convention.md) for the full commit rules.
-
-## Local checks
-
-Run checks that match the affected area. A common baseline is:
+按改动范围运行必要检查。常用命令如下：
 
 ```bash
-./scripts/fork-guard.sh --fast
+(cd pinvou3-app && npm run lint)
+(cd pinvou3-app && npm run build:ui)
+(cd pinvou3-app && npm test)
 python3 scripts/architecture-guard.py
-npm --prefix pinvou3-app run lint:ui
-npm --prefix pinvou3-app run build:ui
-npm --prefix pinvou3-app test
-cargo fmt --manifest-path pinvou3-app/src-tauri/Cargo.toml -- --check
-cargo test --manifest-path pinvou3-app/src-tauri/Cargo.toml --lib -- --test-threads=1
+./scripts/fork-guard.sh --fast
 ```
 
-Optionally, enable the local commit-msg hook to catch commit-message format issues before pushing:
+Rust 业务逻辑变更还应运行：
 
 ```bash
-git config core.hooksPath .githooks
+RUSTC_WRAPPER="$(./pinvou3-app/src-tauri/scripts/rustc-stack-wrapper-select.sh)" \
+TAURI_CONFIG='{"app":{"macOSPrivateApi":true}}' \
+  cargo test --manifest-path pinvou3-app/src-tauri/Cargo.toml --lib -- --test-threads=1
 ```
 
-Run additional frontend, Relay, Rust, CodeWhale, or platform checks when relevant. The workflows in [`.github/workflows/`](.github/workflows/) are the source of truth for automated gates. Disclose checks that could not be run locally.
-
-Tests requiring a live model, network service, credential, or large model asset must be ignored by default and provide an explicit opt-in command.
-
-## CI and merge queue
-
-Pull requests use a staged, path-aware gate. Draft pull requests run fast feedback
-(lint, build, deterministic logic tests, and Rust formatting where applicable).
-Ready pull requests add browser smokes selected from the actual diff, platform
-runtime contracts, and other affected checks. Ready Rust pull requests run fast
-formatting, lint, dependency-policy, and compile feedback by default. All unknown
-Rust paths fail closed to full regression; only documented isolated leaf-feature
-boundaries use the lightweight route. Dependency, CodeWhale gitlink, app-command,
-platform, permission, credential, session, remote-control, and other high-blast-
-radius paths automatically add full Linux and Windows Rust regression before
-queueing. Maintainers can apply `ci:full-rust` to force the same full regression
-for another ready Rust pull request; the label has no effect on a draft.
-The current lightweight Rust boundaries are internal-only changes under `feedback`,
-`personas`, and `pet`. Changing their registration, app commands, shared platform
-surface, Cargo metadata, or any unclassified Rust path still runs full regression.
-Release-chain changes run lightweight contract tests only; full deb, dmg, and nsis
-packages are built only after a
-`VERSION` change reaches `main`, or through an explicit `workflow_dispatch`.
-
-The merge queue runs the applicable product gates against the actual combined tree
-of the queued pull request and the latest `main`. Rust changes run formatting,
-Clippy, compile, and dependency-policy checks there. High-blast-radius Rust changes
-also run the full Linux behavior regression on the combined tree; Windows coverage
-already ran on the ready PR and is not repeated. Frontend changes run browser smokes
-selected from the merge group's actual base/head diff; shared, unknown, or test-
-infrastructure paths fall back to the complete smoke set. Every retained `main` push
-runs cumulative Linux compile verification (full test execution stays on the
-merge-queue leg, which already validates the same combined tree) and native Windows
-checks, and continues to warm the shared caches. A red main regression is a stop
-signal for further queueing until it is fixed or reverted. During review, maintainers should inspect only required checks:
+版本号只修改根目录 `VERSION`，然后执行：
 
 ```bash
-gh pr checks <number> --required
+node scripts/sync-version.mjs
 ```
 
-Do not wait for non-required post-merge platform or release builds when `main` is
-green. Queue independent ready pull requests without routine rebases; resolve actual
-conflicts, and let the queue validate freshness. Maintainers may queue at most two
-low-risk, independent pull requests in one merge group. Dependency-lock, CI, release,
-permission, session, CodeWhale gitlink, and other high-risk changes enter alone.
+## 提交合并请求
 
-## Pull requests
-
-Review the actual diff against the target branch and complete the quality self-check required by [AGENTS.md](AGENTS.md) before submission.
-
-Pull request titles and descriptions must use English; titles must follow the commit subject convention for squash merges.
-
-A pull request should explain:
-
-- what changed and why;
-- affected features, platforms, compatibility, and known risks;
-- tests actually run;
-- unverified scenarios or environment limitations.
-
-Keep changes focused. Update documentation and regression tests with behavior changes. Resolve conflicts against the latest official `main` before merge. The project uses CI-gated pull requests and squash merge by default.
-
-By participating, you agree to follow [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md). Support expectations are documented in [SUPPORT.md](SUPPORT.md).
-
-## Security
-
-Never commit credentials, tokens, passwords, customer or private data, or internal-only addresses. Report unpatched vulnerabilities privately through [SECURITY.md](SECURITY.md) or `security@pinvou.com`.
+合并请求应说明问题、最终行为、关键实现、验证结果和已知限制。提交前请检查需求是否完整、异常状态是否处理、兼容性是否保持，以及文档和测试是否同步。

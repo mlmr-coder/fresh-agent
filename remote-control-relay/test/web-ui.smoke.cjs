@@ -400,7 +400,7 @@ async function main() {
     if (message?.kind === 'http_request') relayHttpRequestTargets.push(String(message.target));
   });
   relay.stderr.on('data', chunk => process.stderr.write(chunk));
-  await waitForOutput(relay, /pinvou remote relay listening/);
+  await waitForOutput(relay, /鲜小助 remote relay listening/);
 
   browser = await puppeteer.launch({
     executablePath: CHROME,

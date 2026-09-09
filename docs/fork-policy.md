@@ -2,8 +2,6 @@
 
 > 最后更新：2026-08-28（公开维护基线：上游 `v0.9.5` r12；r11 的 PR #18、#21、#22、#25、#26、#27、#29、#30 与 r12 的 PR #33、#35 已发布到现有 4 个 Pinvou 主题，父仓 gitlink 由父仓 PR #375 接入）
 > 配套：`docs/fork-modifications.md`、`scripts/fork-guard.sh`、`docs/底座升级验收清单.md`
-> English: [`docs/fork-policy.en.md`](fork-policy.en.md)
-
 ## 0. 当前基线
 
 - 上游：`Hmbown/CodeWhale` tag `v0.9.5`，commit `853cb707bbcf4f7dc4268fba6d811e0d04083f9c`。

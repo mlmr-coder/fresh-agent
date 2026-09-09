@@ -1,80 +1,45 @@
-# Third-Party Notices
+# 第三方许可声明
 
-Pinvou Agent includes or redistributes the following open-source components.
-Their original licenses remain in effect.
+鲜小助包含或再分发下列开源组件，各组件继续遵循其原始许可证。
 
-## Directly included or downloaded components
+## 直接包含或按需下载的组件
 
-| Component | Version or baseline | Included form | License | Upstream |
+| 组件 | 版本或基线 | 使用方式 | 许可证 | 上游地址 |
 |---|---|---|---|---|
-| CodeWhale | `pinvou-v0.9.5-r8` | Public Git submodule and linked Rust crates | MIT | https://github.com/Pinvou/CodeWhale |
-| DingTalk Workspace CLI (`dws`) and skills | 1.0.58 | Apache-2.0 skill sources; official CLI binaries downloaded and SHA-256-verified by the app on first connector use (linux-arm64, linux-x64, darwin-arm64, darwin-x64, windows-x64) | Apache-2.0 | https://github.com/DingTalk-Real-AI/dingtalk-workspace-cli |
-| Lark CLI and skills | 1.0.87 | MIT skill sources; official CLI binaries downloaded and SHA-256-verified by the app on first connector use (linux-arm64, linux-x64, darwin-arm64, darwin-x64, windows-x64) | MIT | https://github.com/larksuite/cli |
-| WeCom CLI and skills | 1.1.0 | MIT skill sources; official CLI binaries downloaded and SHA-256-verified by the app on first connector use (linux-arm64, linux-x64, darwin-arm64, darwin-x64, windows-x64) | MIT | https://github.com/WecomTeam/wecom-cli |
-| Tencent Meeting CLI (`tmeet`) and skills | 1.0.15 | MIT skill sources bundled from the upstream `skills/tmeet-skill/`; official CLI installed from npm (`@tencentcloud/tmeet`, version pinned in `tmeet.rs`) | MIT | https://github.com/TencentCloud/tencentmeeting-cli |
-| agency-agents-zh | bundle schema `agency-1.0`, 268-role snapshot imported 2026-08-18 (upstream main@6e158d9c; one telemetry example in a persona body normalized from `web_search` to `search` to satisfy the retired-tool-name lint) | Normalized Chinese persona data and retained upstream license | MIT | https://github.com/jnMetaCode/agency-agents-zh |
-| SenseVoice.cpp | Source pinned by setup script | Built on user setup; no executable stored in Git | MIT | https://github.com/lovemefan/SenseVoice.cpp |
-| marked | 14.1.4 | npm dependency bundled by Vite (`pinvou3-app/package.json`; highest major whose browser output stays free of Safari 15.4+ runtime APIs) | MIT | https://github.com/markedjs/marked |
-| DOMPurify | 3.4.14 | npm dependency bundled by Vite (`pinvou3-app/package.json`) | Apache-2.0 OR MPL-2.0 | https://github.com/cure53/DOMPurify |
-| chrome-devtools-mcp | 1.7.0 | Self-contained Windows build vendored at build time into `pinvou3-app/src-tauri/resources/platforms/windows/chrome-devtools-mcp/` (shipped under `runtime/chrome-devtools-mcp`); npm tarball SHA-512-verified; package-internal `build/src/third_party/THIRD_PARTY_NOTICES` preserved | Apache-2.0 | https://github.com/ChromeDevTools/chrome-devtools-mcp |
-| Tailwind CSS Play CDN runtime | 3.4.17 | Vendored browser script | MIT | https://github.com/tailwindlabs/tailwindcss |
-| Material Icon Theme | Iconify snapshot exported 2026-07-29 | 13 SVG file-type glyphs inlined in `pinvou3-app/src/shared/artifact-utils.js` | MIT | https://github.com/material-extensions/vscode-material-icon-theme |
-| Material Icon Theme (file/folder icon subset) | Upstream `main` snapshot downloaded 2026-07-30 | 43 SVG file/folder icons vendored in `pinvou3-app/src/file-icons/theme/` | MIT | https://github.com/material-extensions/vscode-material-icon-theme |
-| cc-switch (provider preset data) | Public preset list (trimmed 2026-08-05) | Base URL / protocol presets in `pinvou3-app/src/features/settings/acp-provider-catalog.js` | MIT | https://github.com/farion1231/cc-switch |
+| CodeWhale | `pinvou-v0.9.5-r13` | Git 子模块与链接的 Rust crates | MIT | https://github.com/Pinvou/CodeWhale |
+| DingTalk Workspace CLI（`dws`）及技能 | 1.0.58 | 内置 Apache-2.0 技能源码；首次使用连接器时下载并校验官方 CLI | Apache-2.0 | https://github.com/DingTalk-Real-AI/dingtalk-workspace-cli |
+| Lark CLI 及技能 | 1.0.87 | 内置 MIT 技能源码；首次使用连接器时下载并校验官方 CLI | MIT | https://github.com/larksuite/cli |
+| WeCom CLI 及技能 | 1.1.0 | 内置 MIT 技能源码；首次使用连接器时下载并校验官方 CLI | MIT | https://github.com/WecomTeam/wecom-cli |
+| Tencent Meeting CLI（`tmeet`）及技能 | 1.0.15 | 内置上游技能；CLI 从 npm 安装并固定版本 | MIT | https://github.com/TencentCloud/tencentmeeting-cli |
+| agency-agents-zh | `agency-1.0`，2026-08-18 快照 | 规范化中文角色数据并保留上游许可证 | MIT | https://github.com/jnMetaCode/agency-agents-zh |
+| SenseVoice.cpp | 安装脚本固定源码版本 | 用户启用时构建，Git 不保存可执行文件 | MIT | https://github.com/lovemefan/SenseVoice.cpp |
+| marked | 14.1.4 | npm 依赖，由 Vite 打包 | MIT | https://github.com/markedjs/marked |
+| DOMPurify | 3.4.14 | npm 依赖，由 Vite 打包 | Apache-2.0 或 MPL-2.0 | https://github.com/cure53/DOMPurify |
+| chrome-devtools-mcp | 1.7.0 | Windows 构建时固定并校验 npm 包，保留包内第三方声明 | Apache-2.0 | https://github.com/ChromeDevTools/chrome-devtools-mcp |
+| Tailwind CSS Play CDN runtime | 3.4.17 | 本地保存的浏览器脚本 | MIT | https://github.com/tailwindlabs/tailwindcss |
+| Material Icon Theme | 2026-07-29 Iconify 快照 | 13 个内联 SVG 文件图标 | MIT | https://github.com/material-extensions/vscode-material-icon-theme |
+| Material Icon Theme 文件/文件夹子集 | 2026-07-30 上游快照 | 43 个本地 SVG 图标 | MIT | https://github.com/material-extensions/vscode-material-icon-theme |
+| cc-switch 模型服务预设 | 2026-08-05 精简快照 | 模型地址与协议预设 | MIT | https://github.com/farion1231/cc-switch |
 
-Vendored script attribution:
+## 归属说明
 
-- marked: Copyright (c) 2018+ MarkedJS and Copyright (c) 2011–2018
-  Christopher Jeffrey; its Markdown compatibility code retains the upstream
-  John Gruber attribution and BSD-style terms.
-- DOMPurify: Copyright 2025–2026 Dr.-Ing. Mario Heiderich, Cure53.
-- chrome-devtools-mcp: Modified by Pinvou Agent during vendoring:
-  `build/src/McpResponse.js` adds the `target_id` field to structured page
-  entries so the host can enforce conversation and tab ownership. The adapted
-  output is pinned by SHA-256.
-- Tailwind CSS: Copyright (c) Tailwind Labs, Inc.
-- Material Icon Theme: Copyright (c) 2025 Material Extensions. The glyphs
-  were exported from the
-  [Iconify Material Icon Theme collection](https://icon-sets.iconify.design/material-icon-theme/);
-  Iconify is used only as the export source and is not a runtime dependency.
-- Material Icon Theme (file/folder icon subset): Copyright (c) 2025 Material
-  Extensions. The SVGs in `pinvou3-app/src/file-icons/theme/` were downloaded
-  from the upstream `icons/` directory (`csv.svg` is upstream `table.svg`);
-  `file.svg`, `folder.svg`, and `folder-open.svg` are build-time defaults the
-  upstream repository does not commit, reproduced verbatim from the upstream
-  generator source (`src/core/generator`, default color `#90a4ae`).
+- marked：Copyright (c) 2018+ MarkedJS 与 Copyright (c) 2011–2018 Christopher Jeffrey；Markdown 兼容代码保留 John Gruber 归属及 BSD 风格条款。
+- DOMPurify：Copyright 2025–2026 Dr.-Ing. Mario Heiderich, Cure53。
+- chrome-devtools-mcp：应用在保存时修改 `build/src/McpResponse.js`，为结构化页面条目增加 `target_id`，以便宿主校验会话和标签页所有权；修改后的产物使用 SHA-256 固定。
+- Tailwind CSS：Copyright (c) Tailwind Labs, Inc.
+- Material Icon Theme：Copyright (c) 2025 Material Extensions。图标通过 [Iconify Material Icon Theme](https://icon-sets.iconify.design/material-icon-theme/) 导出，Iconify 不是运行时依赖。
 
-Detailed license texts and upstream notices for bundled connectors are kept
-next to their resources under `pinvou3-app/src-tauri/resources/`.
+Material Icon Theme 文件/文件夹子集保留 Copyright (c) 2025 Material Extensions。图标取自上游 `icons/`，其中 `csv.svg` 对应 `table.svg`；`file.svg`、`folder.svg` 和 `folder-open.svg` 按上游 `src/core/generator` 默认生成器还原，默认颜色为 `#90a4ae`。
 
-The exact connector URLs and SHA-256 checksums are recorded in the per-platform
-`connectors.lock.json` manifests under
-`pinvou3-app/src-tauri/resources/platforms/<os>/<arch>/bundle/connectors/`
-(real path segments: `linux/aarch64`, `linux/x86_64`, `macos/aarch64`,
-`macos/x86_64`, `windows/x86_64`; the lock files' `platform` fields use the
-compact `linux-arm64`-style names), and are
-fetched on first use by the app itself; `scripts/fetch-connectors.sh` is the CI/reviewer helper that materializes the same artifacts for verification.
+连接器的详细许可证和上游声明保存在 `pinvou3-app/src-tauri/resources/` 对应资源旁。各平台连接器地址和 SHA-256 记录在 `pinvou3-app/src-tauri/resources/platforms/<os>/<arch>/bundle/connectors/connectors.lock.json`，应用首次使用时按清单下载；`scripts/fetch-connectors.sh` 用于 CI 和维护者验证同一批产物。
 
-## Package dependencies and SBOM
+Rust、npm 等包管理依赖以清单文件和 GitHub dependency graph 为准。依赖变更应检查已知漏洞与许可证元数据。
 
-Rust, npm, and other manifest-managed dependencies are recorded in the live
-[SPDX SBOM](docs/sbom.md) generated by GitHub's dependency graph. Dependency
-changes are reviewed in pull requests for known vulnerabilities and license
-metadata.
+本仓库保留了原 Pinvou 项目创作的应用图片、截图和宠物动画，并引入鲜小助品牌图标；除上表注明的组件和图标外，这些资源并非从第三方素材包导入。第三方服务图标和产品名称只用于说明兼容关系，不表示第三方背书，也不授予任何商标权利。
 
-## Assets and trademarks
+以下许可证原文为法律声明，保留上游英文内容：
 
-Except for components and icon glyphs identified above, the application
-images, screenshots, pet sprites, and Pinvou visual assets in this repository
-were created for Pinvou and are not imported third-party asset packs. Service
-icons and product names may reproduce third-party marks only to identify
-compatible integrations.
-
-Product names and trademarks belong to their respective owners. Inclusion
-does not imply endorsement or grant trademark rights. See
-[`TRADEMARKS.md`](TRADEMARKS.md).
-
-## Material Icon Theme license
+## Material Icon Theme 许可证原文
 
 The MIT License (MIT)
 

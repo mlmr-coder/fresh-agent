@@ -1,51 +1,49 @@
-name: Feature request
-description: Propose a focused improvement for Pinvou Agent Community
-title: "[Feature]: "
+name: 功能建议
+description: 提议一项明确的鲜小助改进
+title: "[建议] "
 labels:
   - enhancement
 body:
   - type: textarea
     id: problem
     attributes:
-      label: User problem
-      description: What user problem should be solved? Describe the need before the implementation.
+      label: 用户问题
+      description: 需要解决什么问题？请先描述需求和使用场景。
     validations:
       required: true
   - type: textarea
     id: proposal
     attributes:
-      label: Proposed outcome
-      description: What should a successful result look like?
+      label: 期望结果
+      description: 完成后应该呈现什么行为？
     validations:
       required: true
   - type: textarea
     id: alternatives
     attributes:
-      label: Alternatives considered
-      description: Describe current workarounds or alternative approaches, if any.
+      label: 当前替代方法
+      description: 如有，请说明当前采用的绕行方法或其他方案。
   - type: dropdown
     id: area
     attributes:
-      label: Area
+      label: 功能范围
       options:
-        - Desktop UI
-        - Agent or workflow
-        - MCP or connector
-        - Knowledge and artifacts
-        - CodeWhale engine
-        - Build or platform support
-        - Documentation
-        - Other
+        - 桌面界面
+        - Agent 或工作流
+        - MCP 或连接器
+        - 知识库与产物
+        - CodeWhale 引擎
+        - 构建与平台支持
+        - 文档
+        - 其他
     validations:
       required: true
   - type: checkboxes
     id: checks
     attributes:
-      label: Submission checks
+      label: 提交前检查
       options:
-        - label: I searched existing issues and discussions for this request.
+        - label: 我已搜索现有 Issue 和讨论，没有发现相同建议。
           required: true
-        - label: I wrote the issue title and description in English.
-          required: true
-        - label: This request is for the Community edition or a generally useful open-source capability.
+        - label: 该建议适用于开源社区版本或具有通用价值。
           required: true

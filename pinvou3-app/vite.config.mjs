@@ -17,7 +17,6 @@ const staticExtensions = new Set([
 export const staticRuntimeScripts = new Set([
   'features/attachments/attachment-drop-controller.js',
   'features/personas/personas-i18n.js',
-  'features/updater/update-notice-logic.js',
   'platform/tauri/bridge.js',
   'platform/web/bootstrap.js',
   'platform/web/bridge.js',

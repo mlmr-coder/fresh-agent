@@ -1,21 +1,19 @@
-# Developer Certificate of Origin
+# 开发者贡献来源声明
 
-Pinvou Agent uses the [Developer Certificate of Origin 1.1](https://developercertificate.org/).
+本项目使用 [Developer Certificate of Origin 1.1（DCO）](https://developercertificate.org/)确认贡献来源。提交代码即表示你有权按照本项目许可证提供该贡献。
 
-By adding a `Signed-off-by` trailer to a commit, you certify that you have the right to submit the contribution under the license of this repository and that the contribution meets the DCO 1.1 terms.
-
-Create a signed-off commit with:
+人工提交请使用：
 
 ```bash
 git commit -s
 ```
 
-The trailer should match the commit author:
+Git 会在提交信息末尾加入：
 
 ```text
-Signed-off-by: Your Name <your.email@example.com>
+Signed-off-by: 姓名 <邮箱>
 ```
 
-Every commit in a pull request must be signed off. This is a developer attestation, not a GPG or SSH cryptographic signature.
+该签署只声明贡献来源，不额外转让版权，也不改变项目许可证。
 
-How CI enforces this (`.github/workflows/dco.yml`): the check verifies that a `Signed-off-by:` trailer is present in each commit's message; it does not compare the trailer's name/email against the commit author — keeping them in sync is the developer's responsibility. Trusted Dependabot and GitHub Actions bot commits, and merge commits (more than one parent), are exempt.
+`Signed-off-by` 的姓名和邮箱应与提交作者一致。这是贡献来源声明，不是 GPG 或 SSH 加密签名。CI 检查签署行是否存在；可信机器人提交和合并提交按工作流规则豁免。

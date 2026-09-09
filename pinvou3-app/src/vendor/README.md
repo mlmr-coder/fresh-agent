@@ -5,31 +5,23 @@ React / ReactDOM 由 npm 依赖打包进 `dist/assets/`。
 
 | 文件 | 版本 | SHA-256 | 来源 / 许可证 | 用途 |
 |---|---|---|---|---|
-| `tailwind.js` | 3.4.17 + local patch | `e884d0030114ff1babdb43e9822ea7293c848debd9ce76a96cafc27105c3df6b` | Tailwind CSS Play CDN runtime / MIT | Scans the DOM at runtime to generate Tailwind styles |
+| `tailwind.js` | 3.4.17 + 本地补丁 | `e884d0030114ff1babdb43e9822ea7293c848debd9ce76a96cafc27105c3df6b` | Tailwind CSS Play CDN 运行时 / MIT | 运行时扫描 DOM 并生成 Tailwind 样式 |
 
-**Local patch (2026-08, Safari 14 compatibility)**: the upstream
-`cdn.tailwindcss.com` build emits the `inset-*` utilities through the `inset`
-shorthand property (supported from Safari 14.1 only; the WKWebView of the
-initial macOS 11.0 release does not parse it, which breaks all 52
-`fixed inset-0` dialog overlays at once). The patch expands the emission-table
-entry `["inset",["inset"]]` into `["inset",["top","right","bottom","left"]]`,
-restoring the physical-property output of the Tailwind 3.0 era. The patch must
-be reapplied after refreshing the upstream file, and the SHA-256 above refers
-to the patched bytes; `tests/compat_audit.test.mjs` pins the emission table
-with a contract assertion.
+**本地补丁（2026-08，兼容 Safari 14）**：上游 `cdn.tailwindcss.com` 使用
+`inset` 简写属性生成 `inset-*` 工具类，该属性从 Safari 14.1 才开始支持。
+macOS 11.0 自带 WKWebView 无法解析它，会让全部 `fixed inset-0` 弹层失效。
+补丁把生成表中的 `["inset",["inset"]]` 展开为
+`["inset",["top","right","bottom","left"]]`，恢复物理方向属性。
+更新上游文件后必须重新应用补丁；表中的 SHA-256 对应补丁后的文件。
+`tests/compat_audit.test.mjs` 会校验生成表。
 
-The vendored marked and DOMPurify copies were removed (2026-08, Safari 14
-compatibility fix): the React path now uniformly uses the npm dependencies
-(`marked@14.1.4` / `dompurify@3.4.14`), transpiled and bundled by Vite for the
-`safari14` target; the bridge fallback renderer degrades to plain text via
-`escapeHtml` when `window.marked` is unavailable. The repository keeps a
-single marked version to avoid vendor-pin vs npm version drift (that drift
-once shipped Safari 15.4+ syntax into the bundle and blanked the app on old
-systems). `tailwind.js` internally (postcss) uses `.at()`, which
-`shared/legacy-polyfills.js` installs before it loads to meet the Safari 14
-baseline. The vendor set is intentionally a single file (Tailwind only);
-`tests/vendor_asset_integrity.test.js` keeps enforcing that every shipped
-`.js` asset stays registered with its exact SHA-256.
+仓库已移除单独保存的 marked 和 DOMPurify 文件。React 统一使用 npm 依赖
+`marked@14.1.4` 和 `dompurify@3.4.14`，由 Vite 按 `safari14` 目标转译和打包。
+当 `window.marked` 不可用时，bridge 兜底渲染器通过 `escapeHtml` 降级为纯文本。
+仓库只保留一个 marked 版本，避免 vendor 固定版本与 npm 版本漂移。
+`tailwind.js` 内部使用的 `.at()` 由 `shared/legacy-polyfills.js` 在加载前补齐。
+vendor 目录只保留 Tailwind；`tests/vendor_asset_integrity.test.js` 校验每个发布的
+`.js` 文件均已登记并具有正确 SHA-256。
 
 完整第三方归因见仓库根目录 `THIRD_PARTY_NOTICES.md`；Apache-2.0 全文随
 `src-tauri/resources/common/bundle/dingtalk-skills/dws/LICENSE` 一并分发。
@@ -41,12 +33,11 @@ cd pinvou3-app/src/vendor
 curl -fsSL -o tailwind.js              https://cdn.tailwindcss.com
 ```
 
-After refreshing any file, update its version and SHA-256 in the table above in
-the same change (and `THIRD_PARTY_NOTICES.md` when the version changes). The
-integrity contract in `npm test` (`tests/vendor_asset_integrity.test.js`)
-verifies every registered hash and rejects unregistered `.js` assets. These
-files are pinned to LF in `.gitattributes`; do not commit bytes rewritten by a
-local `core.autocrlf` checkout.
+刷新文件后，应在同一次改动中更新上表的版本和 SHA-256；版本变化时还要更新
+`THIRD_PARTY_NOTICES.md`。`npm test` 中的
+`tests/vendor_asset_integrity.test.js` 会校验所有登记哈希并拒绝未登记的
+`.js` 文件。这些文件在 `.gitattributes` 中固定为 LF，不要提交被本地
+`core.autocrlf` 改写后的字节。
 
 ## 上线前可做的优化（非必须）
 

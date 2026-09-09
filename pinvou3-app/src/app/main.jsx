@@ -72,10 +72,10 @@ import { revealStartupWindow } from '../platform/tauri/startup-window.js';
 // 定时任务创建与运行链路已恢复，展示入口并允许自动跳转。
 const SCHEDULED_TASKS_ENTRY_ENABLED = true;
 
-// 后端默认会话标题哨兵集合(bridge 按当前语言生成三语兜底标题,并据此判断是否自动改名)——
+// 后端默认会话标题哨兵集合（bridge 按当前语言生成中英文兜底标题，并据此判断是否自动改名）——
 // 显示层把任意一种哨兵标题映射成当前语言的「新对话」文案。哨兵是跨语言的后端
 // 契约而非当前 UI 文案,直接使用 shared/i18n.js 的静态集合,与词典装载进度无关
-// (zh 主用户不会装载 en/ja chunk,不能从 dict 派生)。
+// （zh 主用户不会装载 en chunk，不能从 dict 派生）。
 function isDefaultChatTitle(title) {
   return DEFAULT_CHAT_TITLES.has(title);
 }
@@ -87,7 +87,7 @@ const PREVIEW_SCHEDULED_RUN_SHORTCUTS = [
 ];
 import { PinvouSummonCard } from '../features/tools/tool-renderers.jsx';
 import { SearchOverlay } from '../features/search/SearchOverlay.jsx';
-import { UpdateNoticeButton } from '../features/updater/UpdateNoticeButton.jsx';
+import { SidebarUpdateStatus } from '../features/updater/SidebarUpdateStatus.jsx';
 import { Lanyard } from '../features/personas/persona-shared.jsx';
 import { VIEW_LOADERS, prefetchView } from './view-loaders.js';
 // Low-traffic views are lazy-loaded: VIEW_LOADERS (see view-loaders.js) is the
@@ -862,7 +862,7 @@ function workspaceDisplayName(path) {
           if (disposed) unlisten();
           else unlisteners.push(unlisten);
         }).catch(() => {});
-        // 原生（品悟）代码会话的 turn 走 chat:* 事件：busy 徽标与 ACP 会话同机制，
+        // 原生（鲜小助）代码会话的 turn 走 chat:* 事件：busy 徽标与 ACP 会话同机制，
         // 只跟踪代码会话列表内的 session，普通聊天会话不影响。
         ['chat:turn_started', 'chat:done'].forEach(eventName => {
           tauriEvents.listen(eventName, (message) => {
@@ -959,11 +959,10 @@ function workspaceDisplayName(path) {
       });
       // 语言切换统一走该门(handleSetLanguage):装载完成乱序时只落地最新选择。
       const switchToLanguage = useRef(createLatestLanguageGate()).current;
-      // UI 语言为 en/ja 时确保 personas-i18n overlay 已加载(覆盖「系统中文 + 手动切
-      // 英/日 UI」、index.html 快速路径跳过的场景),加载完成 bump 一次让卡名重渲染。
+      // UI 语言为 en 时确保 personas-i18n overlay 已加载，加载完成后刷新卡名。
       const [, setPersonaI18nTick] = useState(0);
       useEffect(() => {
-        if (language === 'en' || language === 'ja') {
+        if (language === 'en') {
           ensurePersonaI18nOverlay(() => setPersonaI18nTick(v => v + 1));
         }
       }, [language]);
@@ -1112,7 +1111,6 @@ function workspaceDisplayName(path) {
       const [poolMyOnly, setPoolMyOnly] = useState(false); // 跳卡池时是否直接落「我的卡牌」筛选(从确认窗"去查看"进来=true)
       const [webAccessOpen, setWebAccessOpen] = useState(false);
       const [publishedBrowserOverlayIntent, setPublishedBrowserOverlayIntent] = useState('');
-      const [settingsUpdateFocusTick, setSettingsUpdateFocusTick] = useState(0);
       const [settingsInitialSection, setSettingsInitialSection] = useState('general');
       // 收纳 toast「前往查看」→ 对话管理页并直接展开「已收纳」面板(一次性信号,SearchView 消费后复位)
       const [searchShowArchived, setSearchShowArchived] = useState(false);
@@ -1267,7 +1265,7 @@ function workspaceDisplayName(path) {
           setColorScheme(normalizeColorScheme(storedScheme));
         } else {
           const lang = TAG_TO_LANG[settings.language];
-          // 落盘语言可能尚未装载(en/ja 惰性 chunk);ensure 后再切,失败停在系统语言
+          // 落盘语言可能尚未装载（en 惰性 chunk）；ensure 后再切，失败停在系统语言
           if (lang && lang !== language) ensureLanguage(lang).then((ok) => { if (ok) setLanguage(lang); }).catch(() => {});
           // engine 已用此语言启动,作为「需重启」基线(切语言不重启 engine,见 commands.rs)
           bootedLanguageRef.current = lang || language;
@@ -1427,7 +1425,7 @@ function workspaceDisplayName(path) {
           : sessionTitlePresentation(s.title, s.title_attachment_names);
         return {
           id: s.id,
-          // 后端默认标题是三语哨兵之一(见 isDefaultChatTitle;bridge 以此判断是否自动改名)——显示层映射成当前语言
+          // 后端默认标题是中英文哨兵之一（见 isDefaultChatTitle；bridge 以此判断是否自动改名）——显示层映射成当前语言
           title: sessionTitlePlainText(titlePresentation),
           titleContent: titlePresentation.attachments.length
             ? <SessionAttachmentTitle presentation={titlePresentation} />
@@ -2479,11 +2477,11 @@ function workspaceDisplayName(path) {
       }
 
       function handleSetLanguage(lang) {
-        // en/ja 是惰性词典 chunk:先装载再切状态/广播,辅助窗口(桌宠/阅读器)
+        // en 是惰性词典 chunk：先装载再切状态/广播，辅助窗口（桌宠/阅读器）
         // 收到 ui:language_changed 时词典必须已在本窗就位(各入口首帧引导只保证
         // 初始语言)。装载失败(资源损坏)保持原语言,不产生半翻译界面。
-        // 经「最新选择胜出」门落地:ja chunk 静态依赖 en chunk,先选 ja 再选
-        // en 时旧 ja 请求可能后完成并覆盖新选择(见 createLatestLanguageGate)。
+        // 经「最新选择胜出」门落地，避免旧请求后完成并覆盖新选择
+        // （见 createLatestLanguageGate）。
         switchToLanguage(lang, () => {
           setLanguage(lang);
           if (isWeb) {
@@ -2537,10 +2535,10 @@ function workspaceDisplayName(path) {
       const scheduledUnread = !!(bs && ((bs.scheduledTasks || []).some(task => task.hasUnreadRuns)
         || (bs.scheduledTaskRecentRuns || []).some(run => run && run.unread)));
       const mobileTitle = currentView === 'chat'
-        ? ((((chatHistory || []).find(c => c.id === activeChat)) || {}).title || 'PINVOU')
+        ? ((((chatHistory || []).find(c => c.id === activeChat)) || {}).title || t.appTitle)
         : currentView === 'codex'
           ? ((((codexHistory || []).find(c => c.id === activeCodexId)) || {}).title || t.sidebarTaskFilterCode)
-        : ({ search: t.searchChats, scheduled: t.scheduledPlans, monitor: t.monitor, cardpool: t.cardPool, toolStore: t.toolStore, outputs: t.outputs, knowledge: t.knowledge, settings: t.settings, browser: t.browser }[currentView] || 'PINVOU');
+        : ({ search: t.searchChats, scheduled: t.scheduledPlans, monitor: t.monitor, cardpool: t.cardPool, toolStore: t.toolStore, outputs: t.outputs, knowledge: t.knowledge, settings: t.settings, browser: t.browser }[currentView] || t.appTitle);
       const mobileNavigate = (view, beforeNavigate) => {
         setMobileMoreOpen(false);
         navigateFromScheduledRun(view, beforeNavigate);
@@ -2839,7 +2837,7 @@ function workspaceDisplayName(path) {
                 <Menu size={20} className={activeTheme === 'dark' ? 'text-[#E3E3E3]' : 'text-[#444746]'} />
               </button>
               <span className={`text-[18px] font-medium tracking-wide flex items-center gap-2 whitespace-nowrap transition-opacity duration-200 ${isSidebarOpen ? 'opacity-100' : 'opacity-0 w-0'}`}>
-                PINVOU
+                {t.appTitle}
               </span>
               {isSidebarOpen && !isCompactShell && (
                 <button
@@ -3026,7 +3024,7 @@ function workspaceDisplayName(path) {
                         </span>
                       </div>
                       {/* 全部/代码 胶囊 + 一键折叠(分组)按钮:位于「任务列表」标题下方。
-                          flex-wrap 兜底:ja 等语言在 220px 最小宽度下此行已无富余
+                          flex-wrap 兜底：较长文案在 220px 最小宽度下此行已无富余
                           (实测正好占满),字体渲染偏宽的环境让折叠按钮换行而非溢出。 */}
                       <div className="flex flex-wrap items-center justify-between gap-2 px-1">
                         {/* biome-ignore lint/a11y/useSemanticElements: toggle-button pair in an ARIA group, not form controls; a <fieldset> would need its default styles reset */}
@@ -3240,7 +3238,8 @@ function workspaceDisplayName(path) {
                   </button>
                 )}
                 {isSidebarOpen && (
-                  <div className="flex items-center gap-1">
+                  <>
+                  <div className="flex shrink-0 items-center gap-1">
                     {can('webAccessAdmin') && <button type="button"
                       onClick={handleOpenWebAccess}
                       title={t.uiRemote.title}
@@ -3266,6 +3265,8 @@ function workspaceDisplayName(path) {
                       {hasUpdate && <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-[#EA4335]" />}
                     </button>
                   </div>
+                  <SidebarUpdateStatus bs={bs} t={t} dark={activeTheme === 'dark'} />
+                  </>
                 )}
               </div>
             </div>
@@ -3347,7 +3348,6 @@ function workspaceDisplayName(path) {
                   t={t}
                   sidebarDateGrouping={sidebarDateGrouping}
                   onSidebarDateGroupingChange={handleSetSidebarDateGrouping}
-                  updateFocusTick={settingsUpdateFocusTick}
                   initialSection={settingsInitialSection}
                   onCloseSettings={() => navigateFromScheduledRun(settingsReturnViewRef.current || 'chat')}
                 />
@@ -3566,7 +3566,7 @@ function workspaceDisplayName(path) {
               </div>
             )}
 
-            {/* Pinvou 检阅弹窗(品/悟) —— 居中弹窗 + 毛玻璃背景(虚化身后 app);全局,任何视图都能弹;点背景或卡内「跳过」关闭 */}
+            {/* 鲜小助 检阅弹窗(品/悟) —— 居中弹窗 + 毛玻璃背景(虚化身后 app);全局,任何视图都能弹;点背景或卡内「跳过」关闭 */}
             {bs && bs.pinvouModal && browserOverlayPublicationReady && (
               // biome-ignore lint/a11y/useKeyWithClickEvents: keyboard users close the dialog through its real close button
               // biome-ignore lint/a11y/noStaticElementInteractions: this is a pointer-only backdrop around an accessible dialog card
@@ -3719,16 +3719,6 @@ function workspaceDisplayName(path) {
             ]} />
           )}
 
-          <UpdateNoticeButton
-            theme={activeTheme}
-            bs={bs}
-            t={t}
-            onShowChangelog={() => {
-              setSettingsInitialSection('update');
-              setCurrentView('settings');
-              setSettingsUpdateFocusTick(v => v + 1);
-            }}
-          />
         </div>
       );
     };
@@ -3741,7 +3731,7 @@ function workspaceDisplayName(path) {
     const root = createRoot(document.querySelector('#root'));
     window.__PINVOU_STARTUP__.mark('react:create_root_done');
     const __q = new URLSearchParams(window.location.search);
-    // 首帧语言引导:zh 词典内嵌(Promise 已 resolve,仅一个微任务),en/ja 系统
+    // 首帧语言引导:zh 词典内嵌(Promise 已 resolve,仅一个微任务),en 系统
     // 用户先取惰性词典 chunk 再首渲染,保证 t = dict[language] 首帧即有效。
     // 装载失败(资源损坏)按 zh 兜底渲染,不空白。
     const __initialLang = initialSystemLanguage();
@@ -3749,7 +3739,7 @@ function workspaceDisplayName(path) {
       if (!isWeb) return null;
       try {
         const value = window.localStorage.getItem('pinvou.web.language');
-        return value && ['zh', 'en', 'ja'].includes(value) ? value : null;
+        return value && ['zh', 'en'].includes(value) ? value : null;
       } catch { return null; }
     })();
     ensureLanguage(__storedLang || __initialLang).catch(() => {}).then(function () {

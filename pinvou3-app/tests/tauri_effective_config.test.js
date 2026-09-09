@@ -52,13 +52,13 @@ const thirdPartyNotices = fs.readFileSync(
   "utf8",
 );
 const chromeDevtoolsMcpNotice = thirdPartyNotices.match(
-  /- chrome-devtools-mcp: Modified by Pinvou Agent during vendoring:[\s\S]*?(?=\n- |\n\n)/,
+  /- chrome-devtools-mcp：应用在保存时修改[\s\S]*?(?=\n- |\n\n)/,
 )?.[0];
 assert.ok(chromeDevtoolsMcpNotice, "the chrome-devtools-mcp adapter must be disclosed");
 for (const requiredNoticeText of [
   "build/src/McpResponse.js",
   "target_id",
-  "conversation and tab ownership",
+  "会话和标签页所有权",
   "SHA-256",
 ]) {
   assert.ok(
@@ -450,6 +450,10 @@ assert.equal(
 );
 
 const macos = composeEffectiveConfig([platformConfigPath("darwin")]).effectiveConfig;
+assert.equal(macos.productName, "鲜小助");
+assert.equal(macos.identifier, "com.pinvou.pinvou3");
+assert.equal(macos.mainBinaryName, "pinvou3-tauri");
+assert.equal(linux.productName, "pinvou3", "Debian package identity stays ASCII and stable");
 assert.deepEqual(macos.bundle.targets, ["app", "dmg"]);
 assert.equal(
   macos.bundle.resources["resources/platforms/macos/codex-bridge/"],
@@ -475,7 +479,7 @@ assert.ok(
   macosManifest.files.some((file) => file.destination.startsWith("runtime/codex-bridge/")),
   "macOS resource manifest must contain the Codex ACP Bridge runtime",
 );
-for (const locale of ["en", "zh-Hans", "ja"]) {
+for (const locale of ["en", "zh-Hans"]) {
   assert.ok(
     macosManifest.files.some(
       (file) => file.destination === `${locale}.lproj/InfoPlist.strings`,
@@ -493,6 +497,8 @@ assert.ok(
 );
 
 const windows = composeEffectiveConfig([platformConfigPath("win32")]).effectiveConfig;
+assert.equal(windows.productName, "鲜小助");
+assert.equal(windows.identifier, "com.pinvou.pinvou3");
 assert.equal(
   windows.bundle.resources["resources/platforms/windows/chrome-devtools-mcp/"],
   "runtime/chrome-devtools-mcp",
@@ -520,7 +526,7 @@ const runtimeBundleExtraction = fs.readFileSync(
 assert.match(
   runtimeBundleExtraction,
   /#\[cfg\(any\(target_os = "linux", target_os = "macos"\)\)\][\s\S]*?fn browser_mcp_entry_for_session[\s\S]*?@pinvou\/browser-core/,
-  "Linux and macOS must register the unified Pinvou BrowserCore wrapper",
+  "Linux and macOS must register the unified 鲜小助 BrowserCore wrapper",
 );
 assert.match(
   runtimeBundleExtraction,

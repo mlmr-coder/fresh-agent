@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate commit messages against the pinvou3 mandatory convention."""
+"""校验鲜小助提交信息格式。"""
 
 from __future__ import annotations
 
@@ -40,7 +40,7 @@ PROHIBITED_DESCRIPTIONS = {
     "测试",
 }
 FORBIDDEN_ENDING_PUNCTUATION = set("。.，,；;、！!？?：:")
-DOC_PATH = "docs/commit-message-convention.md"
+DOC_PATH = "CONTRIBUTING.md"
 # #235 introduced this gate on main. Older Windows branch history remains
 # grandfathered so generated merge commits and pre-gate commits do not fail main.
 LEGACY_HISTORY_CUTOFF = "deae3ca0141390c06e14aa93610645088b8966d4"
@@ -167,7 +167,7 @@ def main() -> int:
     errors = validate_range(*args.range) if args.range else validate_file(args.message_file)
 
     if errors:
-        print("Commit message does not follow the mandatory Pinvou Agent convention.", file=sys.stderr)
+        print("Commit message does not follow the mandatory 鲜小助 convention.", file=sys.stderr)
         print(f"See {DOC_PATH}", file=sys.stderr)
         for error in errors:
             print(f"- {error}", file=sys.stderr)

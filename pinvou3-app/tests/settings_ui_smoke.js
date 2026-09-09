@@ -5,7 +5,7 @@
  * - 模型列表默认单选、删除二次确认、本地/云端模型删除、添加模型保存条件、编辑模型回显凭据和同厂商切换
  * - 搜索源交互与模型页一致，添加源未点保存不得持久化，确认重启后才写设置
  * - 高级执行权限失败时回滚并 toast 提示
- * - Community uses a dedicated Settings tab that exposes the QQ group and GitHub Discussions at the top level
+ * - Community uses a dedicated Settings tab with a GitHub channel while distribution-owned QQ details are unconfigured
  * - 反馈弹窗保持与模型/搜索一致的 iOS 规格，提交成功不使用原生 alert
  */
 const fs = require('fs');
@@ -18,7 +18,7 @@ const settingsViewSource = fs.readFileSync(
   path.join(__dirname, '..', 'src', 'features', 'settings', 'SettingsView.jsx'),
   'utf8',
 );
-const settingsI18nSources = ['zh', 'en', 'ja'].map((lang) => fs.readFileSync(
+const settingsI18nSources = ['zh', 'en'].map((lang) => fs.readFileSync(
   path.join(__dirname, '..', 'src', 'shared', 'i18n', `${lang}.js`),
   'utf8',
 ));
@@ -153,7 +153,7 @@ function injectSource() {
     var saveModelError = null;
     var dependencyCheckResponse = [];
     var memoryOverview = {
-      profile: { version: 1, revision: 3, identity: { call_name: '升级前称呼', assistant_alias: 'PINVOU' }, conventions: {} },
+      profile: { version: 1, revision: 3, identity: { call_name: '升级前称呼', assistant_alias: '鲜小助' }, conventions: {} },
       preferences: [], work_context: [], current_focus: [], recent_activity: [], recent_work: [], pending: [], never: [],
       runtime: null, snapshot_path: '', warnings: [],
       sources: {
@@ -1766,17 +1766,17 @@ async function modalWidth(page, headingText) {
       directTopLevel: !document.querySelector('[data-community-dialog="true"]') && !document.querySelector('[data-testid="community-entry-open"]'),
       width: rect ? Math.round(rect.width) : 0,
       insideViewport: !!rect && rect.left >= -1 && rect.right <= window.innerWidth + 1 && rect.top >= -1 && rect.bottom <= window.innerHeight + 1,
-      hasQrImage: !!qr && qr.complete && qr.naturalWidth === 824 && qr.naturalHeight === 824 && qr.getBoundingClientRect().width >= 220,
-      correctGroupName: (groupName?.textContent || '').trim() === 'pinvou-agent官方交流群',
-      correctGroupNumber: (groupNumber?.textContent || '').trim() === '1108909346',
-      copyEnabled: !!copyButton && !copyButton.disabled,
-      copyWorks: window.__COMMUNITY_CLIPBOARD_TEXT__ === '1108909346' && text.includes('群号已复制'),
+      noUpstreamQrImage: !qr,
+      correctGroupName: (groupName?.textContent || '').trim() === '鲜小助用户交流群',
+      groupNumberPending: (groupNumber?.textContent || '').trim() === '待补充',
+      copyDisabled: !!copyButton && copyButton.disabled,
+      noClipboardWrite: window.__COMMUNITY_CLIPBOARD_TEXT__ === null,
       hasDiscussionsFallback: text.includes('GitHub Discussions'),
       hasSupportBoundary: text.includes('不等同于官方支持或工单') && text.includes('安全漏洞'),
       noHorizontalOverflow: document.documentElement.scrollWidth <= window.innerWidth + 1 && (!panel || panel.scrollWidth <= panel.clientWidth + 1),
     };
   });
-  rec('⑮ Community follows Help & Feedback and directly exposes the official group', communityPanel.exists && communityPanel.separateTab && communityPanel.immediatelyAfterHelp && communityPanel.directTopLevel && communityPanel.width >= 500 && communityPanel.width <= 700 && communityPanel.insideViewport && communityPanel.hasQrImage && communityPanel.correctGroupName && communityPanel.correctGroupNumber && communityPanel.copyEnabled && communityPanel.copyWorks && communityPanel.hasDiscussionsFallback && communityPanel.hasSupportBoundary && communityPanel.noHorizontalOverflow, JSON.stringify(communityPanel));
+  rec('⑮ Community shows Fresh Assistant with unconfigured QQ details and a GitHub channel', communityPanel.exists && communityPanel.separateTab && communityPanel.immediatelyAfterHelp && communityPanel.directTopLevel && communityPanel.width >= 500 && communityPanel.width <= 700 && communityPanel.insideViewport && communityPanel.noUpstreamQrImage && communityPanel.correctGroupName && communityPanel.groupNumberPending && communityPanel.copyDisabled && communityPanel.noClipboardWrite && communityPanel.hasDiscussionsFallback && communityPanel.hasSupportBoundary && communityPanel.noHorizontalOverflow, JSON.stringify(communityPanel));
   await clickSettingsSection(page, '帮助反馈');
   await clickExact(page, '提交反馈');
   await sleep(250);
@@ -1854,7 +1854,7 @@ async function modalWidth(page, headingText) {
     const greeting = [...document.querySelectorAll('h1')].find(node => {
       const text = node.textContent || '';
       const fontSize = Number.parseFloat(window.getComputedStyle(node).fontSize);
-      return text.includes('今天想聊点什么') || text.includes("what's good") || text.includes('今日は') || fontSize >= 30;
+      return text.includes('今天想聊点什么') || text.includes("what's good") || fontSize >= 30;
     });
     const rect = greeting && greeting.getBoundingClientRect();
     const fontSize = greeting ? Number.parseFloat(window.getComputedStyle(greeting).fontSize) : 0;

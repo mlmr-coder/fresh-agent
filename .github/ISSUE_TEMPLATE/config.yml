@@ -1,11 +1,8 @@
 blank_issues_enabled: false
 contact_links:
-  - name: Report a security vulnerability privately
-    url: https://github.com/Pinvou/pinvou-agent/security/advisories/new
-    about: Do not disclose unpatched vulnerabilities in a public issue.
-  - name: Ask a question or share an idea
-    url: https://github.com/Pinvou/pinvou-agent/discussions
-    about: Use Discussions for setup help, ideas, extensions, and examples.
-  - name: Enterprise support
-    url: https://pinvou.com/
-    about: Commercial editions and enterprise support are handled separately.
+  - name: 私密报告安全漏洞
+    url: https://github.com/mlmr-coder/fresh-agent/security/advisories/new
+    about: 尚未修复的漏洞请勿在公开 Issue 中披露。
+  - name: 提问或分享想法
+    url: https://github.com/mlmr-coder/fresh-agent/discussions
+    about: 安装帮助、想法、扩展和示例请使用 Discussions。

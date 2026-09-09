@@ -1,3 +1,4 @@
+import { BRAND_NAME } from '../../shared/brand.js';
 import { renderMarkdown } from '../../shared/markdown-renderer.js';
 
 export const ASSISTANT_EXPORT_FORMATS = Object.freeze(['md', 'html']);
@@ -25,7 +26,7 @@ function timestampPart(date) {
 
 export function assistantExportFilename(format, date = new Date()) {
   const extension = ASSISTANT_EXPORT_FORMATS.includes(format) ? format : 'md';
-  return `pinvou-response-${timestampPart(date)}.${extension}`;
+  return `fresh-assistant-response-${timestampPart(date)}.${extension}`;
 }
 
 export function buildAssistantResponseExport(markdown, format, options = {}) {
@@ -38,7 +39,7 @@ export function buildAssistantResponseExport(markdown, format, options = {}) {
   }
   if (format !== 'html') throw new Error(`Unsupported assistant export format: ${format}`);
 
-  const title = options.title || 'Pinvou response';
+  const title = options.title || `${BRAND_NAME} response`;
   const body = renderMarkdown(normalized);
   return {
     content: `<!doctype html>

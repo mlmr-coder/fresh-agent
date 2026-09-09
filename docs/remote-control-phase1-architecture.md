@@ -49,7 +49,7 @@ Web 端在 <640px 紧凑视口启用移动壳层：隐藏侧栏窄轨，改为�
   `relay_client.rs` 是纯 WebSocket 传输层（连接、重连退避、心跳与背压），
   `protocol.rs` 定义协议消息，`file_access.rs` 负责宿主文件与 Session 产物授权读取；
 - `remote-control-relay/server.js`：静态站点和 WebSocket v2 Relay；
-- `remote-control-relay/PROTOCOL.md`：线上消息格式的单一协议说明。
+- `pinvou3-app/src-tauri/src/features/remote_control/protocol.rs`：桌面端协议消息定义。
 
 ## 3. 构建与页面更新
 
@@ -64,7 +64,7 @@ Web 构建以 `/pinvou3/remote/` 为默认 base path。Relay 对 HTML 禁止缓�
 要求重新验证，对带 hash 的静态资源使用 immutable 缓存，因此替换 Web dist 后浏览器可在
 下次加载获得新版本，而不受已安装桌面版本的 UI 资源约束。
 
-公开仓库不分发 Pinvou 官方环境的部署脚本、服务器地址或基础设施配置。自行部署 Relay 时，应
+公开仓库不分发 鲜小助维护者环境的部署脚本、服务器地址或基础设施配置。自行部署 Relay 时，应
 按目标环境独立配置进程托管、反向代理、TLS、备份、健康检查与失败回滚；不要把生产凭据或
 服务端配置提交到公开仓库。
 

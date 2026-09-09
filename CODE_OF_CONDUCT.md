@@ -1,49 +1,37 @@
-# Community Code of Conduct
+# 社区行为准则
 
-## Our commitment
+## 我们的承诺
 
-We want participation in the Pinvou Agent community to be respectful, useful,
-and safe for people of every background and experience level.
+鲜小助社区欢迎不同背景和经验水平的参与者。我们希望协作保持尊重、务实和安全。
 
-## Expected behavior
+## 期望的行为
 
-- Be constructive and focus feedback on the work.
-- Respect different technical backgrounds, languages, and viewpoints.
-- Give enough context for others to reproduce and understand a problem.
-- Accept correction, acknowledge mistakes, and help keep discussions on topic.
-- Protect private information and follow responsible disclosure practices.
+- 提供建设性意见，围绕工作本身讨论。
+- 尊重不同技术背景、语言和观点。
+- 提供足够上下文，让他人能够复现并理解问题。
+- 接受纠正、承认错误，并帮助讨论保持主题。
+- 保护私人信息，遵循负责任的安全披露流程。
 
-## Unacceptable behavior
+## 不可接受的行为
 
-- Harassment, threats, discrimination, or targeted personal attacks.
-- Sexualized language or unwanted attention.
-- Trolling, sustained disruption, spam, or deliberate misinformation.
-- Publishing another person's private information without permission.
-- Pressuring anyone to disclose credentials, private code, customer data, or
-  security-sensitive details.
+- 骚扰、威胁、歧视或针对个人的攻击。
+- 性暗示言论或不受欢迎的关注。
+- 挑衅、持续干扰、垃圾信息或故意传播错误信息。
+- 未经许可公开他人的私人信息。
+- 迫使他人披露凭据、私有代码、客户数据或安全敏感信息。
 
-## Scope
+## 适用范围
 
-This policy applies to repository issues, pull requests, discussions, and other
-spaces where someone represents the Pinvou community.
+本准则适用于本仓库的问题、合并请求、讨论区，以及代表鲜小助社区参与的其他交流场所。
 
-## Reporting and enforcement
+## 举报与处理
 
-For ordinary moderation concerns, use GitHub's reporting tools and avoid
-escalating the conflict in public. For a confidential report, email
-`security@pinvou.com` with `[Code of Conduct]` in the subject.
+一般管理问题请使用 GitHub 举报功能，避免在公开场合升级冲突。涉及漏洞或敏感数据的问题按照 [安全政策](SECURITY.md) 处理，不要公开相关信息。
 
-Maintainers may edit or remove content, lock discussions, reject contributions,
-or temporarily or permanently restrict participation when behavior violates
-this policy. Enforcement decisions will consider context, severity, repetition,
-and impact. Reports are handled on a best-effort basis without a guaranteed
-response time.
+维护者可以根据违规情形编辑或移除内容、锁定讨论、拒绝贡献，或暂时、永久限制参与。处理时会考虑背景、严重程度、重复次数和影响。举报按尽力而为原则处理，不保证响应时间。
 
-Retaliation against someone who reports a concern in good faith is not
-acceptable.
+不得报复善意提出问题或举报的参与者。
 
-## Attribution
+## 参考来源
 
-This policy is informed by the
-[Contributor Covenant](https://www.contributor-covenant.org/version/2/1/code_of_conduct/)
-and is adapted for the Pinvou Agent community.
+本准则参考 [Contributor Covenant 2.1](https://www.contributor-covenant.org/version/2/1/code_of_conduct/)，并根据原 Pinvou Agent 社区准则调整，适用于独立维护的鲜小助项目。

@@ -1,30 +1,7 @@
-# Security Policy
+# 安全问题报告
 
-## Supported versions
+请不要在公开 Issue、讨论区、提交或日志中披露安全漏洞、密钥、令牌、账号信息或用户数据。
 
-Security fixes are applied to the latest published Community release and the
-current `main` branch. Older releases may not receive backports.
+发现安全问题时，请通过 GitHub 仓库的私密漏洞报告功能提交：进入仓库 **Security → Advisories → Report a vulnerability**。报告中请提供受影响版本、复现条件、实际影响和可行的缓解建议。
 
-## Report a vulnerability
-
-Use
-[GitHub Private Vulnerability Reporting](https://github.com/Pinvou/pinvou-agent/security/advisories/new)
-as the primary reporting channel. If that is not available, email
-[security@pinvou.com](mailto:security@pinvou.com).
-
-Include the affected version, reproduction steps, and potential impact when
-possible. Include only the minimum data needed to reproduce the issue, and
-remove unrelated personal, customer, or credential data.
-
-Do not open a public issue or discussion for an unpatched vulnerability,
-including suspected credential exposure, remote execution, authorization
-bypass, or cross-user data access.
-
-## Disclosure process
-
-Reports are reviewed on a best-effort basis. Pinvou does not currently promise
-a response-time SLA or operate a vulnerability bounty program. When a report is
-confirmed, we will work with the reporter on a reasonable disclosure timeline
-and publish a fix or mitigation before public technical details when practical.
-
-Do not test against systems or data you do not own or have permission to use.
+维护者确认问题前，请避免公开复现代码或利用细节。普通缺陷和功能建议仍通过 [GitHub Issues](https://github.com/mlmr-coder/fresh-agent/issues) 提交。
