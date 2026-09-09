@@ -57,6 +57,7 @@ function buildComposerToolMenuState({
     .map(tool => ({
       id: tool.id,
       kind: 'tool',
+      connected: tool.connected === true,
       title: tool.name || tool.title || tool.id,
       description: tool.description || tool.subtitle || '',
       enabled: !disabled.has(tool.id),

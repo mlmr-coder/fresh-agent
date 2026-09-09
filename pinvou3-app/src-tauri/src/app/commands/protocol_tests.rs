@@ -48,6 +48,11 @@ macro_rules! command_protocol {
 }
 
 command_protocol!(
+    composer_protocol,
+    "composer.rs",
+    ["list_composer_skills", "list_composer_files", "list_composer_connectors"]
+);
+command_protocol!(
     artifacts_protocol,
     "artifacts.rs",
     [

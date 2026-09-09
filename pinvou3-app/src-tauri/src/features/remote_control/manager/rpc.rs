@@ -442,6 +442,7 @@ pub(super) fn web_session_scope(command: &str) -> Option<WebSessionScope> {
         | "get_session_timeline"
         | "list_shell_tasks"
         | "list_workspace_files"
+        | "list_composer_files"
         | "save_session_persona_events"
         | "save_session_pinvou_reviews"
         | "save_session_pinvou_scene_events"

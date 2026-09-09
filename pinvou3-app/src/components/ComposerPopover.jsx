@@ -13,7 +13,7 @@ const POPOVER_SURFACE =
 // ——否则该祖先会成为 `position: fixed` 的包含块，让按 getBoundingClientRect 算出的视口
 // 坐标被当成 composer 内部坐标，菜单跳位。菜单底边贴在触发按钮上方约 8px，左右各留 12px
 // 安全边并向视口内收缩；随窗口缩放 / 旋转 / 软键盘引起的可视区变化实时重算。
-function useAnchoredPosition(open, triggerRef, active) {
+function useAnchoredPosition(open, triggerRef, active, menuWidth) {
   const [style, setStyle] = useState(null);
   useLayoutEffect(() => {
     if (!open || !active || !triggerRef.current) {
@@ -27,7 +27,7 @@ function useAnchoredPosition(open, triggerRef, active) {
       const vw = document.documentElement.clientWidth || window.innerWidth;
       const vh = document.documentElement.clientHeight || window.innerHeight;
       const inset = 12;
-      const width = Math.min(288, Math.max(0, vw - inset * 2));
+      const width = Math.min(menuWidth, Math.max(0, vw - inset * 2));
       const desiredLeft = rect.left + rect.width / 2 - width / 2;
       const left = Math.max(inset, Math.min(desiredLeft, vw - width - inset));
       setStyle({
@@ -53,7 +53,7 @@ function useAnchoredPosition(open, triggerRef, active) {
         window.visualViewport.removeEventListener('scroll', position);
       }
     };
-  }, [open, active, triggerRef]);
+  }, [open, active, triggerRef, menuWidth]);
   return style;
 }
 
@@ -117,16 +117,16 @@ function useOutsidePointerClose(open, onClose, insideRefs, opts = {}) {
 // composer 下拉外壳。桌面端保持原来的就地 absolute 下拉（外观行为不变）；移动 WebUI
 // portal 到 <body> 并按触发按钮真实屏幕位置锚定。`desktopClassName` 是各菜单原有的桌面
 // 定位样式，移动端统一用 POPOVER_SURFACE + 计算出的 inline 定位。
-const ComposerPopover = ({ open, onClose, triggerRef, compact, desktopClassName, menuProps, children }) => {
+const ComposerPopover = ({ open, onClose, triggerRef, compact, portal = false, menuWidth = 288, desktopClassName, menuProps, children }) => {
   const popoverId = useId();
   // The system child WebView sits above React compositing. Before opening this menu, use the
   // shared Dock occlusion protocol to hide the native surface; otherwise the full-screen
   // click-away layer cannot receive pointer input over the browser region.
   const publicationReady = useRightDockOcclusion(`composer-popover-${popoverId}`, open);
-  const anchored = isWeb && compact;
-  const style = useAnchoredPosition(open, triggerRef, anchored);
+  const anchored = portal || (isWeb && compact);
+  const style = useAnchoredPosition(open, triggerRef, anchored, menuWidth);
   const panelRef = useRef(null);
-  useOutsidePointerClose(open && publicationReady && !anchored, onClose, [panelRef, triggerRef]);
+  useOutsidePointerClose(open && publicationReady, onClose, [panelRef, triggerRef]);
   if (!open || !publicationReady) return null;
   if (!anchored) {
     return (
@@ -141,8 +141,8 @@ const ComposerPopover = ({ open, onClose, triggerRef, compact, desktopClassName,
           menu items inside the panel, so this is a non-interactive element. */}
       {/* biome-ignore lint/a11y/useKeyWithClickEvents: pointer-only outside-click dismiss layer; keyboard path handled by the trigger button and panel buttons */}
       {/* biome-ignore lint/a11y/noStaticElementInteractions: pointer-only outside-click dismiss layer, non-interactive container */}
-      <div data-testid="composer-popover-backdrop" className="fixed inset-0 z-40" onClick={onClose}></div>
-      <div {...menuProps} style={style || { position: 'fixed', visibility: 'hidden' }} className={`fixed ${POPOVER_SURFACE}`}>
+      {!portal && <div data-testid="composer-popover-backdrop" className="fixed inset-0 z-40" onClick={onClose}></div>}
+      <div {...menuProps} ref={panelRef} style={style || { position: 'fixed', visibility: 'hidden' }} className={`fixed ${POPOVER_SURFACE}`}>
         {children}
       </div>
     </>,

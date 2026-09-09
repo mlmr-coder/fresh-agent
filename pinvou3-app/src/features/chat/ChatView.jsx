@@ -41,6 +41,7 @@ import {
   isSearchTool,
   restoreConversationScrollPosition,
 } from '../conversation/conversation-model.js';
+import { useComposerSuggestions } from './ComposerSuggestions.jsx';
 import { AttachmentChips } from '../attachments/AttachmentChips.jsx';
 import { collectClipboardImages, readPasteImageAsBytes } from '../attachments/paste-image.js';
 import { formatAttachmentLimitError } from '../attachments/attachment-limit-errors.js';
@@ -1223,7 +1224,7 @@ const ToolWelcomeCard = ({ toolId, _theme, t, onSend }) => {
         : pinvouMode === 'design'
           ? designModeSubtabs.find(item => item.key === designSubtab)
           : null;
-      const composerPlaceholder = pinvouMode === 'design'
+      const sceneComposerPlaceholder = pinvouMode === 'design'
         ? selectedDesignElement
           ? chatViewCopy.placeholderDesignAdjust
           : dataVisualizationSceneActive
@@ -1240,6 +1241,7 @@ const ToolWelcomeCard = ({ toolId, _theme, t, onSend }) => {
               ? chatViewCopy.placeholderWorkDocument
               : t.placeholder
         : t.placeholder;
+      const composerPlaceholder = `${sceneComposerPlaceholder}  ${t.uiComposerSuggestions.hint}`;
       const isScheduledTaskCreationChat = !!(bs && bs.scheduledTaskCreationSessionId && bs.activeSessionId === bs.scheduledTaskCreationSessionId);
       const scheduledRunContext = bs && bs.scheduledRunContext && bs.scheduledRunContext.sessionId === bs.activeSessionId
         ? bs.scheduledRunContext
@@ -1692,6 +1694,13 @@ const ToolWelcomeCard = ({ toolId, _theme, t, onSend }) => {
       const voiceActive = isVoiceActive(voiceInput);
       const voiceBusy = isVoiceBusy(voiceInput);
       const hasDraftText = inputText.trim().length > 0;
+      const suggestions = useComposerSuggestions({
+        text: inputText, setText: handleComposerInputChange, inputRef: composerRef,
+        sessionId: activeSessionId, language: bs?.settings?.language,
+        copy: t.uiComposerSuggestions, disabled: isMultiAgentReadOnly,
+        onManageSkills: onGotoSkills,
+        skillLabels: t.uiToolStore.storeData.skills, builtinSkillTitle: t.uiSettingsView.visualDesignSkillName,
+      });
       const hasReadyAttachment = attachments.some(a => a.status === 'ready');
       const firstTurnPending = !activeSessionId && chatItems.some(item => (
         item && item.type === 'user' && !!item.deliveryState
@@ -2091,6 +2100,7 @@ const ToolWelcomeCard = ({ toolId, _theme, t, onSend }) => {
             return;
           }
         }
+        if (suggestions.onKeyDown(e)) return;
         // 输入法合成期间(例如中文输入法敲回车确认候选词上屏)不要触发发送,
         // 否则一次回车会既上屏又发送消息。与 PetWindow 处理保持一致。
         if (isPlainEnter(e)) {
@@ -2281,7 +2291,7 @@ const ToolWelcomeCard = ({ toolId, _theme, t, onSend }) => {
       }
 
       const responsiveGutterStyle = {
-        paddingInline: 'clamp(16px, calc((100% - 800px) / 2), 160px)',
+        paddingInline: 'clamp(16px, calc((100% - 850px) / 2), 160px)',
       };
 
       // The two ArtifactsPanel mounts (fullscreen portal / right Dock) share the same 18-prop
@@ -2375,7 +2385,7 @@ const ToolWelcomeCard = ({ toolId, _theme, t, onSend }) => {
             )}
 
             {!hasMessages && welcomeToolId && (
-              <div className="max-w-[800px] w-full mx-auto mt-8">
+              <div className="max-w-[850px] w-full mx-auto mt-8">
                 <ToolWelcomeCard
                   toolId={welcomeToolId}
                   theme={theme}
@@ -2395,7 +2405,7 @@ const ToolWelcomeCard = ({ toolId, _theme, t, onSend }) => {
             )}
 
             {hasMessages && (
-              <div ref={conversationContentRef} className="max-w-[800px] w-full min-w-0 mx-auto space-y-4">
+              <div ref={conversationContentRef} className="max-w-[850px] w-full min-w-0 mx-auto space-y-4">
                 <ConversationTimeline
                     turns={conversationProjection.turns}
                     copy={t.uiConversation}
@@ -2436,7 +2446,7 @@ const ToolWelcomeCard = ({ toolId, _theme, t, onSend }) => {
           {hasMessages && chatItems.some((item) => item.type === 'memory_candidate' && !item.resolved) && (
             <div className="pointer-events-none absolute inset-x-0 z-[24]"
               style={{ ...responsiveGutterStyle, bottom: (composerH ? composerH + 28 : 148) + 'px' }}>
-              <div className="max-w-[800px] w-full mx-auto flex flex-col items-end gap-3">
+              <div className="max-w-[850px] w-full mx-auto flex flex-col items-end gap-3">
                 {chatItems
                   .filter((item) => item.type === 'memory_candidate' && !item.resolved)
                   .slice(-2)
@@ -2463,7 +2473,7 @@ const ToolWelcomeCard = ({ toolId, _theme, t, onSend }) => {
             className={`absolute ${isWeb ? 'bottom-2 sm:bottom-8' : 'bottom-8'} inset-x-0 z-20`}
             style={responsiveGutterStyle}
           >
-            <div className="max-w-[800px] w-full mx-auto">
+            <div className="max-w-[850px] w-full mx-auto">
               {!scheduledRunContext && !conversationStarted && (
                 <HomeModeSwitcher
                   mode={pinvouMode}
@@ -2776,7 +2786,9 @@ const ToolWelcomeCard = ({ toolId, _theme, t, onSend }) => {
                 ref={composerRef}
                 data-testid="chat-composer-input"
                 value={inputText}
-                onChange={e => handleComposerInputChange(e.target.value)}
+                onChange={e => { handleComposerInputChange(e.target.value); suggestions.onSelect(e); }}
+                onSelect={suggestions.onSelect}
+                {...suggestions.inputProps}
                 onKeyDown={handleKeyDown}
                 onPaste={handlePaste}
                 maxLength={CHAT_INPUT_MAX_LENGTH}
@@ -2784,6 +2796,7 @@ const ToolWelcomeCard = ({ toolId, _theme, t, onSend }) => {
                 rows={1}
                 className="w-full bg-transparent resize-none outline-none text-gray-800 dark:text-gray-100 text-[16px] leading-relaxed min-h-[48px] overflow-y-auto hide-scrollbar placeholder:text-gray-400 dark:placeholder:text-gray-500"
               />
+              {suggestions.menu}
               <TextareaContextMenu inputRef={composerRef} setValue={setInputText} theme={theme} t={t} />
               {inputLimitReached && (
                 <div role="status" aria-live="polite" data-testid="chat-input-limit-notice"
@@ -2805,7 +2818,6 @@ const ToolWelcomeCard = ({ toolId, _theme, t, onSend }) => {
                   <ComposerToolMenu
                     t={t}
                     onGotoTools={onGotoTools}
-                    onGotoSkills={onGotoSkills}
                     activeSessionId={bs && bs.activeSessionId}
                     compact={composerCompact}
                     activeSkill={bs && bs.activeSkill}

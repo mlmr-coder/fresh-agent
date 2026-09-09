@@ -34,7 +34,7 @@ function pendingEnablesFor(scope) {
   const key = scope === 'code' ? 'code' : 'plain';
   let entry = pendingToolEnables.get(key);
   if (!entry) {
-    entry = { ids: new Set(), projectSkills: false };
+    entry = { ids: new Set(), projectSkills: false, revision: 0 };
     pendingToolEnables.set(key, entry);
   }
   return entry;
@@ -47,7 +47,8 @@ function pendingEnablesFor(scope) {
 window.addEventListener('pinvou:chat-round-committed', (event) => {
   const committedScope = event && event.detail && event.detail.scope;
   const pending = pendingToolEnables.get(committedScope === 'code' ? 'code' : 'plain');
-  if (!pending || (!pending.ids.size && !pending.projectSkills)) return;
+  if (!pending) return;
+  pending.revision += 1;
   pending.ids.clear();
   pending.projectSkills = false;
 });
@@ -446,7 +447,7 @@ window.addEventListener('pinvou:chat-round-committed', (event) => {
       return (
         <span
           title={row.title}
-          className={`relative flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-white bg-gradient-to-br text-white shadow-sm dark:border-[#161618] ${capabilityAvatarTone(row.id)}`}
+          className={`relative flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-white bg-gradient-to-br text-white shadow-sm dark:border-[#161618] ${capabilityAvatarTone(row.id)}`}
         >
           {logoSrc
             ? <img src={logoSrc} alt="" className="h-full w-full object-cover" loading="lazy" />
@@ -472,12 +473,12 @@ window.addEventListener('pinvou:chat-round-committed', (event) => {
           {preview.rows.length > 0
             ? preview.rows.map(row => <CapabilityMiniAvatar key={`${kind}:${row.id}`} row={row} kind={kind} />)
             : (
-              <span className="flex h-7 w-7 items-center justify-center rounded-full border border-dashed border-black/15 text-gray-400 dark:border-white/20 dark:text-gray-500">
+              <span className="flex h-6 w-6 items-center justify-center rounded-full border border-dashed border-black/15 text-gray-400 dark:border-white/20 dark:text-gray-500">
                 {kind === 'connectors' ? <Wrench size={13} /> : <Sparkles size={13} />}
               </span>
             )}
           {preview.overflow > 0 && (
-            <span className="relative flex h-7 min-w-7 items-center justify-center rounded-full border-2 border-white bg-[#EEF1F5] px-1 text-[10px] font-bold text-[#5F6368] shadow-sm dark:border-[#161618] dark:bg-[#34363A] dark:text-[#DADCE0]">
+            <span className="relative flex h-6 min-w-6 items-center justify-center rounded-full border-2 border-white bg-[#EEF1F5] px-1 text-[10px] font-bold text-[#5F6368] shadow-sm dark:border-[#161618] dark:bg-[#34363A] dark:text-[#DADCE0]">
               +{preview.overflow}
             </span>
           )}
@@ -488,12 +489,14 @@ window.addEventListener('pinvou:chat-round-committed', (event) => {
     // 输入框底栏:工具菜单(只展示已装工具 + 跳工具商店;无会话级开关——后端无此概念)。
     // 可选触发器变体：triggerVariant='pill' 时触发器渲染为代码页配置组同款 pill
     //（triggerLabel 为可选 10px 前缀文案；triggerTestId 覆盖默认 testid），
-    // 下拉内容不变；不传变体时聊天页外观逐字节不变。
-    const ComposerToolMenu = ({ t, onGotoTools, onGotoSkills, compact, activeSkill, triggerVariant, triggerLabel, triggerTestId, scope, activeSessionId: activeSessionIdProp, busy = false }) => {
+    // capability-groups 仅展示连接器头像；原生代码 pill 保留完整工具/技能菜单。
+    const ComposerToolMenu = ({ t, onGotoTools, compact, activeSkill, triggerVariant, triggerLabel, triggerTestId, scope, activeSessionId: activeSessionIdProp, busy = false }) => {
       const [open, setOpen] = useState(false);
-      const [activeSection, setActiveSection] = useState('all');
       const triggerRef = useRef(null);
       const connectorTriggerRef = useRef(null);
+      const refreshSequence = useRef(0);
+      const [savingTool, setSavingTool] = useState(false);
+      const [toolSaveError, setToolSaveError] = useState(false);
       const canMutateToolStore = can('toolStoreMutations');
       // 代码会话保持只增不减：有活动会话时只阻隔「关闭」——已进入上下文的
       // 工具撤不回。普通聊天支持热刷能力目录与工具规则，因此允许随时开关。
@@ -505,7 +508,7 @@ window.addEventListener('pinvou:chat-round-committed', (event) => {
       // 无权限才全局禁用；会话中的「关闭」阻隔是逐行判断（只有已开 = enabled 才禁）。
       // 当前轮次的模型工具表与技能目录已经提交，执行中修改无法追回本轮。
       // 处理完成后恢复开关，变更从下一轮起生效。
-      const toolSwitchDisabled = !canMutateToolStore || busy;
+      const toolSwitchDisabled = !canMutateToolStore || busy || savingTool;
       // scope: 'code' = 原生代码会话(独立开关,默认全关),缺省 = 普通会话(plain)。
       const toolScope = scope === 'code' ? 'code' : 'plain';
       const removalLocked = toolScope === 'code' && !!activeSessionIdProp;
@@ -515,20 +518,14 @@ window.addEventListener('pinvou:chat-round-committed', (event) => {
       const [hidden, setHidden] = useState(() => new Set()); // 被不可见的包 id(可见性预过滤，按 scope 持久)
       const [projectSkillsEnabled, setProjectSkillsEnabled] = useState(false); // 项目级 skills(仅 code scope 生效)
       const [projectSkillsHelp, setProjectSkillsHelp] = useState(false); // 项目技能帮助弹窗(功能说明+扫描目录)
-      const [feishuOn, setFeishuOn] = useState(false); // 飞书是否已连接(CLI 路线)
-      const [feishuEnabled, setFeishuEnabled] = useState(true); // 飞书技能是否启用(未手动停用)
-      const [wecomOn, setWecomOn] = useState(false); // 企微是否已连接(CLI 路线)
-      const [wecomEnabled, setWecomEnabled] = useState(true); // 企微技能是否启用(未手动停用)
-      const [dingtalkOn, setDingtalkOn] = useState(false); // 钉钉是否已连接(CLI 路线)
-      const [dingtalkEnabled, setDingtalkEnabled] = useState(true); // 钉钉技能是否启用(未手动停用)
-      const [tmeetOn, setTmeetOn] = useState(false); // 腾讯会议是否已连接(CLI 路线)
-      const [tmeetEnabled, setTmeetEnabled] = useState(true); // 腾讯会议技能是否启用(未手动停用)
       // 启动时加载已装工具 + 全局持久的禁用列表(持久语义:新窗口/新对话都继承)
-      async function refreshToolsMenu(isAlive) {
+      async function refreshToolsMenu(isMounted) {
+        const sequence = ++refreshSequence.current;
+        const isAlive = () => isMounted() && sequence === refreshSequence.current;
         try {
-          const list = await invokeTauri('list_marketplace_tools');
-          if (isAlive()) setMarketplaceTools(Array.isArray(list) ? list : []);
-        } catch { /* ignore */ }
+          const list = await invokeTauri('list_composer_connectors');
+          if (isAlive()) setMarketplaceTools((Array.isArray(list) ? list : []).map(tool => ({ ...tool, name: t.uiToolDetails?.tools?.[tool.id]?.title || tool.name })));
+        } catch { /* retain the last known state until the next refresh */ }
         try {
           const skills = await invokeTauri('list_marketplace_skills');
           if (isAlive()) setMarketplaceSkills(Array.isArray(skills) ? skills : []);
@@ -545,22 +542,6 @@ window.addEventListener('pinvou:chat-round-committed', (event) => {
           const proj = await invokeTauri('get_project_skills_enabled');
           if (isAlive()) setProjectSkillsEnabled(!!proj);
         } catch { /* ignore */ }
-        try {
-          const fs = await invokeTauri('feishu_skills_state');
-          if (isAlive()) { setFeishuOn(!!(fs && fs.connected)); setFeishuEnabled(!fs || fs.enabled !== false); }
-        } catch { /* ignore */ }
-        try {
-          const ws = await invokeTauri('wecom_skills_state');
-          if (isAlive()) { setWecomOn(!!(ws && ws.connected)); setWecomEnabled(!ws || ws.enabled !== false); }
-        } catch { /* ignore */ }
-        try {
-          const ds = await invokeTauri('dingtalk_skills_state');
-          if (isAlive()) { setDingtalkOn(!!(ds && ds.connected)); setDingtalkEnabled(!ds || ds.enabled !== false); }
-        } catch { /* ignore */ }
-        try {
-          const ts = await invokeTauri('tmeet_skills_state');
-          if (isAlive()) { setTmeetOn(!!(ts && ts.connected)); setTmeetEnabled(!ts || ts.enabled !== false); }
-        } catch { /* ignore */ }
       }
       useEffect(() => {
         let alive = true;
@@ -568,7 +549,8 @@ window.addEventListener('pinvou:chat-round-committed', (event) => {
         const onChanged = () => refreshToolsMenu(isAlive);
         refreshToolsMenu(isAlive); // eslint-disable-line react-hooks/set-state-in-effect -- fetch the tools menu on mount; refreshToolsMenu is async and its setState happens after the await
         window.addEventListener('pinvou:tools-changed', onChanged);
-        return () => { alive = false; window.removeEventListener('pinvou:tools-changed', onChanged); };
+        window.addEventListener('focus', onChanged);
+        return () => { alive = false; window.removeEventListener('pinvou:tools-changed', onChanged); window.removeEventListener('focus', onChanged); };
       // eslint-disable-next-line react-hooks/exhaustive-deps -- fetch once on mount; refreshToolsMenu is an in-component closure and tool changes refresh via events
       }, []);
       // 新一轮对话已被后端受理 → 本 scope 未提交的「打开」已由文件头的模块级
@@ -591,23 +573,29 @@ window.addEventListener('pinvou:chat-round-committed', (event) => {
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
       }, [projectSkillsHelp]);
-      function toggleTool(id, enabled) {
-        // code scope 只增不减：活动会话中只阻隔已进入上下文的「关闭」；
-        // plain scope 允许热刷关闭。本轮刚打开的 code 项在提交前仍可改回。
+      async function toggleTool(id, enabled) {
         const pending = pendingEnablesFor(toolScope);
         if (toolSwitchDisabled || (removalLocked && enabled && !pending.ids.has(id))) return;
-        // scope 收敛后：工具/技能/CLI 开关统一为包 id 单一禁用集（后端
-        // disabled_bundles.json），技能行 id 即包 id，不再带 `skill:` 前缀。
         const next = new Set(disabled);
         next.has(id) ? next.delete(id) : next.add(id);
-        setDisabled(next);
-        // 记录/撤销未提交的「打开」：code scope 发送新一轮后由
-        // pinvou:chat-round-committed 转正锁死；plain scope 记录不影响随时开关。
+        const wasPending = pending.ids.has(id);
+        const revision = pending.revision;
+        // Record before awaiting: a Code turn may be accepted while saving.
         if (enabled) pending.ids.delete(id); else pending.ids.add(id);
-        // 按 scope 持久:落盘 + 广播给所有在跑引擎,关一次该 scope 所有新对话/新窗口都继承。
-        if (bridge.available) {
-          invokeTauri('set_disabled_connectors',
-            { connectorIds: [...next], scope: toolScope }).catch(() => {});
+        setSavingTool(true);
+        setToolSaveError(false);
+        try {
+          if (bridge.available) await invokeTauri('set_disabled_connectors', { connectorIds: [...next], scope: toolScope });
+          setDisabled(next);
+          window.dispatchEvent(new Event('pinvou:tools-changed'));
+        } catch {
+          // Do not revive pending permissions consumed by an intervening turn.
+          if (pending.revision === revision) {
+            if (wasPending) pending.ids.add(id); else pending.ids.delete(id);
+          }
+          setToolSaveError(true);
+        } finally {
+          setSavingTool(false);
         }
       }
       function toggleProjectSkills() {
@@ -628,12 +616,6 @@ window.addEventListener('pinvou:chat-round-committed', (event) => {
         hiddenIds: [...hidden],
         activeSkill,
         scope: toolScope,
-        serviceStates: [
-          { id: 'feishu', title: t.uiSettingsView.serviceFeishu, connected: feishuOn, enabled: feishuEnabled },
-          { id: 'wecom', title: t.uiSettingsView.serviceWecom, connected: wecomOn, enabled: wecomEnabled },
-          { id: 'dingtalk', title: t.uiSettingsView.serviceDingtalk, connected: dingtalkOn, enabled: dingtalkEnabled },
-          { id: 'tmeet', title: t.uiSettingsView.serviceTmeet, connected: tmeetOn, enabled: tmeetEnabled },
-        ],
       });
       const { connectedServices, toolRows, skillRows, enabledCount, allSkillsDisabled } = menuState;
       // 内置技能名称/描述由 composer-tool-menu-logic.js 数据提供，在 UI 边界按当前语言覆盖
@@ -641,15 +623,10 @@ window.addEventListener('pinvou:chat-round-committed', (event) => {
         ? { ...row, title: t.uiSettingsView.visualDesignSkillName, description: t.uiSettingsView.visualDesignSkillDesc }
         : row);
       const connectorRows = [...connectedServices, ...toolRows];
-      const connectorPreview = buildCapabilityPreview(connectorRows);
-      const skillPreview = buildCapabilityPreview(localizedSkillRows);
+      const connectorPreview = buildCapabilityPreview(connectorRows.filter(row => row.connected));
       const avatarGroups = triggerVariant === 'capability-groups';
-      const showConnectors = !avatarGroups || activeSection === 'connectors';
-      const showSkills = !avatarGroups || activeSection === 'skills';
-      const openSection = (section) => {
-        setActiveSection(section);
-        setOpen(current => (current && activeSection === section ? false : true));
-      };
+      const showConnectors = true;
+      const showSkills = !avatarGroups;
       const statusBadge = (label, tone = 'green') => {
         const cls = tone === 'blue'
           ? 'text-[#007AFF] dark:text-[#5AC8FA] bg-[#007AFF]/10 dark:bg-[#0A84FF]/15'
@@ -664,7 +641,7 @@ window.addEventListener('pinvou:chat-round-committed', (event) => {
         <div key={row.id} className="flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl font-medium">
           <span className="min-w-0 flex items-center gap-1.5">
             <span className="block text-[13px] text-gray-700 dark:text-gray-200 truncate">{row.title}</span>
-            {row.kind === 'service' && statusBadge(t.composerConnected, 'green')}
+            {row.connected && statusBadge(t.composerConnected, 'green')}
           </span>
           <Toggle checked={row.enabled} onChange={() => toggleTool(row.id, row.enabled)} aria-label={row.id} disabled={rowDisabled} size="sm" />
         </div>
@@ -701,18 +678,9 @@ window.addEventListener('pinvou:chat-round-committed', (event) => {
                 preview={connectorPreview}
                 label={t.composerConnectors}
                 testId={triggerTestId || 'composer-tool-menu-trigger'}
-                open={open && activeSection === 'connectors'}
+                open={open}
                 disabled={busy}
-                onClick={() => openSection('connectors')}
-              />
-              <CapabilityAvatarTrigger
-                kind="skills"
-                preview={skillPreview}
-                label={t.composerSkills}
-                testId="composer-skill-menu-trigger"
-                open={open && activeSection === 'skills'}
-                disabled={busy}
-                onClick={() => openSection('skills')}
+                onClick={() => setOpen(current => !current)}
               />
             </div>
           ) : triggerVariant === 'pill' ? (
@@ -759,9 +727,10 @@ window.addEventListener('pinvou:chat-round-committed', (event) => {
             desktopClassName="absolute bottom-full left-0 mb-2 w-72 max-h-[420px] z-50 overflow-y-auto custom-scrollbar bg-white dark:bg-[#1E1E20] border border-black/5 dark:border-white/10 rounded-2xl shadow-xl p-1.5">
                 {avatarGroups && (
                   <div className="px-3 pb-1 pt-1.5 text-[11px] font-semibold text-gray-400 dark:text-gray-500">
-                    {activeSection === 'skills' ? t.composerSkills : t.composerConnectors}
+                    {t.composerConnectors}
                   </div>
                 )}
+                {toolSaveError && <div role="alert" className="px-3 py-2 text-[12px] text-red-500">{t.composerUpdateFailed}</div>}
                 {showConnectors && connectorRows.map(switchRow)}
                 {showConnectors && connectorRows.length === 0 && (
                   <div className="px-3 py-2 text-[13px] text-gray-400 dark:text-gray-500">{t.composerNoConnectors}</div>
@@ -805,14 +774,13 @@ window.addEventListener('pinvou:chat-round-committed', (event) => {
                 <div className="h-px bg-black/5 dark:bg-white/10 my-1.5 mx-2" />
                 <button type="button" onClick={() => {
                   setOpen(false);
-                  if (avatarGroups && activeSection === 'skills' && onGotoSkills) onGotoSkills();
-                  else if (onGotoTools) onGotoTools();
+                  if (onGotoTools) onGotoTools();
                 }}
                   className="w-full flex items-center gap-2.5 px-3 py-2.5 text-[13px] text-gray-700 dark:text-gray-200 hover:bg-[#007AFF] hover:text-white rounded-xl transition-colors group">
                   {avatarGroups
                     ? <Plus size={15} className="text-gray-400 group-hover:text-white/90" />
                     : <Store size={15} className="text-gray-400 group-hover:text-white/90" />}
-                  {avatarGroups && activeSection === 'skills' ? t.composerAddSkills : avatarGroups ? t.composerAddConnectors : t.composerManageTools}
+                  {avatarGroups ? t.composerAddConnectors : t.composerManageTools}
                 </button>
           </ComposerPopover>
           {projectSkillsHelp && createPortal(

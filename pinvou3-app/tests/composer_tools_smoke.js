@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * 输入框能力头像组 smoke：连接器/技能分组各显示 3 个头像和 +N，菜单按组筛选。
+ * 输入框能力头像组 smoke：连接器显示 3 个头像和 +N，技能改用 /；检查插入与键盘行为。
  * 依赖先运行 `npm run build:ui`。
  */
 const fs = require('fs'), path = require('path'), os = require('os');
@@ -55,11 +55,14 @@ function injectSource() {
         case 'get_mode_state': return Promise.resolve({mode:'yolo',plan_phase:'none'});
         case 'get_active_persona': return Promise.resolve(null);
         case 'detect_local_vllm_setup': return Promise.resolve({eligible:false});
-        case 'list_marketplace_tools': return Promise.resolve([
-          {id:'gongwen',name:'公文写作',description:'公文工具',installed:true,companion_skills:['government-writing']},
-          {id:'weather',name:'高德天气',installed:true},
-          {id:'obsidian',name:'Obsidian',installed:true},
-          {id:'qcc',name:'企查查',installed:true},
+        case 'list_composer_connectors': case 'list_marketplace_tools': return Promise.resolve([
+          {id:'feishu',name:'飞书（Lark）',installed:true,connected:true},
+          {id:'ima',name:'腾讯 ima',installed:true,connected:true},
+          {id:'gongwen',name:'公文写作',description:'公文工具',installed:true,connected:true,companion_skills:['government-writing']},
+          {id:'weather',name:'高德天气',installed:true,connected:true},
+          {id:'obsidian',name:'Obsidian',installed:true,connected:true},
+          {id:'qcc',name:'企查查',installed:true,connected:true},
+          {id:'pending',name:'待授权',installed:true},
         ]);
         case 'list_marketplace_skills': return Promise.resolve([
           {id:'government-writing',title:'党政机关公文写作',description:'配套技能',installed:true,user_uploaded:false},
@@ -67,6 +70,11 @@ function injectSource() {
           {id:'research',title:'深度研究',installed:true,user_uploaded:false},
           {id:'documents',title:'文档制作',installed:true,user_uploaded:false},
           {id:'spreadsheets',title:'电子表格',installed:true,user_uploaded:false},
+        ]);
+        case 'get_marketplace_tool_auth_status': return Promise.resolve({status:args.toolId==='pending'?'auth_pending':'connected'});
+        case 'list_composer_skills': return Promise.resolve([
+          {name:'visualizer',description:'数据分析可视化',aliases:['chart']},
+          {name:'government-writing',description:'公文写作',aliases:[]}
         ]);
         case 'get_disabled_connectors': return Promise.resolve(state.disabled);
         case 'set_disabled_connectors': state.disabled=(args&&args.connectorIds)||[]; return Promise.resolve(null);
@@ -125,11 +133,9 @@ const sleep = ms => new Promise(r => { setTimeout(r, ms); });
     };
   });
   rec('输入框存在连接器头像组', before.connectorButton, JSON.stringify(before));
-  rec('输入框存在技能头像组', before.skillButton, JSON.stringify(before));
+  rec('输入框不再显示技能头像组', !before.skillButton, JSON.stringify(before));
   rec('连接器默认显示 3 个头像', before.connectorAvatars === 3, JSON.stringify(before));
-  rec('技能默认显示 3 个头像', before.skillAvatars === 3, JSON.stringify(before));
-  rec('连接器超出项显示 +2', before.connectorOverflow === '+2', JSON.stringify(before));
-  rec('技能超出项显示 +2', before.skillOverflow === '+2', JSON.stringify(before));
+  rec('连接器超出项显示 +3，包含 ima', before.connectorOverflow === '+3', JSON.stringify(before));
   rec('模型选择器位于能力组之后', before.modelAfterGroups, JSON.stringify(before));
   rec('工作模式位于添加按钮后且排在专家前', before.workModeSecond, JSON.stringify(before));
 
@@ -147,17 +153,48 @@ const sleep = ms => new Promise(r => { setTimeout(r, ms); });
   const connectorMenu = await page.evaluate(() => document.querySelector('[data-testid="composer-tool-menu"]')?.innerText || '');
   rec('连接器菜单可关闭并添加连接器', connectorMenu.includes('公文写作') && connectorMenu.includes('飞书') && connectorMenu.includes('添加连接器') && !connectorMenu.includes('数据分析可视化'), connectorMenu);
 
-  await page.evaluate(() => document.querySelector('[data-testid="composer-skill-menu-trigger"]').click());
-  await sleep(150);
-  const skillMenu = await page.evaluate(() => document.querySelector('[data-testid="composer-tool-menu"]')?.innerText || '');
-  rec('技能菜单可关闭并添加技能', skillMenu.includes('视觉设计') && skillMenu.includes('数据分析可视化') && skillMenu.includes('添加技能'));
-  rec('技能菜单不重复展示 companion 技能', !skillMenu.includes('党政机关公文写作'));
-  rec('技能菜单不混入连接器', !skillMenu.includes('公文写作'));
+  await page.evaluate(() => document.querySelector('[data-testid="composer-tool-menu-trigger"]').click());
+  await page.click('[data-testid="chat-composer-input"]');
+  await page.type('[data-testid="chat-composer-input"]', '/chart');
+  await page.waitForSelector('[data-testid="composer-suggestions"] [role="option"]');
+  rec('/ 按技能别名筛选', await page.$eval('[data-testid="composer-suggestions"]', node => node.textContent.includes('/数据分析可视化') && !node.textContent.includes('/党政机关公文写作')));
+  await page.keyboard.press('Enter');
+  rec('回车插入技能且不自动发送', await page.$eval('[data-testid="chat-composer-input"]', node => node.value === '/数据分析可视化 '));
+  rec('技能选择不修改全局开关', await page.evaluate(() => !window.__COMPOSER_TOOLS_TEST__.calls.some(call => call.cmd === 'set_disabled_connectors')));
+  await page.keyboard.type('@');
+  await page.waitForSelector('[data-testid="composer-suggestions"]');
+  await sleep(100);
+  rec('无会话文件显示空态', await page.$eval('[data-testid="composer-suggestions"]', node => node.textContent.includes('没有匹配的对话文件')));
+  await page.keyboard.press('Escape');
+  rec('Esc 关闭建议保留草稿', await page.$eval('[data-testid="chat-composer-input"]', node => node.value.endsWith('@')) && !await page.$('[data-testid="composer-suggestions"]'));
+  const geometry = await page.evaluate(() => {
+    const input = document.querySelector('[data-testid="chat-composer-input"]');
+    const avatar = document.querySelector('[data-testid="composer-tool-menu-trigger"] span[title]');
+    return { inputWidth: input.getBoundingClientRect().width, avatarWidth: avatar.getBoundingClientRect().width };
+  });
+  rec('连接器头像缩小到 24px', geometry.avatarWidth === 24, JSON.stringify(geometry));
+  rec('聊天列放宽，输入区域大于 790px', geometry.inputWidth > 790, JSON.stringify(geometry));
 
-  await page.evaluate(() => document.querySelector('button[aria-label="visualizer"]').click());
-  await sleep(150);
-  const disabled = await page.evaluate(() => window.__COMPOSER_TOOLS_TEST__.disabled);
-  rec('关闭独立技能调用 set_disabled_connectors(裸 id)', disabled.includes('visualizer') && !disabled.some(id => id.startsWith('skill:')), JSON.stringify(disabled));
+  await page.keyboard.press('Backspace');
+  await page.keyboard.type('/');
+  await page.waitForSelector('[data-testid="composer-suggestions"] [role="option"]');
+  const popup = await page.$eval('[data-testid="composer-suggestions"]', node => {
+    const rect = node.getBoundingClientRect();
+    return { top: rect.top, bottom: rect.bottom, width: rect.width, hit: node.contains(document.elementFromPoint(rect.left + 20, rect.top + 50)) };
+  });
+  rec('建议弹层位于可视区域且可点击', popup.top >= 0 && popup.hit, JSON.stringify(popup));
+  await page.screenshot({ path: '/tmp/fresh-composer-desktop.png' });
+  await page.setViewport({ width: 390, height: 844 });
+  await sleep(250);
+  rec('窄屏建议弹层不溢出', await page.$eval('[data-testid="composer-suggestions"]', node => {
+    const rect = node.getBoundingClientRect();
+    return rect.left >= 0 && rect.right <= window.innerWidth;
+  }));
+  await page.screenshot({ path: '/tmp/fresh-composer-mobile.png' });
+
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('Enter');
+  rec('方向键可选择第二个中文技能', await page.$eval('[data-testid="chat-composer-input"]', node => node.value.includes('/党政机关公文写作')));
 
   rec('页面无未处理 JavaScript 异常', errors.length === 0, errors.slice(0, 2).join(' | '));
 

@@ -718,7 +718,7 @@ assert.match(settingsView, /const canManageModels = can\('modelManagement'\);/);
 const composerShared = readSource(path.join(root, 'src', 'features', 'settings', 'composer-shared.jsx'), 'utf8');
 assert.match(composerShared, /const canSwitchModels = can\('sessionModelSwitch'\);/);
 assert.match(composerShared, /const canMutateToolStore = can\('toolStoreMutations'\);/);
-assert.match(composerShared, /const toolSwitchDisabled = !canMutateToolStore \|\| busy;/);
+assert.match(composerShared, /const toolSwitchDisabled = !canMutateToolStore \|\| busy \|\| savingTool;/);
 // code scope 保持只增不减 + 未提交可撤销；普通聊天由后端热刷能力目录和规则，
 // 因此不套活动会话的关闭锁。
 assert.match(composerShared, /const removalLocked = toolScope === 'code' && !!activeSessionIdProp;/);

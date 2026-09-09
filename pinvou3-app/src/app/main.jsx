@@ -1027,11 +1027,11 @@ function workspaceDisplayName(path) {
           apiKey: profile.api_key || (fallback && fallback.apiKey) || '',
         };
       }
-      const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+      const compactViewport = useCompactViewport();
+      const [isSidebarOpen, setIsSidebarOpen] = useState(() => !(isWeb && compactViewport));
       const [openSidePanelCount, setOpenSidePanelCount] = useState(0);
       const restoreSidebarAfterConstraintRef = useRef(false);
       // 移动壳层只作用于 Web 端紧凑视口：底部 Tab + 顶栏，侧栏只保留抽屉形态。
-      const compactViewport = useCompactViewport();
       const isCompactShell = isWeb && compactViewport;
       const browserDockAvailable = !isCompactShell
         && browserNativeDisplayAvailable;
