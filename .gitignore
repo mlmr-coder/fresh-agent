@@ -52,6 +52,7 @@ scripts/.builtin-secrets.env
 # Local tool state
 .claude/
 .superpowers/
+.workbuddy/
 .codex-memory.md
 /pinvou-knowledge-data/
 

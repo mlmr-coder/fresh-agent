@@ -63,25 +63,12 @@ git submodule update --init --recursive
 
 ```text
 pinvou3-app/          Tauri 2 + React/Vite 桌面应用
-website/              智灵宣传官网与 Linux 部署配置
 CodeWhale/            Agent 底座 submodule
 pinvou-knowledge/     本地与共享知识服务
 remote-control-relay/ 可选的自托管远控中继
 scripts/              测试、构建与发布脚本
 docs/                 架构和维护文档
 ```
-
-## 宣传官网
-
-官网是独立的 Vite 静态项目，可部署到 Linux、Nginx、Caddy、对象存储或 CDN：
-
-```bash
-cd website
-npm ci
-npm run build
-```
-
-构建产物位于 `website/dist/`。Docker 与原生 Nginx 部署方法见 [website/README.md](website/README.md)。
 
 模型调用、流式输出、工具循环、会话、Skills、Commands、MCP、Hooks 与 Compaction 由 [CodeWhale](https://github.com/Pinvou/CodeWhale) 提供；桌面界面、业务编排和系统集成位于 `pinvou3-app/`。
 
