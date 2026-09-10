@@ -35,6 +35,11 @@ function jsonText(value) {
   return `${JSON.stringify(value, null, 2)}\n`;
 }
 
+export function brandContentMatches(current, expected) {
+  const normalizeLineEndings = (content) => content.replace(/\r\n?/gu, '\n');
+  return normalizeLineEndings(current) === normalizeLineEndings(expected);
+}
+
 function replaceRequired(content, pattern, replacement, target) {
   if (!pattern.test(content)) {
     throw new Error(`${target}: 未找到品牌同步锚点 ${pattern}`);
@@ -242,7 +247,7 @@ export function main(repoRoot = REPO_ROOT, { checkOnly = process.argv.includes('
     const stale = synchronizeLegacyDisplayNames(repoRoot, brand, checkOnly);
     for (const target of managedFiles(repoRoot, brand)) {
       const current = existsSync(target.path) ? readFileSync(target.path, 'utf8') : '';
-      if (current === target.content) continue;
+      if (brandContentMatches(current, target.content)) continue;
       if (checkOnly) stale.push(target.relativePath);
       else writeFileSync(target.path, target.content);
     }

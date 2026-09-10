@@ -4,13 +4,18 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 
-import { main as checkBrand } from '../../scripts/sync-brand.mjs';
+import { brandContentMatches, main as checkBrand } from '../../scripts/sync-brand.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(HERE, '../..');
 
 test('all managed product surfaces match BRAND.json', () => {
   assert.equal(checkBrand(REPO_ROOT, { checkOnly: true }), 0);
+});
+
+test('brand synchronization accepts Windows line endings', () => {
+  assert.equal(brandContentMatches('智灵\r\n桌面应用\r\n', '智灵\n桌面应用\n'), true);
+  assert.equal(brandContentMatches('智灵\r\n桌面应用\r\n', '智灵\n网页应用\n'), false);
 });
 
 test('macOS app menu uses the generated display name instead of the executable name', () => {
