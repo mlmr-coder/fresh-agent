@@ -180,6 +180,7 @@ mod tests {
             oauth: false,
             category: String::new(),
             icon: None,
+            icon_data_url: None,
             display_name: None,
             display_description: None,
         }

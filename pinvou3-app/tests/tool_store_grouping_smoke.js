@@ -123,7 +123,7 @@ async function clickChip(page, text) {
     rec('按类型时业务分区不含「技能」', !sectionsByType.includes('技能'));
 
     // 数量徽标 == 分区内实际渲染条目数(分区内工具卡标题同为 h3,故条目数 = h3 总数 - 1)
-    const badgeSections = await page.evaluate(() => [...document.querySelectorAll('div.items-baseline')].map(head => ({
+    const badgeSections = await page.evaluate(() => [...document.querySelectorAll('.capability-section-title')].map(head => ({
       label: (head.querySelector('h3')?.textContent || '').trim(),
       badge: (head.querySelector('span.tabular-nums')?.textContent || '').trim(),
       items: head.parentElement ? head.parentElement.querySelectorAll('h3').length - 1 : -1,
@@ -136,7 +136,7 @@ async function clickChip(page, text) {
     rec('点击「MCP」chip', await clickExact(page, 'MCP'));
     await sleep(300);
     const mcpBadge = await page.evaluate(() => {
-      const head = [...document.querySelectorAll('div.items-baseline')].find(h => (h.querySelector('h3')?.textContent || '').trim() === '金融数据');
+      const head = [...document.querySelectorAll('.capability-section-title')].find(h => (h.querySelector('h3')?.textContent || '').trim() === '金融数据');
       return head ? (head.querySelector('span.tabular-nums')?.textContent || '').trim() : null;
     });
     rec('MCP 筛选后金融分区徽标为 2', mcpBadge === '2', `实际=${mcpBadge}`);
@@ -186,13 +186,14 @@ async function clickChip(page, text) {
     }));
 
     // 搜索 → 平铺无分区
-    await page.type('[data-testid="tool-store-search"]', '企查');
+    await page.focus('[data-testid="tool-store-search"]');
+    await page.evaluate(() => { const input=document.querySelector('[data-testid="tool-store-search"]'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,'企查'); input.dispatchEvent(new Event('input',{bubbles:true})); });
     await sleep(300);
     const searching = await page.evaluate(() => {
       const h3s = [...document.querySelectorAll('h3')].map(h => (h.textContent || '').trim());
       return document.body.innerText.includes('企查查') && !h3s.includes('MCP') && !h3s.includes('金融数据');
     });
-    rec('搜索时平铺、无分区标题', searching);
+    rec('搜索时平铺、无分区标题', searching, searching ? '' : await page.evaluate(() => JSON.stringify({value:document.querySelector('[data-testid="tool-store-search"]').value,headings:[...document.querySelectorAll('h3')].map(n=>n.textContent),text:document.body.innerText.slice(-600)})));
 
     // 「仅显示已安装」(取代旧「我的工具」页签):保留分区、过滤到已装条目;
     // 本 mock 全部未安装 → 命中空态。先清空上一步的搜索词。

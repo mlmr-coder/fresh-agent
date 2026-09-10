@@ -660,8 +660,8 @@ const ToolOutput = ({ item, t }) => {
                 <Wrench size={13} />
               </span>
               <span className="min-w-0 flex flex-1 items-baseline gap-2 text-[12px]">
-                <span className="shrink-0 font-medium text-gray-600 dark:text-gray-300">{item.name}</span>
-                <span className="truncate text-gray-400">{meta}</span>
+                <span className="conversation-tool-label shrink-0 font-medium text-gray-600 dark:text-gray-300">{item.name}</span>
+                <span className="conversation-tool-meta truncate text-gray-400">{meta}</span>
               </span>
               {isRunning && <StatusDot tone="run" />}
               {cancelButton}

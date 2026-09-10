@@ -62,6 +62,7 @@ function buildComposerToolMenuState({
       available: tool.connected === true && !disabled.has(tool.id),
       title: tool.name || tool.title || tool.id,
       description: tool.description || tool.subtitle || '',
+      visual: tool.visual || null,
       enabled: !disabled.has(tool.id),
       switchable: true,
     }));

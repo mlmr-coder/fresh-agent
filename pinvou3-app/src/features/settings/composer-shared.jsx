@@ -5,7 +5,7 @@
 // 组件实现与 SettingsView.jsx 原版逐字节一致。
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Check, ChevronDown, Cpu, Plus, Sparkles, Store, Users, Wrench, X } from '../../components/icons.jsx';
+import { Check, ChevronDown, Cpu, Plus, Server, Sparkles, Store, Users, Wrench, X } from '../../components/icons.jsx';
 import { ComposerPopover } from '../../components/ComposerPopover.jsx';
 import { Toggle } from '../../components/Toggle.jsx';
 import { bridge } from '../../hooks/useBridge.js';
@@ -14,6 +14,8 @@ import { can } from '../../shared/platform.js';
 import { buildComposerToolMenuState } from './composer-tool-menu-logic.js';
 import { invokeTauri } from '../../platform/tauri/client.js';
 import { THIRD_PARTY_TOOL_LOGOS } from '../tools/tool-visuals.js';
+import { TsToolIcon } from '../tools/ToolIcon.jsx';
+import { tsToolsData, tsToolWelcomeData } from '../tools/tool-common.jsx';
 import {
   artifactPreviewExternalUrlFromMessage,
   buildArtifactPreviewDocument,
@@ -426,32 +428,43 @@ window.addEventListener('pinvou:chat-round-committed', (event) => {
       );
     };
 
-    const CAPABILITY_AVATAR_TONES = [
-      'from-[#5B8CFF] to-[#315BEA]',
-      'from-[#AF7BFF] to-[#7847D9]',
-      'from-[#20C997] to-[#0B9E78]',
-      'from-[#FF9F43] to-[#EB6F20]',
-      'from-[#FF6B8A] to-[#D84468]',
-    ];
+    const CONNECTOR_VISUALS = new Map(
+      [...tsToolsData, ...tsToolWelcomeData]
+        .filter(tool => tool.backendId)
+        .map(tool => [tool.backendId, tool]),
+    );
 
-    function capabilityAvatarTone(id) {
-      const value = String(id || '');
-      let hash = 0;
-      for (let index = 0; index < value.length; index += 1) hash = ((hash * 31) + value.codePointAt(index)) >>> 0;
-      return CAPABILITY_AVATAR_TONES[hash % CAPABILITY_AVATAR_TONES.length];
+    function connectorVisual(row) {
+      const preset = CONNECTOR_VISUALS.get(row.id);
+      return {
+        icon: preset?.icon || Server,
+        color: preset?.color || 'bg-gradient-to-b from-slate-400 to-slate-600',
+        // 上传插件的包内图标优先；内置连接器回退共享品牌资产。两者均按原图
+        // 渲染，不加 grayscale/filter，和能力中心保持一致。
+        logoSrc: row.icon_data_url || THIRD_PARTY_TOOL_LOGOS[row.id] || null,
+      };
     }
 
     const CapabilityMiniAvatar = ({ row, kind }) => {
-      const logoSrc = kind === 'connectors' ? THIRD_PARTY_TOOL_LOGOS[row.id] : null;
-      const Fallback = kind === 'connectors' ? Wrench : Sparkles;
+      if (kind === 'connectors') {
+        return (
+          <TsToolIcon
+            tool={row.visual || connectorVisual(row)}
+            title={row.title}
+            data-tool-icon={row.id}
+            className="h-6 w-6 shrink-0 rounded-full border-2 border-white shadow-sm dark:border-[#161618]"
+            imageClassName="h-4 w-4"
+            fallbackSize={13}
+            fallbackStrokeWidth={2}
+          />
+        );
+      }
       return (
         <span
           title={row.title}
-          className={`relative flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-white bg-gradient-to-br text-white shadow-sm dark:border-[#161618] ${capabilityAvatarTone(row.id)}`}
+          className="relative flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-white bg-gradient-to-br from-[#AF7BFF] to-[#7847D9] text-white shadow-sm dark:border-[#161618]"
         >
-          {logoSrc
-            ? <img src={logoSrc} alt="" className="h-full w-full object-cover" loading="lazy" />
-            : <Fallback size={13} strokeWidth={2} />}
+          <Sparkles size={13} strokeWidth={2} />
         </span>
       );
     };
@@ -619,7 +632,11 @@ window.addEventListener('pinvou:chat-round-committed', (event) => {
         }
       }
       const menuState = buildComposerToolMenuState({
-        marketplaceTools: marketplaceTools.map(tool => ({ ...tool, name: t.uiToolDetails?.tools?.[tool.id]?.title || tool.name })),
+        marketplaceTools: marketplaceTools.map(tool => ({
+          ...tool,
+          visual: connectorVisual(tool),
+          name: t.uiToolDetails?.tools?.[tool.id]?.title || tool.name,
+        })),
         marketplaceSkills,
         disabledIds: [...disabled],
         hiddenIds: [...hidden],
@@ -649,6 +666,16 @@ window.addEventListener('pinvou:chat-round-committed', (event) => {
         return (
         <div key={row.id} data-connector-id={isConnector ? row.id : undefined} className="flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl font-medium">
           <span className="min-w-0 flex items-center gap-1.5">
+            {isConnector && (
+              <TsToolIcon
+                tool={row.visual || connectorVisual(row)}
+                data-tool-icon={row.id}
+                className="h-5 w-5 shrink-0 rounded-[6px]"
+                imageClassName="h-3.5 w-3.5"
+                fallbackSize={12}
+                fallbackStrokeWidth={2}
+              />
+            )}
             <span className="block text-[13px] text-gray-700 dark:text-gray-200 truncate">{row.title}</span>
             {row.available && statusBadge(t.composerConnected, 'green')}
             {isConnector && !row.available && <span className="shrink-0 text-[10px] text-gray-400 dark:text-gray-500">{needsConnection ? t.composerNeedsConnection : t.composerConnectorOff}</span>}

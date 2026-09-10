@@ -288,12 +288,11 @@ async function dismiss(page) {
     // 4. 上传技能卸载提示「移入回收站」(预置/普通卸载不出现该文案)
     await page.click('[data-testid="capability-tab-skills"]');
     await sleep(300);
-    await page.evaluate(() => {
-      const rows = [...document.querySelectorAll('div')].filter(el =>
-        (el.textContent || '').includes('my-test-skill') && el.querySelector('button'));
-      const row = rows[rows.length - 1];
-      if (row) row.querySelector('button').click();
-    });
+    await page.evaluate(() => document.querySelector('[data-testid="skill-more"][data-tool-id="my-test-skill"]').click());
+    await sleep(100);
+    await page.evaluate(() => document.querySelector('[data-testid="tool-store-remove-skill"][data-tool-id="my-test-skill"]').click());
+    await sleep(100);
+    await page.evaluate(() => document.querySelector('[data-testid="tool-store-remove-skill-confirm"]').click());
     await sleep(600);
     rec('上传技能卸载提示移入回收站', await page.evaluate(() => document.body.innerText.includes('已卸载「my-test-skill」，移入回收站')));
     await dismiss(page);
@@ -304,10 +303,14 @@ async function dismiss(page) {
     //     不得出现「移入回收站」(后端保留目录,回收站找不到,文案不能说谎)
     await page.click('[data-testid="capability-tab-connectors"]');
     await sleep(300);
-    await page.click('[data-testid="tool-store-action"][data-tool-id="my-preset-mcp"]');
+    await page.evaluate(() => document.querySelector('[data-testid="connector-more"][data-tool-id="my-preset-mcp"]').click());
+    await sleep(100);
+    await page.evaluate(() => document.querySelector('[data-testid="tool-store-remove-connector"][data-tool-id="my-preset-mcp"]').click());
+    await sleep(100);
+    await page.evaluate(() => document.querySelector('[data-testid="tool-store-remove-connector-confirm"]').click());
     await sleep(600);
     rec('preset 自定义 MCP 卸载提示不含移入回收站', await page.evaluate(() =>
-      document.body.innerText.includes('已卸载「my-preset-mcp」')
+      document.body.innerText.includes('已从应用中删除「my-preset-mcp」')
       && !document.body.innerText.includes('移入回收站')));
     await dismiss(page);
     rec('preset 自定义 MCP 卸载后卡片消失', await page.evaluate(() =>
@@ -320,7 +323,7 @@ async function dismiss(page) {
     rec('打开回收站触发 list_recycled_plugins', await page.evaluate(() =>
       window.__PINVOU_MOCK_CALLS__.some(c => c.cmd === 'list_recycled_plugins')));
     rec('回收站渲染为子页面(标题+返回按钮,主列表消失)', await page.evaluate(() =>
-      document.body.innerText.includes('插件回收站')
+      document.body.innerText.includes('能力回收站')
       && !!document.querySelector('[data-testid="recycle-bin-back"]')
       && !document.querySelector('[data-testid="tool-store-search"]')));
     rec('回收站列表渲染条目与类型徽标', await page.evaluate(() => {

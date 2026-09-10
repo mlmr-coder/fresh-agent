@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { BookOpen, Check, ChevronLeft, Download, Globe, Package, Server, Settings, Trash2, Upload, XIcon, Zap } from '../../components/icons.jsx';
+import { BookOpen, Check, ChevronLeft, Download, Globe, Package, Server, Settings, Trash2, Upload, XIcon } from '../../components/icons.jsx';
 import { IosSearchField } from '../../components/IosControls.jsx';
 import { EmptyState } from '../../components/EmptyState.jsx';
 import { Spinner } from '../../components/Spinner.jsx';
@@ -14,6 +14,11 @@ import { isImeComposing } from '../../shared/ime-guard.mjs';
 import { pathBasename } from '../../shared/path-utils.js';
 import { capabilityKindForEntry, resolveLiveCapabilitySelection } from '../capabilities/capability-model.mjs';
 import { THIRD_PARTY_TOOL_LOGOS } from './tool-visuals.js';
+import { TsToolIcon } from './ToolIcon.jsx';
+import { canRemoveConnector, removeConnector } from './connector-removal.mjs';
+import { canRemoveSkill, removeSkill } from './skill-removal.mjs';
+import { CapabilityActionsMenu } from './ConnectorActionsMenu.jsx';
+import './tool-store.css';
 
 const OAUTH_UI_TIMEOUT_MS = 90_000;
 
@@ -66,38 +71,30 @@ const PlatformToolAction = ({ copy, t, ...props }) => {
       {copy.recycleExport}
     </button>
   );
-  if (!exportBtn) return <TsActionBtn {...props} t={t} />;
+  const capabilityKind = capabilityKindForEntry(props.tool);
+  const removable = Boolean(props.onRemove && (capabilityKind === 'skill'
+    ? canRemoveSkill(props.tool)
+    : canRemoveConnector(props.tool)));
+  // Use one delete entry for package uninstall; keep distinct login disconnect actions.
+  const hasDisconnect = props.tool.feishuCli || props.tool.wecomCli || props.tool.dingtalkCli
+    || props.tool.tmeetCli || props.tool.imaOpenapi || props.tool.oauthMcp;
+  const actionTool = removable && Array.isArray(props.tool.actions)
+    ? { ...props.tool, actions: props.tool.actions.filter(action => !['uninstall', 'disconnect'].includes(action.id)) }
+    : removable && props.tool.installed
+      ? { ...props.tool, actions: [] }
+      : props.tool;
+  const disconnect = hasDisconnect && props.tool.installed
+    && (!Array.isArray(props.tool.actions) || props.tool.actions.some(action => action.id === 'disconnect' && action.enabled));
+  const hasPrimary = !Array.isArray(actionTool.actions) || actionTool.actions.length > 0 || actionTool.updateAvailable;
   return (
-    <div className="flex items-center gap-2">
-      <TsActionBtn {...props} t={t} />
+    <div className="capability-card-actions">
+      {hasPrimary ? <TsActionBtn {...props} tool={actionTool} t={t} />
+        : <button type="button" className="capability-manage" disabled={props.busy}
+          onClick={event => { event.stopPropagation(); props.onDetails?.(); }}>{copy.connectorManage}</button>}
       {exportBtn}
-    </div>
-  );
-};
-
-const FULL_TILE_LOGOS = new Set(['assets/tool-icons/amap-user-v3.png', 'assets/tool-icons/dingtalk-user-v2.png', 'assets/tool-icons/iwencai-user-v3.png', 'assets/tool-icons/qcc-user.png', 'assets/tool-icons/wb-ima-mcp.png', 'assets/tool-icons/wb-tencent-meeting.png', 'assets/tool-icons/wb-yuandian-mcp.svg', 'assets/tool-icons/wecom-user.png']);
-const CROPPED_TILE_LOGOS = new Set(['assets/tool-icons/wb-yuandian-mcp.svg']);
-
-const TsToolIcon = ({ tool, className = '', imageClassName = 'h-8 w-8', fallbackSize = 30, fallbackStrokeWidth = 1.5, children }) => {
-  const Icon = tool.icon;
-  const isFullTileLogo = tool.logoSrc && FULL_TILE_LOGOS.has(tool.logoSrc);
-  const cropTileLogo = tool.logoSrc && CROPPED_TILE_LOGOS.has(tool.logoSrc);
-  const logoBg = tool.logoSrc ? (isFullTileLogo ? 'bg-transparent' : 'bg-white dark:bg-white') : '';
-  const logoFg = tool.logoSrc ? 'text-slate-900' : `${tool.color} text-white`;
-  const logoBox = tool.logoSrc ? `${logoBg} ${logoFg}` : `${tool.color} text-white`;
-  return (
-    <div className={`relative flex items-center justify-center overflow-hidden ${logoBox} ${className}`}>
-      {tool.logoSrc ? (
-        <img
-          src={tool.logoSrc}
-          alt=""
-          className={isFullTileLogo ? `h-full w-full rounded-[inherit] object-cover ${cropTileLogo ? 'scale-[1.22]' : ''}` : `object-contain ${imageClassName}`}
-          loading="lazy"
-        />
-      ) : (
-        <Icon size={fallbackSize} strokeWidth={fallbackStrokeWidth} />
-      )}
-      {children}
+      {props.onRemove && <CapabilityActionsMenu tool={props.tool} copy={copy} kind={capabilityKind} busy={props.busy}
+        removable={removable} onRemove={props.onRemove} onDetails={props.onDetails}
+        onDisconnect={disconnect ? () => props.onAction(props.tool.backendId, true) : undefined} />}
     </div>
   );
 };
@@ -905,21 +902,25 @@ const withUiTimeout = (promise, timeoutMs, fallbackResult) => {
       const [obsidianGuide, setObsidianGuide] = useState(null); // {backendId,name,state,vault_path} 未安装/没库引导
       const [groupBy, setGroupBy] = useState('type'); // 列表视图主维度:'type'(按类型) | 'business'(按业务)
       const [installedOnly, setInstalledOnly] = useState(false); // 头像入口:只看已安装
+      const [codeAvailableOnly, setCodeAvailableOnly] = useState(false); // 技能页:只看代码会话真实可调用的技能
+      const [codeSkillAvailability, setCodeSkillAvailability] = useState({ loaded: false, failed: false, ids: new Set() });
       const [skillBackend, setSkillBackend] = useState([]); // list_marketplace_skills 原始返回
-      // 按会话模式配置工具可见性（预过滤，与开关正交）：managingVisibility = 编辑态；
+      // 连接器页管理可见性；技能页复用同一个编辑态入口管理代码可用范围。
       // hiddenByMode = { plain: Set, code: Set }——每个模式被设为「不可见」的包 id。
       const [managingVisibility, setManagingVisibility] = useState(false);
       const [hiddenByMode, setHiddenByMode] = useState({ plain: new Set(), code: new Set() });
+      const [disabledCodeSkills, setDisabledCodeSkills] = useState(new Set());
       // ref 镜像：setState updater 执行时机不保证同步，后端载荷以 ref 为基准，
       // 与 UI 同一份 prev，快速连续勾选不丢写。
       const hiddenByModeRef = useRef({ plain: new Set(), code: new Set() });
+      const disabledCodeSkillsRef = useRef(new Set());
       // 插件指南弹窗：拖入安装说明 + 插件包介绍 + 规范文档下载。
       const [showGuide, setShowGuide] = useState(false);
       // 下载规范文档（桌面端走保存对话框；web 平台无此命令，静默忽略）。
       const downloadSpec = () => {
         invokeTauri('export_plugin_spec').catch(() => {});
       };
-      // 回收站：用户上传的插件卸载后进入回收站，可恢复或彻底删除
+      // 回收站：用户上传的连接器或技能包删除后进入回收站，可恢复或彻底删除
       // （list 为只读命令，Web 端可看列表；恢复/删除挂 toolStoreMutations 能力门）。
       const [showRecycleBin, setShowRecycleBin] = useState(false);
       const [recycledPlugins, setRecycledPlugins] = useState([]);
@@ -931,6 +932,10 @@ const withUiTimeout = (promise, timeoutMs, fallbackResult) => {
       // ——单独标记，子页渲染失败态（重进子页或恢复/彻底删除后的重取会自动重试）。
       const [recycledLoadFailed, setRecycledLoadFailed] = useState(false);
       const [purgeConfirm, setPurgeConfirm] = useState(null); // { id, name }
+      const [removeConnectorConfirm, setRemoveConnectorConfirm] = useState(null);
+      const removingConnectorRef = useRef(false);
+      const [removeSkillConfirm, setRemoveSkillConfirm] = useState(null);
+      const removingSkillRef = useRef(false);
       // 加载代际守卫：进/出子页、恢复/彻底删除后的重取可能重叠，先发后至的失败
       // 不得覆盖后发成功（否则空回收站会被渲染成失败态 + 假错误提示）。
       const recycledLoadSeqRef = useRef(0);
@@ -1045,16 +1050,22 @@ const withUiTimeout = (promise, timeoutMs, fallbackResult) => {
         Promise.all([
           invokeTauri('get_bundle_visibility', { scope: 'plain' }),
           invokeTauri('get_bundle_visibility', { scope: 'code' }),
-        ]).then(([plain, code]) => {
+          ...(capabilityKind === 'skill' ? [invokeTauri('get_disabled_skills', { scope: 'code' })] : []),
+        ]).then(([plain, code, disabledCode]) => {
           const loaded = { plain: new Set(plain || []), code: new Set(code || []) };
           hiddenByModeRef.current = loaded;
           setHiddenByMode(loaded);
+          if (capabilityKind === 'skill') {
+            const disabled = new Set(disabledCode || []);
+            disabledCodeSkillsRef.current = disabled;
+            setDisabledCodeSkills(disabled);
+          }
           setVisibilityLoaded(true);
         }).catch(() => {
           // 读失败不静默清空（后端整集覆盖语义下会把用户已配置的可见性规则冲掉）：
           // 保留现有状态并提示；加载成功前勾选入口不可用（二轮评审）。
           setVisibilityLoaded(false);
-          setAlert({ visible: true, loading: false, title: storeCopy.visibilityLoadFailed, isInstall: false, isError: true });
+          setAlert({ visible: true, loading: false, title: capabilityKind === 'skill' ? storeCopy.codeAvailabilityLoadFailed : storeCopy.visibilityLoadFailed, isInstall: false, isError: true });
         });
       };
       useEffect(() => {
@@ -1088,6 +1099,34 @@ const withUiTimeout = (promise, timeoutMs, fallbackResult) => {
             loadHiddenByMode();
             setAlert({ visible: true, loading: false, title: storeCopy.operationFailedWith(String(e)), isInstall: false, isError: true });
           });
+      };
+      // 技能页的管理态直接控制「代码可用」：开启时同时解除 code scope 的停用与
+      // 隐藏，关闭时只写停用集，卡片仍留在能力中心供用户随时重新开启。
+      const toggleCodeSkillAvailability = (id, checked) => {
+        if (!canMutateToolStore || !visibilityLoaded || !id || busyRef.current) return;
+        const nextDisabled = new Set(disabledCodeSkillsRef.current);
+        const nextHidden = new Set(hiddenByModeRef.current.code || []);
+        if (checked) {
+          nextDisabled.delete(id);
+          nextHidden.delete(id);
+        } else {
+          nextDisabled.add(id);
+        }
+        disabledCodeSkillsRef.current = nextDisabled;
+        setDisabledCodeSkills(nextDisabled);
+        const nextHiddenState = { ...hiddenByModeRef.current, code: nextHidden };
+        hiddenByModeRef.current = nextHiddenState;
+        setHiddenByMode(nextHiddenState);
+        setBusyId(`code-skill:${id}`);
+        Promise.all([
+          invokeTauri('set_disabled_skills', { skillIds: [...nextDisabled], scope: 'code' }),
+          ...(checked ? [invokeTauri('set_bundle_visibility', { bundleIds: [...nextHidden], scope: 'code' })] : []),
+        ]).then(() => {
+          notifyComposerToolsChanged();
+        }).catch((e) => {
+          loadHiddenByMode();
+          setAlert({ visible: true, loading: false, title: storeCopy.operationFailedWith(String(e)), isInstall: false, isError: true });
+        }).finally(() => setBusyId(null));
       };
       // bundle_readiness 统一取数（Phase 2 第八刀，§3.3）：逐连接器 status 命令
       // （feishu/wecom/dingtalk/tmeet/ima_status）的前端调用全部移除，installed /
@@ -1139,14 +1178,17 @@ const withUiTimeout = (promise, timeoutMs, fallbackResult) => {
           setToolStates(states);
           setSkillToMcp(s2m);
           setToolBackend(list);
-          const authEntries = await Promise.all(tsToolsData
-            .filter(tool => tool.oauthMcp && tool.backendId)
-            .map(async (tool) => {
+          const oauthToolIds = new Set([
+            ...tsToolsData.filter(tool => tool.oauthMcp && tool.backendId).map(tool => tool.backendId),
+            ...list.filter(tool => tool.oauth_server_name).map(tool => tool.id),
+          ]);
+          const authEntries = await Promise.all([...oauthToolIds]
+            .map(async (toolId) => {
               try {
-                const status = await invokeTauri('get_marketplace_tool_auth_status', { toolId: tool.backendId });
-                return [tool.backendId, status];
+                const status = await invokeTauri('get_marketplace_tool_auth_status', { toolId });
+                return [toolId, status];
               } catch (err) {
-                console.error('get_marketplace_tool_auth_status failed:', tool.backendId, err);
+                console.error('get_marketplace_tool_auth_status failed:', toolId, err);
                 return null;
               }
             }));
@@ -1198,6 +1240,35 @@ const withUiTimeout = (promise, timeoutMs, fallbackResult) => {
       };
 
       useEffect(() => { loadBackendState(); }, []);
+
+      // 技能卡上的「代码可用」直接复用代码输入框 `/` 选择器的事实源。
+      // list_composer_skills(code) 已综合安装态、代码 scope 开关与可见性配置，避免
+      // 能力中心自行拼接三份状态后与真正注入代码会话的技能集发生偏差。
+      useEffect(() => {
+        if (capabilityKind !== 'skill') return;
+        let alive = true;
+        const refresh = () => {
+          invokeTauri('list_composer_skills', { scope: 'code' }).then((items) => {
+            if (!alive) return;
+            const ids = new Set();
+            for (const item of Array.isArray(items) ? items : []) {
+              if (item?.catalogue_id) ids.add(item.catalogue_id);
+              if (item?.name) ids.add(item.name);
+            }
+            setCodeSkillAvailability({ loaded: true, failed: false, ids });
+          }).catch(() => {
+            if (alive) setCodeSkillAvailability(prev => ({ ...prev, failed: true }));
+          });
+        };
+        refresh();
+        window.addEventListener('pinvou:tools-changed', refresh);
+        window.addEventListener('focus', refresh);
+        return () => {
+          alive = false;
+          window.removeEventListener('pinvou:tools-changed', refresh);
+          window.removeEventListener('focus', refresh);
+        };
+      }, [capabilityKind]);
 
       // 订阅跨视图 store：把 store 状态镜像进本组件渲染，并在完成/失败时做组件级收尾
       // (alert dialog, connection-state refresh). The real listeners/stopwatch live in the module-level conn singleton, surviving view switches.
@@ -1259,6 +1330,7 @@ const withUiTimeout = (promise, timeoutMs, fallbackResult) => {
         return {
           ...t,
           exportable: tb ? tb.exportable !== false : true,
+          packageInstalled: Boolean(bs?.installed || tb?.installed || toolStates[t.backendId]),
           version: bf && bf.version ? `v${String(bf.version).replace(/^v/i, '')}` : t.version,
           configFields: mergeConfigFields(bf ? bf.config_fields : null, t.configFields),
           logoSrc: THIRD_PARTY_TOOL_LOGOS[t.backendId] || THIRD_PARTY_TOOL_LOGOS[t.id] || null,
@@ -1299,6 +1371,8 @@ const withUiTimeout = (promise, timeoutMs, fallbackResult) => {
         .filter(x => tsToolsData.every(t => t.backendId !== x.id))
         .map(x => {
           const bs = bundleStates[x.id] || null;
+          const oauthMcp = Boolean(x.oauth_server_name);
+          const authState = toolAuthStates[x.id];
           // 卡面标题/说明优先取 readiness bundle 的生效值（后端已应用 extra
           // 展示名/说明覆盖）；无 readiness 回退 list_marketplace_tools 现状。
           const bf = (bs && bs.bundle) || null;
@@ -1308,10 +1382,18 @@ const withUiTimeout = (promise, timeoutMs, fallbackResult) => {
             version: x.version ? `v${String(x.version).replace(/^v/i, '')}` : '—',
             latency: storeCopy.localLatency, desc: (bf && bf.description) || x.description || '',
             icon: Server, color: 'bg-gradient-to-b from-slate-400 to-slate-600',
-            installed: bs ? bs.installed : !!x.installed,
-            authRequired: false, userUploaded: x.source === 'upload',
+            logoSrc: (bf && bf.icon_data_url) || x.icon_data_url || null,
+            installed: oauthMcp ? authState?.status === 'connected' : (bs ? bs.installed : !!x.installed),
+            packageInstalled: bs ? bs.installed : !!x.installed,
+            authRequired: oauthMcp, userUploaded: x.source === 'upload',
+            oauthMcp,
+            oauthServerName: x.oauth_server_name,
+            authStatus: authState?.status || 'not_installed',
+            authMessage: authState?.message || '',
+            mcpConfigured: !!authState?.mcp_configured,
+            oauthTokenPresent: !!authState?.oauth_token_present,
             exportable: x.exportable !== false,
-            actions: actionsOf(bs),
+            actions: oauthMcp ? undefined : actionsOf(bs),
           };
           return localizeTool(base, t);
         });
@@ -1401,6 +1483,8 @@ const withUiTimeout = (promise, timeoutMs, fallbackResult) => {
             category: mcpEntry ? (mcpEntry.category || 'skill') : 'skill',
             type: mcpId ? ((storeCopy.typeGroups || {}).bundle || 'Bundle') : 'Skill',
             companionBundle: !!mcpId,
+            connectorId: mcpId,
+            packageInstalled: mcpInstalled,
             exportable: ownerExportable,
             version: '—', latency: storeCopy.localLatency, desc: x.description || '',
             icon: tsSkillIconByName[x.icon] || Package, color: x.color || 'bg-gradient-to-b from-slate-400 to-slate-600',
@@ -1418,6 +1502,14 @@ const withUiTimeout = (promise, timeoutMs, fallbackResult) => {
         actions: actionsOf(bundleStates[x.id]),
       }));
       const skillCards = [...presetSkills, ...companionSkillCards, ...uploadedSkills];
+      const isCodeSkillAvailable = (tool) => {
+        if (!codeSkillAvailability.loaded || !tool) return false;
+        const ids = codeSkillAvailability.ids;
+        if (tool.backendId && ids.has(tool.backendId)) return true;
+        // 视觉设计是无 backendId 的内置技能卡，实际技能目录名沿用 visual-design。
+        if (tool.builtin && ids.has('visual-design')) return true;
+        return !!tool.id && ids.has(String(tool.id).replace(/^(?:up-|mcp-skill-)/, ''));
+      };
 
       // 双维度分组:主维度(groupBy)决定二级筛选集合,另一维度决定下方分区(section)。
       // 含 companion_skills 的 MCP = 工具包(skillToMcp 的值即其 id,manifest 反建,单一真源)。
@@ -1460,7 +1552,8 @@ const withUiTimeout = (promise, timeoutMs, fallbackResult) => {
         const matchesSearch = tool.title.toLowerCase().includes(q) || (tool.desc || '').toLowerCase().includes(q);
         const matchesCategory = searching || activeCategory === 'all' || primaryGroupOf(tool) === activeCategory;
         const matchesInstalled = !installedOnly || tool.installed;
-        return matchesSearch && matchesCategory && matchesInstalled;
+        const matchesCodeAvailability = !codeAvailableOnly || isCodeSkillAvailable(tool);
+        return matchesSearch && matchesCategory && matchesInstalled && matchesCodeAvailability;
       }).sort((a, b) => {
         // 已上线(有 backendId 或内置)排在未上线(即将上线)之前
         const onA = !!a.backendId || !!a.builtin, onB = !!b.backendId || !!b.builtin;
@@ -1931,6 +2024,61 @@ const withUiTimeout = (promise, timeoutMs, fallbackResult) => {
       const browserOpenFailed = () => setAlert({ visible: true, loading: false, title: storeCopy.openBrowserFailed, isInstall: false, isError: true });
 
       // 安装/卸载入口
+      const confirmRemoveConnector = async () => {
+        if (!canMutateToolStore || !removeConnectorConfirm || removingConnectorRef.current) return;
+        const tool = removeConnectorConfirm;
+        removingConnectorRef.current = true;
+        setRemoveConnectorConfirm(null);
+        setBusyId(tool.backendId);
+        try {
+          const removal = await removeConnector(tool, invokeTauri);
+          setSelectedTool(null);
+          setAlert({
+            visible: true,
+            loading: false,
+            title: storeCopy.connectorRemoved(tool.title),
+            subtitle: removal.cleanupFailures.length > 0 ? storeCopy.connectorRemovedCleanupWarning : '',
+            isInstall: false,
+            isError: false,
+          });
+        } catch {
+          setAlert({ visible: true, loading: false, title: storeCopy.connectorRemoveFailed, isInstall: false, isError: true });
+        } finally {
+          await loadBackendState();
+          notifyComposerToolsChanged();
+          setBusyId(null);
+          removingConnectorRef.current = false;
+        }
+      };
+
+      const confirmRemoveSkill = async () => {
+        if (!canMutateToolStore || !removeSkillConfirm || removingSkillRef.current) return;
+        const tool = removeSkillConfirm;
+        removingSkillRef.current = true;
+        setRemoveSkillConfirm(null);
+        setBusyId(tool.backendId);
+        try {
+          const removal = await removeSkill(tool, invokeTauri);
+          setSelectedTool(null);
+          setAlert({
+            visible: true,
+            loading: false,
+            title: tool.userUploaded ? storeCopy.movedToRecycleBinQuoted(tool.title) : storeCopy.skillRemoved(tool.title),
+            subtitle: removal.removedWithConnector ? storeCopy.skillRemovedWithConnector : '',
+            isInstall: false,
+            isError: false,
+          });
+        } catch (e) {
+          console.error('skill removal failed:', e);
+          setAlert({ visible: true, loading: false, title: storeCopy.skillRemoveFailed, isInstall: false, isError: true });
+        } finally {
+          await loadBackendState();
+          notifyComposerToolsChanged();
+          setBusyId(null);
+          removingSkillRef.current = false;
+        }
+      };
+
       const handleAction = async (backendId, isInstalled) => {
         if (!canMutateToolStore) return;
         // 有配套 MCP 的技能(公文=gongwen、PPT=pptx,manifest companion_skills 声明)：
@@ -2124,6 +2272,20 @@ const withUiTimeout = (promise, timeoutMs, fallbackResult) => {
               onCancel={() => setPurgeConfirm(null)}
             />
           ), document.body)}
+          {removeConnectorConfirm && createPortal(<SheetRowConfirm
+            title={storeCopy.removeConnectorTitle(removeConnectorConfirm.title)}
+            desc={storeCopy.removeConnectorHint}
+            cancelLabel={storeCopy.cancel} confirmLabel={storeCopy.removeConnector}
+            confirmTone="rose" confirmTestId="tool-store-remove-connector-confirm"
+            onConfirm={confirmRemoveConnector} onCancel={() => setRemoveConnectorConfirm(null)}
+          />, document.body)}
+          {removeSkillConfirm && createPortal(<SheetRowConfirm
+            title={storeCopy.removeSkillTitle(removeSkillConfirm.title)}
+            desc={removeSkillConfirm.companionBundle && removeSkillConfirm.packageInstalled ? storeCopy.removeCompanionSkillHint : storeCopy.removeSkillHint}
+            cancelLabel={storeCopy.cancel} confirmLabel={storeCopy.removeSkill}
+            confirmTone="rose" confirmTestId="tool-store-remove-skill-confirm"
+            onConfirm={confirmRemoveSkill} onCancel={() => setRemoveSkillConfirm(null)}
+          />, document.body)}
           {/* 飞书扫码二维码已内联进 FeishuFlowCard（详情弹窗内），不再单独浮层 */}
           {wecomQr && (() => {
             // Mirrors the wecom flow reset (factory resetFlow): backend cancel is now
@@ -2273,10 +2435,12 @@ const withUiTimeout = (promise, timeoutMs, fallbackResult) => {
                         <span>{storeCopy.guide.title}</span>
                       </button>
                       {canMutateToolStore && (
-                        <button type="button" data-testid="tool-store-manage-visibility" onClick={() => setManagingVisibility(v => !v)} title={storeCopy.modeVisibilityHint}
+                        <button type="button" data-testid="tool-store-manage-visibility" onClick={() => setManagingVisibility(v => !v)} title={capabilityKind === 'skill' ? storeCopy.manageCodeSkillsHint : storeCopy.modeVisibilityHint}
                           className={`inline-flex h-9 items-center rounded-full px-4 text-[13px] font-semibold shadow-sm transition-colors ${managingVisibility ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-[#2C2C2E] dark:text-white dark:hover:bg-[#3A3A3C]'}`}>
                           <Settings size={14} className="mr-2 opacity-70" />
-                          <span>{managingVisibility ? storeCopy.doneManagingVisibility : storeCopy.manageVisibility}</span>
+                          <span>{managingVisibility
+                            ? storeCopy.doneManagingVisibility
+                            : capabilityKind === 'skill' ? storeCopy.manageCodeSkills : storeCopy.manageVisibility}</span>
                         </button>
                       )}
                       {canMutateToolStore && (
@@ -2339,7 +2503,7 @@ const withUiTimeout = (promise, timeoutMs, fallbackResult) => {
                             </button>
                           ))}
                         </div>
-                        <div className="flex gap-2 overflow-x-auto no-scrollbar scroll-smooth">
+                        <div className="flex flex-wrap items-center gap-2">
                           {groupChips.map((chip) => {
                             const isActive = activeCategory === chip.id;
                             return (
@@ -2354,8 +2518,19 @@ const withUiTimeout = (promise, timeoutMs, fallbackResult) => {
                               </button>
                             );
                           })}
+                          {capabilityKind === 'skill' && (
+                            <button type="button" data-testid="tool-store-code-available-only"
+                              onClick={() => setCodeAvailableOnly(v => !v)}
+                              disabled={!codeSkillAvailability.loaded}
+                              title={codeSkillAvailability.failed ? storeCopy.codeAvailabilityLoadFailed : storeCopy.codeAvailableOnlyHint}
+                              className={`ml-auto h-9 whitespace-nowrap shrink-0 inline-flex items-center rounded-full px-3.5 text-[13px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-45 ${codeAvailableOnly
+                                ? 'bg-blue-600 text-[#fff] hover:bg-blue-700'
+                                : 'bg-[#F2F2F7] text-[#000] dark:bg-[#2C2C2E] dark:text-[#fff]'}`}>
+                              <span>{storeCopy.codeAvailableOnly}</span>
+                            </button>
+                          )}
                           <button type="button" data-testid="tool-store-installed-only" onClick={() => setInstalledOnly(v => !v)} title={storeCopy.installedOnly}
-                            className={`ml-auto h-9 whitespace-nowrap shrink-0 inline-flex items-center rounded-full px-3.5 text-[13px] font-semibold transition-colors ${installedOnly
+                            className={`${capabilityKind === 'skill' ? '' : 'ml-auto'} h-9 whitespace-nowrap shrink-0 inline-flex items-center rounded-full px-3.5 text-[13px] font-semibold transition-colors ${installedOnly
                               ? 'bg-blue-600 text-[#fff] hover:bg-blue-700'
                               : 'bg-[#F2F2F7] text-[#000] dark:bg-[#2C2C2E] dark:text-[#fff]'}`}>
                             <Check size={14} className="mr-1.5 opacity-70" />
@@ -2366,57 +2541,84 @@ const withUiTimeout = (promise, timeoutMs, fallbackResult) => {
                             <Trash2 size={14} className="mr-1.5 opacity-70" />
                             <span>{storeCopy.recycleBin}</span>
                           </button>
-                          <span className="shrink-0 hidden sm:flex items-center gap-1.5 text-[12px] text-slate-400 dark:text-slate-500 pl-1">
-                            {storeCopy.guide.dragHintShort}
-                            <button type="button" onClick={() => setShowGuide(true)} aria-label={storeCopy.guide.title} title={storeCopy.guide.title}
-                              className="w-[18px] h-[18px] rounded-full bg-slate-200 dark:bg-white/10 text-slate-500 dark:text-slate-400 hover:bg-slate-300 dark:hover:bg-white/20 flex items-center justify-center text-[11px] font-bold leading-none">?</button>
-                          </span>
+
                         </div>
                       </div>
                   </div>
 
                   {filteredTools.length > 0 ? (
-                    <div key="tool-store-list-grid" className={sectioned ? 'pb-7 space-y-8' : 'grid grid-cols-1 lg:grid-cols-2 gap-4 pb-7'}>
+                    <div key="tool-store-list-grid" className="capability-catalog pb-7 space-y-7">
                       {(sectioned ? listSections : [{ id: 'flat', label: null, items: filteredTools }]).map((section) => (
                         <div key={`section-${section.id}`} id={sectioned ? `store-section-${section.id}` : undefined} className="scroll-mt-24">
                           {section.label && (
-                            <div className="flex items-baseline gap-2 mb-2 px-3">
+                            <div className="capability-section-title">
                               <h3 className="text-[13px] font-bold uppercase tracking-wider text-[#3C3C43]/60 dark:text-[#EBEBF5]/60">{section.label}</h3>
                               <span className="text-[12px] font-semibold text-slate-400 dark:text-slate-500 tabular-nums">{section.items.length}</span>
                             </div>
                           )}
-                          <div className={sectioned ? 'grid grid-cols-1 lg:grid-cols-2 gap-4' : 'contents'}>
+                          <div className="capability-grid">
                             {section.items.map((tool) => (
                               // biome-ignore lint/a11y/useKeyWithClickEvents: row click is a shortcut; the keyboard path is covered by the row's real buttons
                               // biome-ignore lint/a11y/noStaticElementInteractions: row click hot zone, not a standalone interactive control
                               <div
                                 key={`list-${tool.id}`}
                                 onClick={() => setSelectedTool(tool)}
-                                className="group flex items-center gap-4 py-3 cursor-pointer px-3 border-b border-slate-100 dark:border-white/5 last:border-0"
+                                className="capability-card" data-testid="capability-card" data-tool-id={tool.backendId}
                               >
-                                <TsToolIcon tool={tool} className="h-16 w-16 flex-shrink-0 rounded-[16px] border border-black/5 shadow-sm transition-shadow group-hover:shadow dark:border-white/5" imageClassName="h-11 w-11" fallbackSize={30} />
-                                <div className="flex-1 min-w-0 flex flex-col justify-center py-1">
-                                  <h3 className="text-[17px] font-semibold text-slate-900 dark:text-white truncate tracking-tight">{tool.title}</h3>
-                                  <p className="text-[13px] text-slate-500 dark:text-slate-400 truncate mt-0.5 font-medium">{tool.subtitle}</p>
-                                  <div className="flex items-center gap-2 mt-1.5">
-                                    <span className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded uppercase tracking-wide">{tool.type}</span>
-                                    {tool.internal ? (
-                                      <span className="text-[10px] font-semibold text-sky-700 dark:text-sky-300 bg-sky-100 dark:bg-sky-500/15 px-1.5 py-0.5 rounded-full">{storeCopy.internalDirect}</span>
-                                    ) : tool.authRequired && (
-                                      <span className="text-[10px] text-amber-500/80 dark:text-amber-400/80 flex items-center gap-0.5">
-                                        <Zap size={10} /> {storeCopy.keyRequired}
+                                <TsToolIcon tool={tool} className="capability-card-icon" imageClassName="h-8 w-8" fallbackSize={24} />
+                                <div className="capability-card-copy">
+                                  <h3><button type="button" className="capability-card-title" title={tool.title}
+                                    onClick={event => { event.stopPropagation(); setSelectedTool(tool); }}>{tool.title}</button></h3>
+                                  <p className="capability-card-description" title={tool.subtitle}>{tool.subtitle}</p>
+                                </div>
+                                <div className="capability-card-footer">
+                                  <div className="flex min-w-0 flex-wrap items-center gap-2">
+                                    <span className="capability-status" data-tone={tool.installed ? 'ready' : canRemoveConnector(tool) ? 'attention' : 'idle'}>
+                                      {tool.installed ? (isRestrictedExternalAuthTool(tool) || tool.oauthMcp ? storeCopy.connected : storeCopy.connectorAdded)
+                                        : canRemoveConnector(tool) ? (tool.oauthMcp ? storeCopy.connectorNeedsAuth : storeCopy.connectorNeedsConnection)
+                                        : storeCopy.connectorAvailable}
+                                    </span>
+                                    {capabilityKind === 'skill' && (
+                                      <span data-testid="skill-code-availability" data-tool-id={tool.backendId || tool.id}
+                                        data-available={isCodeSkillAvailable(tool) ? 'true' : 'false'}
+                                        title={codeSkillAvailability.failed ? storeCopy.codeAvailabilityLoadFailed : undefined}
+                                        className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-semibold leading-none ${isCodeSkillAvailable(tool)
+                                          ? 'bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-300'
+                                          : 'bg-slate-100 text-slate-400 dark:bg-white/[0.06] dark:text-slate-500'}`}>
+                                        <span className={`h-1.5 w-1.5 rounded-full ${isCodeSkillAvailable(tool) ? 'bg-blue-500' : 'bg-slate-300 dark:bg-slate-600'}`} />
+                                        {codeSkillAvailability.loaded
+                                          ? (isCodeSkillAvailable(tool) ? storeCopy.codeAvailable : storeCopy.codeUnavailable)
+                                          : codeSkillAvailability.failed ? storeCopy.codeAvailabilityUnknown : storeCopy.codeAvailabilityLoading}
                                       </span>
                                     )}
                                   </div>
-                                </div>
-                                <div className="flex flex-col items-center justify-center gap-1.5 pl-2">
+                                <div className="capability-card-actions">
                                   {(() => {
                                     const cf = tool.feishuCli ? feishuFlow : tool.wecomCli ? wecomFlow : tool.dingtalkCli ? dingtalkFlow : tool.tmeetCli ? tmeetFlow : null;
                                     if (externalAuthAvailable && cf && (cf.phase === 'running' || cf.phase === 'qr')) {
                                       return <FeishuMini flow={cf} onClick={() => setSelectedTool(tool)} copy={storeCopy.mini} />;
                                     }
-                                    // 管理可见性编辑态：卡片出现每个模式的勾选框，勾选 = 可见。
+                                    // 连接器管理可见性；技能管理代码可用范围。
                                     if (managingVisibility) {
+                                      if (capabilityKind === 'skill') {
+                                        const id = tool.backendId;
+                                        const hidden = hiddenByMode.code || new Set();
+                                        const available = !!id && tool.installed && !disabledCodeSkills.has(id) && !hidden.has(id);
+                                        const checkDisabled = !id || !tool.installed || !visibilityLoaded || busyId === `code-skill:${id}`;
+                                        return (
+                                          // biome-ignore lint/a11y/useKeyWithClickEvents: propagation stop layer; checkbox supplies the keyboard path
+                                          // biome-ignore lint/a11y/noStaticElementInteractions: non-interactive propagation stop layer
+                                          <label className={`flex items-center gap-2 ${checkDisabled ? 'cursor-not-allowed opacity-45' : 'cursor-pointer'}`} onClick={e => e.stopPropagation()}>
+                                            <input type="checkbox" checked={available} disabled={checkDisabled}
+                                              onChange={() => toggleCodeSkillAvailability(id, !available)}
+                                              aria-label={`${tool.title} · ${storeCopy.codeAvailable}`}
+                                              className="h-4 w-4 rounded border-slate-300 accent-blue-600" />
+                                            <span className={`text-[12px] font-semibold ${available ? 'text-blue-600 dark:text-blue-300' : 'text-slate-400 dark:text-slate-500'}`}>
+                                              {available ? storeCopy.codeAvailable : storeCopy.codeUnavailable}
+                                            </span>
+                                          </label>
+                                        );
+                                      }
                                       return (
                                         // biome-ignore lint/a11y/useKeyWithClickEvents: click-propagation stop layer; the keyboard path is covered by the checkbox itself
                                         // biome-ignore lint/a11y/noStaticElementInteractions: click-propagation stop layer, non-interactive container
@@ -2448,8 +2650,9 @@ const withUiTimeout = (promise, timeoutMs, fallbackResult) => {
                                         </div>
                                       );
                                     }
-                                    return <PlatformToolAction tool={tool} busy={busyId === tool.backendId} onAction={handleAction} onUpdate={handleSkillUpdate} onEditDisplay={handleEditDisplay} onExport={handleExportInstalled} copy={storeCopy} t={t} />;
+                                    return <PlatformToolAction tool={tool} busy={busyId === tool.backendId} onAction={handleAction} onUpdate={handleSkillUpdate} onEditDisplay={handleEditDisplay} onExport={handleExportInstalled} onDetails={() => setSelectedTool(tool)} onRemove={capabilityKindForEntry(tool) === 'connector' ? setRemoveConnectorConfirm : setRemoveSkillConfirm} copy={storeCopy} t={t} />;
                                   })()}
+                                </div>
                                 </div>
                               </div>
                             ))}
@@ -2462,11 +2665,11 @@ const withUiTimeout = (promise, timeoutMs, fallbackResult) => {
                       className="py-24 flex flex-col items-center"
                       icon={<Server size={28} />}
                       iconClassName="w-16 h-16 mb-4 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400"
-                      title={searching ? storeCopy.emptyNoMatch : (installedOnly ? storeCopy.emptyNoInstalled : storeCopy.emptyNoTools)}
+                      title={codeAvailableOnly ? storeCopy.emptyNoCodeAvailable : searching ? storeCopy.emptyNoMatch : (installedOnly ? storeCopy.emptyNoInstalled : storeCopy.emptyNoTools)}
                       titleClassName="text-xl font-semibold text-slate-800 dark:text-slate-200 mb-2"
-                      hint={searching ? storeCopy.emptyNoMatchHint : (installedOnly ? (canMutateToolStore ? storeCopy.emptyNoInstalledHint : storeCopy.emptyNoInstalledHintReadonly) : storeCopy.emptyNoToolsHint)}
+                      hint={codeAvailableOnly ? storeCopy.emptyNoCodeAvailableHint : searching ? storeCopy.emptyNoMatchHint : (installedOnly ? (canMutateToolStore ? storeCopy.emptyNoInstalledHint : storeCopy.emptyNoInstalledHintReadonly) : storeCopy.emptyNoToolsHint)}
                       hintClassName="text-slate-500 dark:text-slate-400"
-                      action={!searching && !installedOnly && canMutateToolStore && (
+                      action={!searching && !installedOnly && !codeAvailableOnly && canMutateToolStore && (
                         <button type="button" data-testid="tool-store-empty-upload-btn" onClick={handleUploadSkill}
                           className="mt-5 inline-flex h-9 items-center rounded-full bg-blue-600 px-5 text-[13px] font-semibold text-white shadow-sm transition-colors hover:bg-blue-700">
                           <Upload size={14} className="mr-2" />{storeCopy.uploadSkillPackage}
@@ -2565,7 +2768,7 @@ const withUiTimeout = (promise, timeoutMs, fallbackResult) => {
                       <div className="flex flex-col items-end gap-1.5">
                         {(() => { const sf = detailTool.feishuCli ? feishuFlow : detailTool.wecomCli ? wecomFlow : detailTool.dingtalkCli ? dingtalkFlow : detailTool.tmeetCli ? tmeetFlow : null; return (externalAuthAvailable && sf && (sf.phase === 'running' || sf.phase === 'qr'))
                           ? <FeishuMini flow={sf} onClick={() => {}} copy={storeCopy.mini} />
-                          : <PlatformToolAction tool={detailTool} busy={busyId === detailTool.backendId} onAction={handleAction} onUpdate={handleSkillUpdate} onEditDisplay={handleEditDisplay} onExport={handleExportInstalled} size="lg" copy={storeCopy} t={t} />; })()}
+                          : <PlatformToolAction tool={detailTool} busy={busyId === detailTool.backendId} onAction={handleAction} onUpdate={handleSkillUpdate} onEditDisplay={handleEditDisplay} onExport={handleExportInstalled} onDetails={() => setSelectedTool(detailTool)} onRemove={capabilityKindForEntry(detailTool) === 'connector' ? setRemoveConnectorConfirm : setRemoveSkillConfirm} size="lg" copy={storeCopy} t={t} />; })()}
                         {((detailTool.feishuCli && !feishuConnected) || (detailTool.wecomCli && !wecomConnected) || (detailTool.dingtalkCli && !dingtalkConnected) || (detailTool.tmeetCli && !tmeetConnected)) && <span className="text-[11px] text-slate-400">{storeCopy.firstUseOnlineInstall}</span>}
                       </div>
                     </div>

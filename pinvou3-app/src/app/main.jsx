@@ -3405,6 +3405,7 @@ function workspaceDisplayName(path) {
                 onGotoModelSettings={() => openSettingsSection('model')}
                 onGotoSettings={() => openSettingsSection('general')}
                 onGotoTools={() => navigateFromScheduledRun('capabilities', () => setCapabilityTab('connectors'))}
+                onGotoSkills={() => navigateFromScheduledRun('capabilities', () => setCapabilityTab('skills'))}
               />
             )}
             {SCHEDULED_TASKS_ENTRY_ENABLED && currentView === 'scheduled' && (

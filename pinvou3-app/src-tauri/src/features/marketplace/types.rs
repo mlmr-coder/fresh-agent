@@ -160,8 +160,15 @@ pub struct MarketplaceToolInfo {
     pub description: String,
     pub version: String,
     pub icon: String,
+    /// 已安装包自带图标的内联 data URL。前端能力中心与输入框共同消费，避免
+    /// 相对磁盘路径在 WebView 中不可读后退回无品牌色的通用图标。
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub icon_data_url: Option<String>,
     pub category: String,
     pub installed: bool,
+    /// OAuth capability comes from the manifest, including uploaded connectors.
+    #[serde(default)]
+    pub oauth_server_name: Option<String>,
     /// 配套技能 id(来自 manifest `companion_skills`)。前端据此把「有配套 MCP 的技能卡」的
     /// 状态/装卸联动到本 MCP,单一真源在 manifest,避免命名不一致(gongwen↔government-writing)
     /// 时前端漏建映射导致两卡状态分叉。

@@ -449,13 +449,26 @@ pub(super) fn uninstall_marketplace_tool_sync(tool_id: &str) -> Result<(), Strin
     // Resolve companion ownership before any OAuth, skill, or MCP state is mutated.
     let companions = mgr.companion_skills(tool_id);
     if let Some(server_name) = mgr.oauth_remote_server_name(tool_id) {
-        match marketplace_oauth_server_from_mcp_config(&server_name)? {
-            Some(server) => {
-                deepseek_tui::mcp::oauth::delete_oauth_tokens_for_server(&server_name, &server)
-                    .map_err(|e| format!("删除 MCP OAuth token 失败: {e:#}"))?;
+        match marketplace_oauth_server_from_mcp_config(&server_name) {
+            Err(error) => {
+                log::warn!(
+                    "[marketplace] 读取 OAuth server 配置失败，继续从应用删除 '{tool_id}': {error}"
+                );
             }
-            None => {
-                eprintln!(
+            Ok(Some(server)) => {
+                if let Err(error) =
+                    deepseek_tui::mcp::oauth::delete_oauth_tokens_for_server(&server_name, &server)
+                {
+                    // Token revoke/keyring cleanup is secondary to the explicit local deletion.
+                    // A stale or malformed OAuth provider must not make an uploaded connector
+                    // impossible to remove from the app.
+                    log::warn!(
+                        "[marketplace] 删除 MCP OAuth token 失败，继续从应用删除 '{tool_id}': {error:#}"
+                    );
+                }
+            }
+            Ok(None) => {
+                log::warn!(
                     "[marketplace] OAuth server '{server_name}' not found in mcp.json while uninstalling '{tool_id}'"
                 );
             }

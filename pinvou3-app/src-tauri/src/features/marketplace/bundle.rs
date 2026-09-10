@@ -237,7 +237,8 @@ pub struct BundleInfo {
     pub cli: Vec<String>,
     /// 包声明的凭据项（收敛自 config_fields/secret_env/secret_headers）
     pub credentials: Vec<CredentialSpec>,
-    /// 功能事实（修复方案 V4 下沉；icon/color/todayImg/welcomeQueries/i18n 留前端 overlay）
+    /// 功能事实（修复方案 V4 下沉；内置条目的语义 icon/color 与 i18n 留前端
+    /// overlay，上传包的原始 icon 则由下方 icon/icon_data_url 透传）
     pub description: String,
     pub version: String,
     pub auth_required: bool,
@@ -266,6 +267,10 @@ pub struct BundleInfo {
     /// 图标相对包目录路径（`icon.svg`/`icon.png`；缺省 None → 前端用默认图标）。
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub icon: Option<String>,
+    /// 图标的内联 data URL。相对路径只用于包结构与导出，本字段供 WebView 直接
+    /// 渲染，确保能力中心、输入框和连接器菜单使用同一张彩色原图。
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub icon_data_url: Option<String>,
     /// 用户自定义展示名/说明覆盖的**原值**（仅 source=Upload 的包；存于
     /// bundles.json extra，供前端编辑弹窗预填）。name/description 已是应用
     /// 覆盖后的生效值。
@@ -384,9 +389,10 @@ impl BundleRegistry {
                 user_uploaded: upload_record.is_some(),
                 degraded,
                 update_available: false,
-                oauth: !tool.servers.is_empty(),
+                oauth: tool.servers.iter().any(|server| server.requires_oauth()),
                 category: tool.category.clone(),
                 icon: bundle_icon_path(&tool.id),
+                icon_data_url: bundle_icon_data_url(&tool.id),
                 display_name,
                 display_description,
             });
@@ -427,6 +433,7 @@ impl BundleRegistry {
                 oauth: false,
                 category: "skill".to_string(),
                 icon: bundle_icon_path(&skill.id),
+                icon_data_url: bundle_icon_data_url(&skill.id),
                 display_name: None,
                 display_description: None,
             });
@@ -459,6 +466,7 @@ impl BundleRegistry {
                 oauth: false,
                 category: "skill".to_string(),
                 icon: bundle_icon_path(&skill.id),
+                icon_data_url: bundle_icon_data_url(&skill.id),
                 display_name: skill.display_name.clone(),
                 display_description: skill.display_description.clone(),
             });
@@ -497,6 +505,7 @@ impl BundleRegistry {
                 oauth: false,
                 category: "collab".to_string(),
                 icon: bundle_icon_path(id),
+                icon_data_url: bundle_icon_data_url(id),
                 display_name: None,
                 display_description: None,
             });
@@ -562,6 +571,7 @@ impl BundleRegistry {
             oauth: false,
             category: "docs".to_string(),
             icon: bundle_icon_path("ima"),
+            icon_data_url: bundle_icon_data_url("ima"),
             display_name: None,
             display_description: None,
         });
@@ -616,6 +626,35 @@ pub fn bundle_icon_path(id: &str) -> Option<String> {
         }
     }
     None
+}
+
+/// 读取包目录声明的图标并转为 WebView 可直接使用的 data URL。
+///
+/// 只读取固定文件名且限制为 1 MiB：插件图标无需暴露本机绝对路径，也不会让
+/// UI 因异常大文件承担无界 JSON/base64 开销。SVG/PNG 原始字节不做滤镜或重绘，
+/// 因而完整保留插件作者提供的颜色。
+pub fn bundle_icon_data_url(id: &str) -> Option<String> {
+    const MAX_ICON_BYTES: u64 = 1024 * 1024;
+    let name = bundle_icon_path(id)?;
+    let path = crate::platform::paths::bundles_root().join(id).join(&name);
+    if std::fs::metadata(&path).ok()?.len() > MAX_ICON_BYTES {
+        log::warn!(
+            "[marketplace] ignore oversized bundle icon: {}",
+            path.display()
+        );
+        return None;
+    }
+    let bytes = std::fs::read(&path).ok()?;
+    let mime = if name.ends_with(".svg") {
+        "image/svg+xml"
+    } else {
+        "image/png"
+    };
+    use base64::Engine as _;
+    Some(format!(
+        "data:{mime};base64,{}",
+        base64::engine::general_purpose::STANDARD.encode(bytes)
+    ))
 }
 
 /// 从 MCP ToolManifest 收敛凭据声明（修复方案一）：config_fields → credentials，
@@ -878,6 +917,26 @@ mod tests {
     }
 
     #[test]
+    fn bundle_icon_data_url_preserves_authored_svg() {
+        with_temp_home(|| {
+            let dir = crate::platform::paths::bundles_root().join("colored-plugin");
+            std::fs::create_dir_all(&dir).unwrap();
+            let svg = br##"<svg xmlns="http://www.w3.org/2000/svg"><rect fill="#ff2d55" width="24" height="24"/></svg>"##;
+            std::fs::write(dir.join("icon.svg"), svg).unwrap();
+
+            let url = bundle_icon_data_url("colored-plugin").expect("icon should be readable");
+            use base64::Engine as _;
+            assert_eq!(
+                url,
+                format!(
+                    "data:image/svg+xml;base64,{}",
+                    base64::engine::general_purpose::STANDARD.encode(svg)
+                )
+            );
+        });
+    }
+
+    #[test]
     fn readiness_rules() {
         let b = |kind: BundleKind, creds: Vec<CredentialSpec>| BundleInfo {
             id: "x".into(),
@@ -898,6 +957,7 @@ mod tests {
             oauth: false,
             category: String::new(),
             icon: None,
+            icon_data_url: None,
             display_name: None,
             display_description: None,
         };

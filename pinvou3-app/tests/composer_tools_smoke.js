@@ -61,8 +61,8 @@ function injectSource() {
           {id:'gongwen',name:'公文写作',description:'公文工具',installed:true,connected:true,companion_skills:['government-writing']},
           {id:'weather',name:'高德天气',installed:true,connected:true},
           {id:'obsidian',name:'Obsidian',installed:true,connected:true},
-          {id:'qcc',name:'企查查',installed:true,connected:true},
-          {id:'pending',name:'待授权',installed:true},
+          {id:'pptx',name:'PPT 生成',installed:true,connected:true},
+          {id:'pending',name:'待授权',installed:true,icon_data_url:'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IGZpbGw9IiNmZjJkNTUiIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIvPjwvc3ZnPg=='},
         ].map(tool => ({...tool,connected:state.readiness[tool.id]??tool.connected})));
         case 'list_marketplace_skills': return Promise.resolve([
           {id:'government-writing',title:'数据库操作',description:'配套技能',installed:true,user_uploaded:false},
@@ -75,6 +75,9 @@ function injectSource() {
         case 'list_composer_skills': return Promise.resolve(state.skillsOverride || [
           {name:'visualizer',description:'数据分析可视化',aliases:['chart']},
           {name:'database-ops',title:'数据库操作',description:'数据库查询和维护',aliases:[]}
+        ]);
+        case 'list_composer_display_skills': return Promise.resolve([
+          {name:'archify',title:'archify',description:'架构图',aliases:[],icon:'Presentation',color:'bg-violet'},
         ]);
         case 'get_disabled_connectors': {
           if(state.failRead) return Promise.reject(new Error('mock read failed'));
@@ -123,6 +126,11 @@ const sleep = ms => new Promise(r => { setTimeout(r, ms); });
       connectorAvatars: connectors ? connectors.querySelectorAll('span[title]').length : 0,
       skillAvatars: skills ? skills.querySelectorAll('span[title]').length : 0,
       connectorOverflow: connectors ? connectors.innerText.trim() : '',
+      connectorIcons: connectors ? [...connectors.querySelectorAll('[data-tool-icon]')].map(icon => ({
+        id: icon.dataset.toolIcon,
+        image: icon.querySelector('img')?.getAttribute('src') || '',
+        vector: !!icon.querySelector('svg'),
+      })) : [],
       skillOverflow: skills ? skills.innerText.trim() : '',
       modelAfterGroups: (() => {
         const groups = document.querySelector('[data-testid="composer-capability-groups"]');
@@ -143,6 +151,10 @@ const sleep = ms => new Promise(r => { setTimeout(r, ms); });
   rec('输入框不再显示技能头像组', !before.skillButton, JSON.stringify(before));
   rec('连接器默认显示 3 个头像', before.connectorAvatars === 3, JSON.stringify(before));
   rec('连接器超出项显示 +3，包含 ima', before.connectorOverflow === '+3', JSON.stringify(before));
+  rec('输入框头像与能力中心使用同一连接器图标', before.connectorIcons.length === 3
+    && before.connectorIcons[0].id === 'feishu' && before.connectorIcons[0].image.includes('wb-feishu.svg')
+    && before.connectorIcons[1].id === 'ima' && before.connectorIcons[1].image.includes('wb-ima-mcp.png')
+    && before.connectorIcons[2].id === 'gongwen' && before.connectorIcons[2].vector, JSON.stringify(before.connectorIcons));
   rec('模型选择器位于能力组之后', before.modelAfterGroups, JSON.stringify(before));
   rec('工作模式位于添加按钮后且排在专家前', before.workModeSecond, JSON.stringify(before));
 
@@ -159,13 +171,30 @@ const sleep = ms => new Promise(r => { setTimeout(r, ms); });
   rec('连接器弹层完整显示在输入框上方', connectorPopoverVisible);
   const connectorMenu = await page.evaluate(() => document.querySelector('[data-testid="composer-tool-menu"]')?.innerText || '');
   rec('连接器菜单可关闭并添加连接器', connectorMenu.includes('公文写作') && connectorMenu.includes('飞书') && connectorMenu.includes('添加连接器') && !connectorMenu.includes('数据分析可视化'), connectorMenu);
+  rec('连接器名称前显示与能力中心一致的小图标', await page.$$eval('[data-testid="composer-tool-menu"] [data-connector-id]', rows => (
+    rows.length === 7 && rows.every(row => !!row.querySelector(`[data-tool-icon="${row.dataset.connectorId}"]`))
+  )));
+  rec('PPT 图标保留能力中心的橙红渐变', await page.$eval('[data-tool-icon="pptx"]', icon => getComputedStyle(icon).backgroundImage.includes('linear-gradient')));
+  rec('上传连接器直接使用插件包彩色原图', await page.$eval('[data-connector-id="pending"] [data-tool-icon="pending"] img', image => atob(image.getAttribute('src').split(',')[1]).includes('#ff2d55') && getComputedStyle(image).filter === 'none'));
   rec('待授权连接器显示连接入口，不显示绿色开关', await page.$eval('[data-connector-id="pending"]', row => row.textContent.includes('待连接') && row.textContent.includes('去连接') && !row.querySelector('[role="switch"]')));
 
   await page.evaluate(() => document.querySelector('[data-testid="composer-tool-menu-trigger"]').click());
   await page.click('[data-testid="chat-composer-input"]');
   await page.type('[data-testid="chat-composer-input"]', '/chart');
-  await page.waitForSelector('[data-testid="composer-suggestions"] [role="option"]');
+  try {
+    await page.waitForSelector('[data-testid="composer-suggestions"] [role="option"]');
+  } catch (error) {
+    console.error('composer suggestion diagnostics', await page.evaluate(() => ({
+      value: document.querySelector('[data-testid="chat-composer-input"]')?.value,
+      selectionStart: document.querySelector('[data-testid="chat-composer-input"]')?.selectionStart,
+      active: document.activeElement?.dataset?.testid,
+      popover: document.querySelector('[data-testid="composer-suggestions"]')?.textContent,
+      calls: window.__COMPOSER_TOOLS_TEST__.calls.filter(call => call.cmd.includes('composer') || call.cmd.includes('marketplace_skills')),
+    })));
+    throw error;
+  }
   rec('/ 按技能别名筛选', await page.$eval('[data-testid="composer-suggestions"]', node => node.textContent.includes('/数据分析可视化') && !node.textContent.includes('/数据库操作')));
+  rec('技能候选显示可识别的内部技能编码', await page.$eval('[data-testid="composer-suggestions"]', node => node.textContent.includes('技能编码 /visualizer')));
   await page.keyboard.press('Enter');
   rec('回车插入技能且不自动发送', await page.$eval('[data-testid="chat-composer-input"]', node => node.value === '/数据分析可视化 '));
   await page.keyboard.press('Backspace');

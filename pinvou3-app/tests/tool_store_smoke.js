@@ -36,25 +36,25 @@ const PROFILE = fs.mkdtempSync(path.join(os.tmpdir(), 'pinvou-tool-store-'));
 function injectSource() {
   return `(function(){
     const TOOL_META={
-      weather:['高德天气',[]],iwencai:['同花顺问财',[]],qcc:['企查查',[]],
+      'custom-oauth':['自定义 OAuth',[]],weather:['高德天气',[]],iwencai:['同花顺问财',[]],qcc:['企查查',[]],
       'patsnap-search':['智慧芽专利&文献融合检索',[]],
       'tencent-docs':['腾讯文档 MCP',['tencent-docs-skill']],
       'canva-mcp':['Canva 可画',[]],
       'yuandian-mcp':['华宇元典法律数据',[]],
       obsidian:['Obsidian 知识库',[]],pptx:['PPT 生成',['pptx']],gongwen:['公文写作',['government-writing']]
     };
-    const OAUTH_SERVERS={'yuandian-mcp':'yuandian_mcp','canva-mcp':'canva_mcp',qcc:'qcc-company'};
+    const OAUTH_SERVERS={'custom-oauth':'custom_remote','yuandian-mcp':'yuandian_mcp','canva-mcp':'canva_mcp',qcc:'qcc-company'};
     const BLOCKING_INSTALL_OAUTH_TOOLS=new Set(['yuandian-mcp','canva-mcp']);
     const state=window.__TOOL_STORE_TEST__={
       // government-writing 初始为独立已装（MCP gongwen 未装）:覆盖 G3 混合态——
       // companion 卡动作须来自技能级 readiness(卸载),首个用例卸载后回到未装态。
-      installed:{},skills:{visualizer:false,'government-writing':true},connected:{feishu:false,wecom:false,dingtalk:false,tmeet:false,ima:false},
+      installed:{'custom-oauth':true},skills:{visualizer:false,'government-writing':true},connected:{feishu:false,wecom:false,dingtalk:false,tmeet:false,ima:false},
       oauthAuth:{},oauthRequests:{},finishOAuthInstall:null,calls:[],obsidianChecks:0,composerChanged:0,failVisibility:false,failOpenExternal:false,
-      hidden:{plain:[],code:[]}
+      hidden:{plain:[],code:[]},disabledSkills:{plain:[],code:['visualizer']}
     };
     window.addEventListener('pinvou:tools-changed',()=>{state.composerChanged++;});
     window.__TAURI_EVENT_HANDLERS__={};
-    const tools=()=>Object.entries(TOOL_META).map(([id,[name,companions]])=>({id,name,description:'test',version:'1.0.0',icon:'',category:'test',installed:!!state.installed[id],companion_skills:companions}));
+    const tools=()=>Object.entries(TOOL_META).map(([id,[name,companions]])=>({id,name,description:'test',version:'1.0.0',icon:'',icon_data_url:id==='custom-oauth'?'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IGZpbGw9IiNmZjJkNTUiIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIvPjwvc3ZnPg==':null,category:'test',source:id==='custom-oauth'?'upload':'builtin',oauth_server_name:OAUTH_SERVERS[id]||null,installed:!!state.installed[id],companion_skills:companions}));
     const skills=()=>[
       // companion 技能安装态 = 所属 MCP 已装 或 技能独立已装（G3 混合态）。
       {id:'government-writing',title:'党政机关公文写作',installed:!!(state.installed.gongwen||state.skills['government-writing']),user_uploaded:false},
@@ -109,6 +109,9 @@ function injectSource() {
           });
         }
         case 'list_marketplace_skills': return Promise.resolve(skills());
+        case 'list_composer_skills': return Promise.resolve(skills()
+          .filter(item=>item.installed&&!Object.values(TOOL_META).some(([,companions])=>companions.includes(item.id))&&!state.disabledSkills[args.scope||'plain'].includes(item.id)&&!state.hidden[args.scope||'plain'].includes(item.id))
+          .map(item=>({name:item.id,title:item.title,catalogue_id:item.id,description:'',aliases:[],icon:'Package',color:'bg-slate'})));
         case 'install_marketplace_tool':
           if(BLOCKING_INSTALL_OAUTH_TOOLS.has(args.toolId)) return new Promise(resolve=>{state.finishOAuthInstall=()=>{state.installed[args.toolId]=true;state.finishOAuthInstall=null;resolve(null);};});
           state.installed[args.toolId]=true; return Promise.resolve(null);
@@ -173,6 +176,8 @@ function injectSource() {
         // mock 不再 no-op，勾选往返才可测）。
         case 'get_bundle_visibility': return state.failVisibility ? Promise.reject(new Error('mock visibility read failure')) : Promise.resolve(state.hidden[args.scope]||[]);
         case 'set_bundle_visibility': state.hidden[args.scope]=(args.bundleIds||[]).map(toPackageId); return Promise.resolve(null);
+        case 'get_disabled_skills': return Promise.resolve(state.disabledSkills[args.scope]||[]);
+        case 'set_disabled_skills': state.disabledSkills[args.scope]=(args.skillIds||[]).map(toPackageId); return Promise.resolve(null);
         case 'feishu_apply_skills': case 'wecom_apply_skills': case 'dingtalk_apply_skills': case 'tmeet_apply_skills': return Promise.resolve(null);
         // failOpenExternal simulates an external-url allowlist rejection: the WeCom QR modal's "Open in browser" must surface a visible error.
         case 'open_external_url': return state.failOpenExternal ? Promise.reject('external-url-not-allowlisted') : Promise.resolve(null);
@@ -207,6 +212,11 @@ async function clickExact(page, text) {
     el.scrollIntoView({block:'center'}); el.click(); return true;
   }, text);
   if (!ok) throw new Error(`找不到可点击文本: ${text}`);
+}
+async function openConnectorMenu(page, id) {
+  const triggers=await page.$$(`[data-testid="connector-more"][data-tool-id="${id}"]`);
+  await triggers.at(-1).click();
+  await page.waitForSelector('.capability-action-menu');
 }
 async function search(page, query) {
   const input = await getToolStoreSearchInput(page);
@@ -427,14 +437,55 @@ async function visibilityBox(page, cardText, modeLabel, click) {
   rec('Obsidian 重检成功后安装',await page.evaluate(()=>!!window.__TOOL_STORE_TEST__.installed.obsidian&&window.__TOOL_STORE_TEST__.obsidianChecks===2));
 
   await search(page,'党政机关公文写作');
-  rec('公文配套技能与 MCP 安装态联动',await page.evaluate(()=>[...document.querySelectorAll('button')].some(b=>(b.textContent||'').trim()==='卸载')));
+  await openConnectorMenu(page,'government-writing');
+  rec('公文配套技能与 MCP 安装态联动',await page.evaluate(()=>!!document.querySelector('[data-testid="tool-store-remove-connector"][data-tool-id="government-writing"]')));
+  await page.keyboard.press('Escape');
   await page.click('[data-testid="capability-tab-skills"]'); await sleep(180);
   await action(page,'数据分析可视化','安装','visualizer'); await dismiss(page);
   rec('独立可视化技能经 UI 安装',await page.evaluate(()=>window.__TOOL_STORE_TEST__.skills.visualizer));
+  rec('技能卡明确显示代码未启用',await page.evaluate(()=>document.querySelector('[data-testid="skill-code-availability"][data-tool-id="visualizer"]')?.textContent.includes('代码未启用')));
+  await page.click('[data-testid="tool-store-manage-visibility"]'); await sleep(180);
+  rec('技能页管理态提供代码可用开关',await page.evaluate(()=>{
+    const card=document.querySelector('[data-testid="capability-card"][data-tool-id="visualizer"]');
+    const input=card?.querySelector('input[type="checkbox"]');
+    if(!input||input.checked)return false;
+    input.click();return true;
+  }));
+  await sleep(260);
+  rec('开启后技能卡显示代码可用',await page.evaluate(()=>document.querySelector('[data-testid="skill-code-availability"][data-tool-id="visualizer"]')?.textContent.includes('代码可用')));
+  await page.click('[data-testid="tool-store-manage-visibility"]'); await sleep(120);
+  await page.click('[data-testid="tool-store-code-available-only"]'); await sleep(120);
+  rec('代码可用筛选保留真实可调用技能',await page.evaluate(()=>document.body.innerText.includes('数据分析可视化')));
+  await page.click('[data-testid="skill-more"][data-tool-id="visualizer"]');
+  rec('已安装技能在更多菜单提供删除入口',await page.evaluate(()=>{
+    const button=document.querySelector('[data-testid="tool-store-remove-skill"][data-tool-id="visualizer"]');
+    return !!button&&!button.disabled;
+  }));
+  await page.click('[data-testid="tool-store-remove-skill"][data-tool-id="visualizer"]');
+  rec('技能删除确认说明下一轮生效且保留历史消息',await page.evaluate(()=>document.body.innerText.includes('下一轮消息起停止生效')&&document.body.innerText.includes('历史消息保留')));
+  await page.click('[data-testid="tool-store-remove-skill-confirm"]'); await sleep(180); await dismiss(page);
+  rec('独立技能删除走技能卸载并通知聊天刷新',await page.evaluate(()=>!window.__TOOL_STORE_TEST__.skills.visualizer&&window.__TOOL_STORE_TEST__.calls.some(x=>x.cmd==='uninstall_marketplace_skill'&&x.args.skillId==='visualizer')&&window.__TOOL_STORE_TEST__.composerChanged>0));
   await page.click('[data-testid="capability-tab-connectors"]'); await sleep(180);
 
-  await action(page,'高德天气','卸载','weather'); await dismiss(page);
+  await search(page,'高德天气');
+  await openConnectorMenu(page,'weather');
+  await page.click('[data-testid="tool-store-remove-connector"][data-tool-id="weather"]');
+  await page.click('[data-testid="tool-store-remove-connector-confirm"]');
+  await sleep(180); await dismiss(page);
   rec('MCP 经 UI 卸载并刷新状态',await page.evaluate(()=>!window.__TOOL_STORE_TEST__.installed.weather));
+
+  await action(page,'自定义 OAuth','重新授权','custom-oauth');
+  rec('上传 OAuth 插件已安装但未授权时提供重新授权入口',await page.evaluate(()=>Object.values(window.__TOOL_STORE_TEST__.oauthRequests).some(r=>r.toolId==='custom-oauth')));
+  await clickExact(page,'取消'); await sleep(180); await dismiss(page);
+  await action(page,'自定义 OAuth','重新授权','custom-oauth');
+  await page.evaluate(()=>{
+    const s=window.__TOOL_STORE_TEST__;
+    const req=Object.values(s.oauthRequests).find(r=>r.toolId==='custom-oauth');
+    s.oauthAuth['custom-oauth']={installed:true,mcp_configured:true,oauth_required:true,oauth_token_present:true,status:'connected',server_name:'custom_remote'};
+    req.resolve({status:'connected',server_name:'custom_remote'});
+  });
+  await sleep(250); await dismiss(page);
+  rec('上传 OAuth 插件授权成功后显示已连接',await page.evaluate(()=>document.querySelector('[data-testid="capability-card"][data-tool-id="custom-oauth"] .capability-status')?.textContent.trim()==='已连接'));
 
   const composerChangedBeforeYuandian = await page.evaluate(()=>window.__TOOL_STORE_TEST__.composerChanged);
   await action(page,'华宇元典法律数据','连接','yuandian-mcp');
@@ -472,6 +523,24 @@ async function visibilityBox(page, cardText, modeLabel, click) {
   rec('Canva 取消授权后保持待授权态',await page.evaluate(()=>window.__TOOL_STORE_TEST__.installed['canva-mcp']&&[...document.querySelectorAll('button')].some(b=>(b.textContent||'').trim()==='重新授权')));
   rec('Canva 未授权不通知 composer 刷新',await page.evaluate(before=>window.__TOOL_STORE_TEST__.composerChanged===before, composerChangedBeforeCanva));
   await dismiss(page);
+
+  // Registered but unauthorised connectors must still be deletable from the app.
+  await search(page,'Canva 可画');
+  const deleteSelector='[data-testid="tool-store-remove-connector"][data-tool-id="canva-mcp"]';
+  await openConnectorMenu(page,'canva-mcp');
+  await page.waitForSelector(deleteSelector);
+  await page.click(deleteSelector);
+  await clickExact(page,'取消');
+  await openConnectorMenu(page,'canva-mcp');
+  rec('取消删除保留连接器配置',await page.evaluate(()=>window.__TOOL_STORE_TEST__.installed['canva-mcp']));
+  await page.click(deleteSelector);
+  await page.click('[data-testid="tool-store-remove-connector-confirm"]');
+  await page.waitForFunction(()=>!window.__TOOL_STORE_TEST__.installed['canva-mcp']);
+  await dismiss(page);
+  await openConnectorMenu(page,'canva-mcp');
+  rec('删除后菜单明确说明尚未添加',await page.$eval(deleteSelector,node=>node.disabled));
+  await page.keyboard.press('Escape');
+  rec('删除连接器通知聊天工具刷新',await page.evaluate(before=>window.__TOOL_STORE_TEST__.composerChanged>before,composerChangedBeforeCanva));
 
   const connectors=[
     ['飞书（Lark）','feishu','feishu:connected',['feishu_ensure_cli','feishu_connect_begin']],
@@ -551,12 +620,19 @@ async function visibilityBox(page, cardText, modeLabel, click) {
     }
     await page.evaluate((id,event)=>{window.__TOOL_STORE_TEST__.connected[id]=true;return window.__emitTauri(event,{});},id,event);
     await sleep(180); await dismiss(page);
-    rec(`${query} 连接成功后详情按钮同步为断开`,await page.evaluate((id)=>
+    await openConnectorMenu(page,id);
+    rec(`${query} 连接成功后详情菜单同步为断开`,await page.evaluate((id)=>
       [...document.querySelectorAll(`button[data-tool-id="${id}"]`)].some(b=>(b.textContent||'').trim()==='断开'),id));
     const info=await page.evaluate(({commands})=>({calls:commands.every(c=>window.__TOOL_STORE_TEST__.calls.some(x=>x.cmd===c)),seen:window.__TOOL_STORE_TEST__.calls.map(x=>x.cmd)}),{commands});
     rec(`${query} 授权编排命令与成功事件`,info.calls,info.calls?'':JSON.stringify(info.seen.slice(-12)));
+    await page.keyboard.press('Escape');
     await closeDetail(page,query);
   }
+
+  await search(page,'飞书');
+  await openConnectorMenu(page,'feishu');
+  await page.screenshot({path:'/tmp/fresh-connector-menu.png'});
+  await page.keyboard.press('Escape');
 
   // 管理可见性（四轮评审）：加载成功时勾选框可用；读取失败时勾选框禁用、
   // 有错误提示且不产生静默写入。
@@ -568,7 +644,10 @@ async function visibilityBox(page, cardText, modeLabel, click) {
     return boxes.length>0&&boxes.some(b=>!b.disabled);
   }));
   await page.click('[data-testid="tool-store-manage-visibility"]');
-  await page.evaluate(()=>{window.__TOOL_STORE_TEST__.failVisibility=true;});
+  await page.evaluate(()=>{
+    window.__TOOL_STORE_TEST__.failVisibility=true;
+    window.__TOOL_STORE_TEST__.calls=window.__TOOL_STORE_TEST__.calls.filter(x=>x.cmd!=='set_bundle_visibility');
+  });
   await sleep(80);
   await page.click('[data-testid="tool-store-manage-visibility"]');
   await sleep(300);
@@ -614,6 +693,34 @@ async function visibilityBox(page, cardText, modeLabel, click) {
   rec('companion 卡恢复可见后重进读回为可见',boxAfterShow.found&&boxAfterShow.checked);
   await setManaging(page,false);
 
+  await search(page,'高德天气');
+  await openConnectorMenu(page,'weather');
+  rec('未添加连接器统一显示更多入口和禁用删除说明',await page.evaluate(()=>{
+    const menu=document.querySelector('.capability-action-menu');
+    return menu?.innerText.includes('尚未添加到本机') && menu.querySelector('[data-testid="tool-store-remove-connector"]').disabled;
+  }));
+  await page.keyboard.press('End');
+  rec('菜单键盘导航跳过禁用删除',await page.evaluate(()=>document.activeElement.textContent==='查看详情'));
+  await page.keyboard.press('Escape');
+  rec('Escape 关闭菜单并归还焦点',await page.evaluate(()=>!document.querySelector('.capability-action-menu') && document.activeElement.dataset.testid==='connector-more'));
+  await search(page,'');
+  await page.evaluate(()=>{ let node=document.querySelector('[data-testid="capability-card"]'); while(node){ if(node.scrollHeight>node.clientHeight) node.scrollTop=0; node=node.parentElement; } });
+  await sleep(200);
+  rec('连接器卡片操作位置和图标尺寸一致',await page.evaluate(()=>{
+    const cards=[...document.querySelectorAll('[data-testid="capability-card"]')];
+    const pair=cards.slice(0,2).map(c=>c.getBoundingClientRect());
+    return cards.length>2 && cards.every(c=>!!c.querySelector('[data-testid="connector-more"]') && Math.round(c.querySelector('.capability-card-icon').getBoundingClientRect().width)===48)
+      && Math.abs(pair[0].height-pair[1].height)<2;
+  }));
+  rec('上传连接器在能力中心保留插件包彩色原图',await page.$eval('[data-tool-id="custom-oauth"] img',image=>atob(image.getAttribute('src').split(',')[1]).includes('#ff2d55')&&getComputedStyle(image).filter==='none'));
+  await page.screenshot({path:'/tmp/fresh-capability-center-light.png'});
+  await page.evaluate(()=>document.documentElement.classList.add('dark'));
+  await sleep(400);
+  await page.screenshot({path:'/tmp/fresh-capability-center-dark.png'});
+  await page.evaluate(()=>document.documentElement.classList.remove('dark'));
+  await page.setViewport({width:760,height:1000}); await sleep(200);
+  rec('窄屏卡片不会横向溢出',await page.evaluate(()=>[...document.querySelectorAll('[data-testid="capability-card"]')].every(c=>c.scrollWidth<=c.clientWidth+1)));
+  await page.screenshot({path:'/tmp/fresh-capability-center-narrow.png'});
   const calls=await page.evaluate(()=>window.__TOOL_STORE_TEST__.calls);
   rec('用户 Key 工具安装调用携带对应配置',calls.filter(x=>x.cmd==='install_marketplace_tool').every(x=>{
     if(x.args.toolId==='weather')return Object.keys(x.args.config||{}).join(',')==='AMAP_KEY';

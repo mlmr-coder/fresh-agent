@@ -676,7 +676,13 @@ impl<S: CredentialStore> MarketplaceManager<S> {
                     }
                     None => (m.name, m.description),
                 };
+                let icon_data_url = bundle::bundle_icon_data_url(&m.id);
                 MarketplaceToolInfo {
+                    oauth_server_name: m
+                        .servers
+                        .iter()
+                        .find(|server| server.requires_oauth())
+                        .map(|server| server.name.clone()),
                     source: source_by_id
                         .get(m.id.as_str())
                         .map(|s| s.to_string())
@@ -690,6 +696,7 @@ impl<S: CredentialStore> MarketplaceManager<S> {
                     description,
                     version: m.version,
                     icon: m.icon,
+                    icon_data_url,
                     category: m.category,
                     companion_skills: m.companion_skills,
                 }
@@ -870,9 +877,8 @@ impl<S: CredentialStore> MarketplaceManager<S> {
         // Upload 整包回收 preflight（M2）：回收站不可用（同 id 目标残留/根目录不可
         // 建）时在拆任何供给面之前 fail loud —— 此前 secrets/installed.json/mcp.json
         // 已不可逆拆除后回收失败只回写 bundles.json，造成「显示已安装、实际未供给」。
-        // 注意文案口径：命令层（uninstall_marketplace_tool_sync）对远程 OAuth 工具
-        // 的 token 删除先于本函数，此处中止时 token 可能已删除——只能说市场安装态
-        // （mcp.json/installed.json/bundles.json/包目录/secrets）未改动。
+        // OAuth token 清理是命令层的 best-effort 前置步骤；无论其结果如何，本地市场
+        // 安装态仍由这里的事务独立保证一致性。
         let pkg_dir = paths::bundles_root().join(tool_id);
         let will_recycle = upload_record.is_some() && pkg_dir.exists();
         if will_recycle {
@@ -905,8 +911,7 @@ impl<S: CredentialStore> MarketplaceManager<S> {
             installed.retain(|id| id != tool_id);
             self.save_installed(&installed)?;
 
-            // 镜像删除（与 install 对称：失败只记日志。命令层 OAuth token 前置删除的
-            // 中止语义在 uninstall_marketplace_tool_sync，先于本函数，不受影响）。
+            // 镜像删除（与 install 对称：失败只记日志）。
             // removed_by_us = 记录是否由本次调用删除：回收失败回滚仅以本次所删为限
             // 回写，不复活他人已删的记录。
             let removed_by_us = match store.remove(tool_id) {
@@ -2924,6 +2929,67 @@ mod tests {
                 })
                 .collect();
             assert_eq!(backups.len(), 1);
+        });
+    }
+
+    #[test]
+    fn list_tools_exposes_uploaded_oauth_server() {
+        with_temp_home(|| {
+            write_tool_manifest(
+                "custom-oauth",
+                r#"{
+                "id":"custom-oauth","name":"Custom OAuth","description":"test","version":"1","icon":"plug","category":"test",
+                "mcp_tools":[],"command":"","args":[],
+                "servers":[{"name":"custom_remote","url":"https://example.com/mcp","scopes":["mcp"]}]
+            }"#,
+            );
+            write_tool_manifest(
+                "custom-public",
+                r#"{
+                "id":"custom-public","name":"Public MCP","description":"test","version":"1","icon":"plug","category":"test",
+                "mcp_tools":[],"command":"","args":[],
+                "servers":[{"name":"public_remote","url":"https://example.com/public"}]
+            }"#,
+            );
+            store::BundleStore::new()
+                .upsert(store::BundleRecord::installed_now(
+                    "custom-oauth",
+                    store::BundleSource::Upload("custom.zip".into()),
+                ))
+                .unwrap();
+            let tools = MarketplaceManager::new().list_tools();
+            assert_eq!(
+                tools
+                    .iter()
+                    .find(|t| t.id == "custom-oauth")
+                    .unwrap()
+                    .oauth_server_name
+                    .as_deref(),
+                Some("custom_remote")
+            );
+            assert_eq!(
+                tools
+                    .iter()
+                    .find(|t| t.id == "custom-public")
+                    .unwrap()
+                    .oauth_server_name,
+                None
+            );
+            let bundles = bundle::BundleRegistry::new().list_bundles();
+            assert!(
+                bundles
+                    .iter()
+                    .find(|b| b.id == "custom-oauth")
+                    .unwrap()
+                    .oauth
+            );
+            assert!(
+                !bundles
+                    .iter()
+                    .find(|b| b.id == "custom-public")
+                    .unwrap()
+                    .oauth
+            );
         });
     }
 

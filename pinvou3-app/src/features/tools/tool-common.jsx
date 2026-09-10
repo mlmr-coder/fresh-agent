@@ -524,7 +524,7 @@ const AcFmtIcon = FileTypeIcon;
     // 「去新对话」引导卡按 backendId 取标题/描述/欢迎问题（中英文 overlay 同 localizeTool）；
     // category 同时供商店组合包合成卡确定业务分区。
     const tsToolWelcomeData = [
-      { backendId: 'pptx', title: 'PPT 生成', category: 'docs', desc: '说“做个 PPT / 汇报”，AI 先列大纲让你确认，再按内容自动选主题（9 套）生成可编辑 .pptx——真·图表、自带封面缩略图，全程本地、数据不出机。首次安装会自动下载 python-pptx 依赖（需联网）。', icon: Presentation, welcomeQueries: ['做个 Q2 季度汇报 PPT', '帮我做一份产品介绍 PPT', '做个项目方案演示', '做个公司介绍 PPT'] },
+      { backendId: 'pptx', title: 'PPT 生成', category: 'docs', desc: '说“做个 PPT / 汇报”，AI 先列大纲让你确认，再按内容自动选主题（9 套）生成可编辑 .pptx——真·图表、自带封面缩略图，全程本地、数据不出机。首次安装会自动下载 python-pptx 依赖（需联网）。', icon: Presentation, color: 'bg-gradient-to-b from-orange-400 to-rose-500', welcomeQueries: ['做个 Q2 季度汇报 PPT', '帮我做一份产品介绍 PPT', '做个项目方案演示', '做个公司介绍 PPT'] },
     ];
 
     // overlay 提供 configFields 时按字段 key 深合并，只覆盖 label/helpText/placeholder，其余源字段保留。
