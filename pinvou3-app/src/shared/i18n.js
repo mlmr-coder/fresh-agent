@@ -37,6 +37,9 @@ const SEARCH_KEY_PROVIDERS = ['metaso', 'bocha', 'baidu', 'tavily'];
 // 不能从 dict 惰性派生（zh 主用户不会装载 en chunk）。
 export const DEFAULT_CHAT_TITLES = new Set(['新对话', 'New chat']);
 
+// Persisted expert-removal text from the desktop/web bridges, in either language.
+export const PERSONA_REMOVAL_PREFIXES = ['🎴 已卸下专家卡牌: ', '🎴 Expert card removed: '];
+
 // 惰性语言词典装载。模式对齐 shared/syntax-highlighter.js 的 LAZY_LANGUAGE_LOADERS:
 // 载入表冻结、在途去重、失败清挂起(下次触发可重试)。
 const LAZY_DICT_LOADERS = Object.freeze({
