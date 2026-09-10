@@ -19,7 +19,7 @@ const BRAND_SCAN_ROOTS = [
 ];
 const BRAND_SCAN_FILES = [
   'AGENTS.md', 'CODE_OF_CONDUCT.md', 'CONTRIBUTING.md', 'CONTRIBUTING.zh-CN.md',
-  'README.md', 'README.ja.md', 'SUPPORT.md', 'THIRD_PARTY_NOTICES.md', 'TRADEMARKS.md',
+  'README.md', 'SUPPORT.md', 'THIRD_PARTY_NOTICES.md', 'TRADEMARKS.md',
 ];
 const BRAND_TEXT_EXTENSIONS = new Set([
   '.cjs', '.desktop', '.html', '.js', '.jsx', '.json', '.md', '.mjs', '.plist',
