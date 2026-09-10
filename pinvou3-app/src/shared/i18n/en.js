@@ -509,6 +509,7 @@ export const dictEn = {
         voiceIntroEnable: 'Enable and continue',
         voiceShortcutEnableTitle: 'Enable voice shortcuts',
         composerUpdateFailed: 'Could not save the change. Please retry.',
+        personaRemoveFailed: 'Could not remove the expert. Your previous selection was kept: ',
         composerStatusRefreshFailed: 'Could not refresh status. Reopen the menu to try again.',
         composerNeedsConnection: 'Not connected', composerConnectorOff: 'Off', composerGoConnect: 'Connect',
         composerConnectNamed: name => `Connect ${name}`, composerConnectHint: 'Complete connection or setup in the capability center to show this connector here.',

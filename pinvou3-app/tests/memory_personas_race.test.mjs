@@ -227,6 +227,19 @@ test('syncActivePersona 慢响应不得覆盖权威 equip（同会话乱序）',
   assert.equal(rt.state.activePersona.id, 'persona-x', '慢 sync 的旧快照不得覆盖刚加持的挂件');
 });
 
+test('unequipPersona 保存失败时保留专家卡和事件记录', async () => {
+  const rt = loadPersonasFeature();
+  rt.state.activePersona = { id: 'persona-a', name: 'A专家' };
+  const unequip = rt.defer('unequip_persona');
+  const p = rt.api.unequipPersona();
+  unequip.reject(new Error('save failed'));
+  await p;
+  assert.equal(rt.state.activePersona.id, 'persona-a');
+  assert.equal(rt.state.personaEvents.length, 0, '失败的移除不得生成卸下记录');
+  assert.ok(rt.state.chatItems.some(item => item.text.includes('save failed')));
+  assert.equal(rt.calls.invoke.includes('save_session_persona_events'), false);
+});
+
 test('unequipPersona 切走后卸下播报不写进别的会话', async () => {
   const rt = loadPersonasFeature();
   rt.state.activePersona = { id: 'persona-a', name: 'A专家' };

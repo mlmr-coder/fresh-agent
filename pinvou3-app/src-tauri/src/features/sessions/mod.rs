@@ -23,6 +23,7 @@
 //! - `retention` —— 保留策略与 `persist_then_reconcile` 系列 helper
 //! - `transcript` —— transcript revision / 截断保护
 //! - `mode_state` —— per-session 模式状态机（mode/plan/persona/skill）
+//! - `persona_binding` —— 会话专家绑定落盘、旧事件迁移与重启恢复
 //! - `injections` —— 一次性注入与 plan-claim 的事务 checkout guard
 //! - `sidecars` —— skill 绑定 / 模型 / 置顶 / 收起 的独立 sidecar 落盘
 //! - `rewind` —— 代码模式回退的对话截断与 `_rewound_turns.json` 备份
@@ -35,6 +36,7 @@
 pub(crate) mod diagnostics;
 mod injections;
 pub(crate) mod mode_state;
+mod persona_binding;
 mod retention;
 mod rewind;
 mod scheduled;
@@ -97,7 +99,8 @@ pub enum SessionKind {
 ///   mode = 本 lane 全局默认（code 由 `resolved_default_mode` 解析，work/design
 ///   由前端在会话物化时应用）。yolo 一次性确认标志
 ///   `code_permission.yolo_confirmed` 同样在 settings.json，由确认命令写入。
-/// 其余运行时交互状态（pending_plan、persona、知识库挂载等）仍 in-memory only。
+/// 专家绑定按会话存入 `sessions/<id>/persona.json`，重启或覆盖安装后按需恢复。
+/// 其余运行时交互状态（pending_plan、知识库挂载等）仍 in-memory only。
 ///
 /// `auto_continue_count`：M2 弱模型加固——Executing 态 LLM 调一次工具就停时,
 /// bridge 自动 send "继续"消息驱动 agent loop。每个用户主动消息重置为 0,

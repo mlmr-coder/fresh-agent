@@ -509,6 +509,7 @@ export const dictZh = {
         voiceIntroEnable: '启用并继续',
         voiceShortcutEnableTitle: '启用快捷键唤醒语音',
         composerUpdateFailed: '更新失败，请重试',
+        personaRemoveFailed: '移除专家失败，已保留原专家：',
         composerStatusRefreshFailed: '状态刷新失败，请重新打开菜单重试',
         composerNeedsConnection: '待连接', composerConnectorOff: '已关闭', composerGoConnect: '去连接',
         composerConnectNamed: name => `连接 ${name}`, composerConnectHint: '前往能力中心完成连接或配置，连接就绪后显示头像',

@@ -24,11 +24,13 @@ pub async fn equip_persona(
     let card = crate::features::personas::get(&persona_id)
         .ok_or_else(|| format!("未知专家面具: {persona_id}"))?;
     let summary = card.summary();
-    store.set_pending_persona_body(
-        &session_id,
-        Some(crate::features::personas::equip_body_injection(&card)),
-    );
-    store.set_active_persona(&session_id, Some(persona_id));
+    store
+        .set_session_persona(
+            &session_id,
+            Some(persona_id),
+            Some(crate::features::personas::equip_body_injection(&card)),
+        )
+        .map_err(|error| error.to_string())?;
     super::sessions::emit_session_event(&app, "session:persona_changed", &session_id, "equipped");
     Ok(summary)
 }
@@ -219,8 +221,9 @@ pub async fn unequip_persona(
     app: AppHandle,
     store: State<'_, SessionStore>,
 ) -> Result<(), String> {
-    store.set_active_persona(&session_id, None);
-    store.set_pending_persona_body(&session_id, None);
+    store
+        .set_session_persona(&session_id, None, None)
+        .map_err(|error| error.to_string())?;
     super::sessions::emit_session_event(&app, "session:persona_changed", &session_id, "unequipped");
     Ok(())
 }
@@ -234,6 +237,7 @@ pub async fn get_active_persona(
 ) -> Result<Option<crate::features::personas::PersonaSummary>, String> {
     Ok(store
         .active_persona_id(&session_id)
+        .map_err(|error| error.to_string())?
         .and_then(|pid| crate::features::personas::get(&pid).map(|c| c.summary())))
 }
 use super::prelude::*;

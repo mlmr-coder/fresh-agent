@@ -206,9 +206,11 @@ pub(crate) async fn chat_with_reservation(
             reference_absolute,
         )
     };
-    let pending_injections = store.take_pending_turn_injections(&sid);
-    // Side B 卡片池: 加持后首条消息一次性 prepend 完整人设 body(agency-agents-zh)。
-    // 之后每 turn 只靠 equip_anchor 轻锚点维持身份(EnginePool 注入),不再重灌 body。
+    let pending_injections = store
+        .take_pending_turn_injections(&sid)
+        .map_err(|error| error.to_string())?;
+    // Side B 卡片池: 加持或重启恢复后首条消息一次性 prepend 完整人设 body。
+    // 同一进程之后每 turn 只靠 equip_anchor 轻锚点维持身份(EnginePool 注入)。
     if let Some(body) = pending_injections.persona_body() {
         full = format!("{body}\n\n---\n\n{full}");
     }

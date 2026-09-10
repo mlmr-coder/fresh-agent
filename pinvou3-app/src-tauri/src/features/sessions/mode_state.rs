@@ -9,10 +9,9 @@
 //!
 //! These methods drive the in-memory `mode_states` map (mode, pinvou_review,
 //! pending Plan ticket + claim-in-flight, persona,
-//! mounted collection). All state is deliberately in-memory only: mode /
-//! plan_phase is runtime interaction state that should reset to Yolo + None on
-//! restart, while model selections are persisted in their own sidecars (see
-//! [`super::sidecars`]).
+//! mounted collection). Mode and expert selection have durable sidecars;
+//! pending plan tickets and knowledge mounts remain transient. Expert bodies
+//! are reloaded once for a resumed conversation (see [`super::persona_binding`]).
 
 use serde::{Deserialize, Serialize};
 
@@ -77,6 +76,9 @@ pub struct SessionModeState {
     /// Side B 卡片池:当前加持的专家卡 id(远端 persona 体系)。
     #[serde(default)]
     pub active_persona: Option<String>,
+    /// 本进程是否已从会话 sidecar 恢复专家绑定。
+    #[serde(skip)]
+    pub(crate) persona_loaded: bool,
     /// Side B:待一次性注入的人设 body。
     #[serde(default, skip)]
     pub pending_persona_body: Option<String>,
@@ -96,7 +98,7 @@ pub struct SessionModeState {
     pub pinvou_review_enabled: bool,
     /// 该 session 挂载的本地知识集 id(会话级粘连)。`None` = 未挂载。
     /// 挂上后每条 user 消息发送前,用消息文本对该集 `kb_retrieve`,把命中片段
-    /// 当附件一样注入(见 `commands::chat`)。与 `active_persona` 一样仅驻内存,
+    /// 当附件一样注入(见 `commands::chat`)。知识库挂载仅驻内存,
     /// 不落盘——重启 app 后回到未挂载。
     #[serde(default)]
     pub mounted_collection: Option<i64>,
@@ -125,6 +127,7 @@ impl Default for SessionModeState {
             plan_claim_in_flight: None,
             pinvou_review_enabled: false,
             active_persona: None,
+            persona_loaded: false,
             pending_persona_body: None,
             mounted_collection: None,
             mounted_collections: Vec::new(),
@@ -166,6 +169,7 @@ mod type_tests {
             plan_claim_in_flight: None,
             pinvou_review_enabled: false,
             active_persona: None,
+            persona_loaded: false,
             pending_persona_body: None,
             mounted_collection: None,
             mounted_collections: Vec::new(),
@@ -424,19 +428,20 @@ impl SessionStore {
         }
     }
 
-    pub(crate) fn take_pending_turn_injections(&self, id: &str) -> PendingTurnInjections {
+    pub(crate) fn take_pending_turn_injections(&self, id: &str) -> Result<PendingTurnInjections> {
+        self.ensure_session_persona_loaded(id)?;
         let persona = self.mode_states.write().get_mut(id).and_then(|state| {
             state
                 .pending_persona_body
                 .take()
                 .map(|body| (state.active_persona.clone(), body))
         });
-        PendingTurnInjections {
+        Ok(PendingTurnInjections {
             store: self.clone(),
             session_id: id.to_string(),
             persona,
             committed: false,
-        }
+        })
     }
 
     pub(crate) fn restore_pending_turn_injections(
@@ -456,16 +461,25 @@ impl SessionStore {
         }
     }
 
+    #[cfg(test)]
     pub fn set_active_persona(&self, id: &str, persona_id: Option<String>) {
         let default_mode = self.resolved_default_mode(id);
-        Self::mode_state_entry(&mut self.mode_states.write(), id, default_mode).active_persona =
-            persona_id;
+        let mut states = self.mode_states.write();
+        let state = Self::mode_state_entry(&mut states, id, default_mode);
+        state.active_persona = persona_id;
+        state.persona_loaded = true;
     }
 
-    pub fn active_persona_id(&self, id: &str) -> Option<String> {
-        self.mode_states.read().get(id)?.active_persona.clone()
+    pub fn active_persona_id(&self, id: &str) -> Result<Option<String>> {
+        self.ensure_session_persona_loaded(id)?;
+        Ok(self
+            .mode_states
+            .read()
+            .get(id)
+            .and_then(|state| state.active_persona.clone()))
     }
 
+    #[cfg(test)]
     pub fn set_pending_persona_body(&self, id: &str, body: Option<String>) {
         let default_mode = self.resolved_default_mode(id);
         Self::mode_state_entry(&mut self.mode_states.write(), id, default_mode)

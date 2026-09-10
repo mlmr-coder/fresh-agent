@@ -2463,13 +2463,174 @@ fn mode_switch_loop_preserves_orthogonal_state() {
 }
 
 #[test]
+fn persona_binding_survives_reopen_and_restores_runtime_once() {
+    let (store, _g) = isolated_store();
+    let id = store
+        .create_new("test-model".into(), None, std::env::temp_dir())
+        .unwrap()
+        .metadata
+        .id;
+    let other = store
+        .create_new("test-model".into(), None, std::env::temp_dir())
+        .unwrap()
+        .metadata
+        .id;
+    let card = crate::features::personas::get("pinvou-card-creator").unwrap();
+    store
+        .set_session_persona(
+            &id,
+            Some(card.id.clone()),
+            Some(crate::features::personas::equip_body_injection(&card)),
+        )
+        .unwrap();
+    let reopened = reopen_store(&store).unwrap();
+    assert_eq!(
+        reopened.active_persona_id(&id).unwrap().as_deref(),
+        Some(card.id.as_str())
+    );
+    assert!(reopened.active_persona_id(&other).unwrap().is_none());
+    let pending = reopened.take_pending_turn_injections(&id).unwrap();
+    assert!(pending.persona_body().unwrap().contains(&card.name));
+    drop(pending); // Failed/cancelled submission restores the body.
+    reopened.take_pending_turn_injections(&id).unwrap().commit();
+    assert_eq!(
+        reopened.active_persona_id(&id).unwrap().as_deref(),
+        Some(card.id.as_str())
+    );
+    assert!(
+        reopened
+            .take_pending_turn_injections(&id)
+            .unwrap()
+            .persona_body()
+            .is_none()
+    );
+    // Another process start gets the same expert even after the prior turn committed.
+    let restarted = reopen_store(&reopened).unwrap();
+    assert_eq!(
+        restarted.active_persona_id(&id).unwrap().as_deref(),
+        Some(card.id.as_str())
+    );
+    assert!(
+        restarted
+            .take_pending_turn_injections(&id)
+            .unwrap()
+            .persona_body()
+            .is_some()
+    );
+    restarted.set_session_persona(&id, None, None).unwrap();
+    assert!(
+        reopen_store(&restarted)
+            .unwrap()
+            .active_persona_id(&id)
+            .unwrap()
+            .is_none()
+    );
+    let folder = store.manager.sessions_dir().join(&id);
+    store.delete(&id).unwrap();
+    assert!(!folder.exists());
+}
+
+#[test]
+fn persona_binding_recovers_legacy_events_and_explicit_removal_wins() {
+    let (store, _g) = isolated_store();
+    let id = store
+        .create_new("test-model".into(), None, std::env::temp_dir())
+        .unwrap()
+        .metadata
+        .id;
+    let root = store.manager.sessions_dir().join(&id);
+    std::fs::create_dir_all(&root).unwrap();
+    let events = root.join("persona_events.json");
+    std::fs::write(&events, r#"[{"kind":"equip","card":{"id":"missing-old-card"}},{"kind":"unequip"},{"kind":"equip","card":{"id":"pinvou-card-creator","body":"untrusted event body"}},{"kind":"card_creator_intro"}]"#).unwrap();
+    let restored = reopen_store(&store).unwrap();
+    assert_eq!(
+        restored.active_persona_id(&id).unwrap().as_deref(),
+        Some("pinvou-card-creator")
+    );
+    let body = restored.take_pending_turn_injections(&id).unwrap();
+    assert!(
+        !body
+            .persona_body()
+            .unwrap()
+            .contains("untrusted event body")
+    );
+    drop(body);
+    assert!(root.join("persona.json").is_file());
+    restored.set_session_persona(&id, None, None).unwrap();
+    // Even a stale frontend re-saving old events cannot resurrect the removed card.
+    assert!(
+        reopen_store(&restored)
+            .unwrap()
+            .active_persona_id(&id)
+            .unwrap()
+            .is_none()
+    );
+
+    let removed = store
+        .create_new("test-model".into(), None, std::env::temp_dir())
+        .unwrap()
+        .metadata
+        .id;
+    let removed_root = store.manager.sessions_dir().join(&removed);
+    std::fs::create_dir_all(&removed_root).unwrap();
+    std::fs::write(
+        removed_root.join("persona_events.json"),
+        r#"[{"kind":"equip","card":{"id":"pinvou-card-creator"}},{"kind":"unequip"}]"#,
+    )
+    .unwrap();
+    assert!(store.active_persona_id(&removed).unwrap().is_none());
+}
+
+#[test]
+fn persona_binding_failed_write_keeps_memory_and_does_not_trust_invalid_state() {
+    let (store, _g) = isolated_store();
+    let id = store
+        .create_new("test-model".into(), None, std::env::temp_dir())
+        .unwrap()
+        .metadata
+        .id;
+    store
+        .set_session_persona(
+            &id,
+            Some("pinvou-card-creator".into()),
+            Some("original body".into()),
+        )
+        .unwrap();
+    let file = store.manager.sessions_dir().join(&id).join("persona.json");
+    let saved = std::fs::read(&file).unwrap();
+    std::fs::remove_file(&file).unwrap();
+    std::fs::create_dir(&file).unwrap(); // Deterministic persistence failure, including as root.
+    assert!(store.set_session_persona(&id, None, None).is_err());
+    assert_eq!(
+        store.active_persona_id(&id).unwrap().as_deref(),
+        Some("pinvou-card-creator")
+    );
+    assert_eq!(
+        store.mode_state(&id).pending_persona_body.as_deref(),
+        Some("original body")
+    );
+    std::fs::remove_dir(&file).unwrap();
+    std::fs::write(&file, "{broken").unwrap();
+    assert!(
+        reopen_store(&store)
+            .unwrap()
+            .active_persona_id(&id)
+            .is_err()
+    );
+    assert_eq!(std::fs::read_to_string(&file).unwrap(), "{broken");
+    std::fs::write(&file, saved).unwrap();
+    assert!(store.set_session_persona("../escape", None, None).is_err());
+    assert!(store.active_persona_id("../escape").is_err());
+}
+
+#[test]
 fn pending_turn_injections_restore_on_drop_and_commit_only_after_submission() {
     let (store, _g) = isolated_store();
     store.set_active_persona("s1", Some("persona-a".into()));
     store.set_pending_persona_body("s1", Some("PERSONA BODY".into()));
 
     {
-        let pending = store.take_pending_turn_injections("s1");
+        let pending = store.take_pending_turn_injections("s1").unwrap();
         assert_eq!(pending.persona_body(), Some("PERSONA BODY"));
         assert!(store.mode_state("s1").pending_persona_body.is_none());
         // Simulate attachment/build/Engine submission failure.
@@ -2480,7 +2641,7 @@ fn pending_turn_injections_restore_on_drop_and_commit_only_after_submission() {
     );
 
     store.set_pending_persona_body("s1", Some("SECOND PERSONA".into()));
-    store.take_pending_turn_injections("s1").commit();
+    store.take_pending_turn_injections("s1").unwrap().commit();
     assert!(store.mode_state("s1").pending_persona_body.is_none());
 }
 

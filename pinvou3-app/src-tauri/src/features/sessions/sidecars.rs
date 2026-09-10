@@ -1,15 +1,17 @@
 //! Sidecar persistence for per-session auxiliary state.
 //!
 //! The durable `SavedSession` cannot grow new fields without changing the
-//! upstream schema, so four independent JSON sidecars under
+//! upstream schema, so independent JSON sidecars under
 //! `~/.pinvou3/sessions/` capture cross-restart runtime state that must
 //! survive a process bounce:
 //!
 //! - `_session_models.json` — session_id -> SavedModel.id override.
 //! - `_pinned_sessions.json` — pinned conversation id list with timestamps.
 //! - `_hidden_sessions.json` — collapsed conversation id list with timestamps.
+//! - `<id>/persona.json` — expert binding (owned by `persona_binding`).
 //!
-//! Mode / pinvou_review / plan-phase remain in-memory only by design.
+//! Mode and expert bindings have their own persistence modules; transient
+//! review/plan-phase state is not persisted here.
 
 use std::collections::HashMap;
 use std::io::ErrorKind;

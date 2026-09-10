@@ -2003,14 +2003,14 @@ impl EnginePool {
         // 步骤，避免空闲巡检在这个窗口把引擎收走）。
         self.touch_engine_activity(session_id).await;
         // Side B 卡片池: 该 session 加持了专家面具时,每 turn 注入轻锚点(短)维持身份。
-        // 完整 body 已在加持首条消息一次性注入(commands::chat take_pending_turn_injections)。
+        // 完整 body 在加持/重启恢复后的首条消息注入(commands::chat take_pending_turn_injections)。
         // 在 pool 层解析,所有上层调用(chat / accept_plan)自动带上锚点。
         // 同一张卡派生两样每-turn 状态: ① 轻锚点(粘性身份) ② 是否清空工具表
         // (纯对话元卡如卡牌制造专家 → 本轮零工具,防它误写文件)。每 turn 实时读 active
         // persona,戴上即限 / 卸下即恢复 / 换卡按新卡走,无持久状态、无需 equip/unequip 同步。
         let active_card = self
             .store
-            .active_persona_id(session_id)
+            .active_persona_id(session_id)?
             .and_then(|pid| crate::features::personas::get(&pid));
         let persona_reminder = active_card
             .as_ref()

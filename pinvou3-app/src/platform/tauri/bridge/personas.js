@@ -134,7 +134,13 @@
     if (!state.activeSessionId) return;
     // 入口捕获触发会话：await 期间切走，卸下播报不得写进别的会话（审计）。
     const sid = state.activeSessionId;
-    try { await invoke("unequip_persona", { sessionId: state.activeSessionId }); } catch { /* 忽略,前端照样摘 */ }
+    try { await invoke("unequip_persona", { sessionId: state.activeSessionId }); } catch (e) {
+      if (sid === state.activeSessionId) {
+        const copy = window.__PINVOU_SHARED_I18N__?.[state.settings?.language === "en" ? "en" : "zh"];
+        addSystemItem((copy?.personaRemoveFailed || bt("deleteFailed")) + e);
+      }
+      return; // A failed durable removal must not disappear locally and return after restart.
+    }
     if (sid !== state.activeSessionId) return; // 已切走：不写当前显示
     personaSyncSeq++; // 权威写前 bump：作废在途 syncActivePersona 的旧快照(审计补充)
     // 旧专家同样在写点复核：await 窗口内若已被 equip 换成新卡,播报新卡,

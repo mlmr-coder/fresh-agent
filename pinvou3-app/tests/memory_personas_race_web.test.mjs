@@ -157,6 +157,21 @@ test('web: equipPersona 切走后不得改名字/插卡/写挂件', async () => 
   assert.equal(rt.calls.invoke.filter(n => n === 'rename_session').length, renameCallsBefore, '不得重命名切走后的会话');
 });
 
+test('web: unequipPersona 保存失败时保留专家卡和事件记录', async () => {
+  const rt = bootWebBridge();
+  const before = await primeSessionA(rt);
+  const savesBefore = rt.calls.invoke.filter(name => name === 'save_session_persona_events').length;
+  const unequip = rt.defer('unequip_persona');
+  const p = rt.personas.unequipPersona();
+  unequip.reject(new Error('save failed'));
+  await p;
+  const view = rt.view();
+  assert.equal(view.activePersona.id, 'persona-prime');
+  assert.deepEqual(view.personaEvents, before.personaEvents);
+  assert.ok(view.chatItems.some(item => item.text?.includes('save failed')));
+  assert.equal(rt.calls.invoke.filter(name => name === 'save_session_persona_events').length, savesBefore);
+});
+
 test('web: unequipPersona 切走后卸下播报不写进别的会话', async () => {
   const rt = bootWebBridge();
   await primeSessionA(rt);
