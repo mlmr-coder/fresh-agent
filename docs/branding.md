@@ -2,7 +2,9 @@
 
 应用窗口、原生代码会话、审核与语音提示、内置技能、知识服务、导出内容和安装说明等面向用户的品牌显示统一使用“鲜小助”。
 
-前端品牌常量位于 `pinvou3-app/src/shared/brand.js`，本地化文案通过 `src/shared/i18n/` 中的 `appTitle` 使用它。前端加载前就会显示的 HTML 标题和原生安装包元数据也直接使用“鲜小助”。内置提示词发生变化时会更新内容哈希，应用按正常资源提取流程刷新已安装内容。
+根目录 `BRAND.json` 是显示名称和品牌图标路径的单一来源。修改后运行 `node scripts/sync-brand.mjs`；脚本会同步前端品牌常量、主窗口与 HTML 标题、macOS 应用菜单与安装元数据、Linux 启动器、包描述及原生图标清单。`node scripts/sync-brand.mjs --check` 用于检查遗漏。生成的 `pinvou3-app/src/shared/brand.js` 与 `pinvou3-app/src-tauri/src/core/brand.rs` 不应手工修改。
+
+品牌图标分为一个前端显示资源和一组原生平台尺寸资源，路径统一登记在 `BRAND.json`。更换图标时应同时准备配置中列出的对应格式与尺寸，随后运行同步命令。内置提示词发生变化时会更新内容哈希，应用按正常资源提取流程刷新已安装内容。
 
 ## 兼容性边界
 

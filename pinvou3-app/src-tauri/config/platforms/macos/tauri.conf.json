@@ -16,12 +16,18 @@
         "decorations": true,
         "titleBarStyle": "Overlay",
         "hiddenTitle": true,
-        "trafficLightPosition": { "x": 12, "y": 20 }
+        "trafficLightPosition": {
+          "x": 12,
+          "y": 20
+        }
       }
     ]
   },
   "bundle": {
-    "targets": ["app", "dmg"],
+    "targets": [
+      "app",
+      "dmg"
+    ],
     "resources": {
       "resources/platforms/macos/PrivacyInfo.xcprivacy": "PrivacyInfo.xcprivacy",
       "resources/platforms/macos/codex-bridge/": "runtime/codex-bridge",
@@ -31,7 +37,8 @@
       "minimumSystemVersion": "11.0",
       "signingIdentity": "-",
       "entitlements": "packaging/macos/entitlements.plist",
-      "infoPlist": "packaging/macos/Info.plist"
+      "infoPlist": "packaging/macos/Info.plist",
+      "bundleName": "鲜小助"
     }
   }
 }

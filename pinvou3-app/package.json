@@ -5,11 +5,14 @@
   "private": true,
   "scripts": {
     "tauri": "node scripts/tauri/build.js",
+    "predev": "npm run check:brand",
     "dev": "node scripts/tauri/build.js dev",
     "setup:macos-signing": "node scripts/tauri/macos-dev-signing.js setup",
     "dev:ui": "node scripts/tauri/build.js dev",
     "serve:src": "vite",
+    "prebuild:ui": "npm run check:brand",
     "build:ui": "vite build",
+    "prebuild:web": "npm run check:brand",
     "build:web": "vite build --mode web",
     "audit:compat": "node scripts/audit-compat.mjs",
     "prepare:codex-bridge": "node scripts/tauri/codex-bridge.js",
@@ -130,6 +133,8 @@
     "test:webui": "npm run build:web && node ../remote-control-relay/test/web-ui.smoke.cjs",
     "test:user-journey": "../scripts/run-user-journey-tests.sh",
     "sync:version": "node ../scripts/sync-version.mjs",
+    "sync:brand": "node ../scripts/sync-brand.mjs",
+    "check:brand": "node ../scripts/sync-brand.mjs --check",
     "test:markdown": "node tests/markdown_syntax_highlight.test.mjs && node tests/markdown_bridge_fallback_safety.test.mjs"
   },
   "devDependencies": {

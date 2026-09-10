@@ -453,6 +453,7 @@ const macos = composeEffectiveConfig([platformConfigPath("darwin")]).effectiveCo
 assert.equal(macos.productName, "鲜小助");
 assert.equal(macos.identifier, "com.pinvou.pinvou3");
 assert.equal(macos.mainBinaryName, "pinvou3-tauri");
+assert.equal(macos.bundle.macOS.bundleName, "鲜小助");
 assert.equal(linux.productName, "pinvou3", "Debian package identity stays ASCII and stable");
 assert.deepEqual(macos.bundle.targets, ["app", "dmg"]);
 assert.equal(

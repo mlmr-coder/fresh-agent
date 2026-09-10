@@ -1,4 +1,5 @@
 pub mod app_events;
+pub(crate) mod app_menu;
 pub(crate) mod capabilities;
 pub mod connector_lock;
 pub mod connector_skills;

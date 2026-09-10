@@ -592,7 +592,10 @@ pub fn run() {
     let initial_navigation_reported =
         std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
     let main_navigation_origin = std::sync::Arc::new(std::sync::Mutex::new(None::<String>));
-    let builder = tauri::Builder::default()
+    let builder = tauri::Builder::default();
+    #[cfg(target_os = "macos")]
+    let builder = builder.menu(platform::app_menu::branded_default_menu);
+    let builder = builder
         // These no-op probe plugins bracket Tauri's own plugin initialization.
         // The main window is created by Tauri before the application setup hook,
         // so their lifecycle hooks expose time that was previously one opaque gap.
