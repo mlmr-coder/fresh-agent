@@ -228,6 +228,11 @@ impl Pinvou3Bundle {
                 heal.converged_builtin_dirs.len()
             ),
         );
+        // `/` 技能选择取代普通聊天底栏的技能开关：安装态与归属已经就绪，
+        // 现在迁移遗留停用记录，确保选择列表与随后创建的引擎使用同一启用集。
+        if let Err(error) = crate::features::marketplace::scope::migrate_plain_skill_picker() {
+            log::warn!("[skill-picker] {error}");
+        }
         // 飞书 / 企微 / 钉钉鉴权 CLI 不得阻塞 Tauri setup。启动阶段只沿用上次落盘的完整
         // 技能目录作为缓存；React 首屏提交后调用 refresh_connector_auth_gates 并行
         // 实时探测，再按真实状态修正目录。bundle 升级时仅刷新当前可见的缓存目录。

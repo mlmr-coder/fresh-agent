@@ -160,6 +160,81 @@ mod tests {
     use super::*;
 
     #[test]
+    fn composer_upgrade_restores_installed_skills_in_picker_and_runtime() {
+        use crate::features::marketplace::{ConnectorScope, scope};
+        use crate::platform::paths;
+        let _guard = paths::tests::ENV_LOCK
+            .lock()
+            .unwrap_or_else(|p| p.into_inner());
+        let temp = tempfile::tempdir().unwrap();
+        let previous = std::env::var_os("PINVOU3_HOME");
+        // SAFETY: holding the shared environment lock for the full test.
+        unsafe { std::env::set_var("PINVOU3_HOME", temp.path()) };
+        let result = std::panic::catch_unwind(|| {
+            let ids = ["visualizer", "package-author", "skill-author"].map(str::to_string);
+            for id in &ids {
+                crate::features::marketplace::skill_marketplace::SkillMarketplaceManager::new()
+                    .install(id)
+                    .unwrap();
+            }
+            let builtin = paths::bundle_skills_dir().join("visual-design");
+            std::fs::create_dir_all(&builtin).unwrap();
+            std::fs::write(
+                builtin.join("SKILL.md"),
+                "---\nname: visual-design\ndescription: Design\n---\nDesign body\n",
+            )
+            .unwrap();
+            scope::save_disabled_bundles_for(ConnectorScope::Plain, &ids);
+            scope::save_disabled_bundles_for(ConnectorScope::Code, &ids);
+            assert_eq!(
+                skills("zh")
+                    .iter()
+                    .map(|skill| skill.name.as_str())
+                    .collect::<Vec<_>>(),
+                vec!["visual-design"]
+            );
+            assert_eq!(scope::migrate_plain_skill_picker().unwrap(), 3);
+            let catalogue = skills("zh");
+            assert_eq!(catalogue.len(), 4);
+            for title in ["数据分析可视化", "插件包标准化", "技能创建"] {
+                assert!(catalogue.iter().any(|skill| skill.title == title));
+            }
+            super::super::skill_materialization::materialize_session_skills(
+                "picker-fixture",
+                ConnectorScope::Plain,
+                None,
+            )
+            .unwrap();
+            let runtime = deepseek_tui::skills::SkillRegistry::discover(
+                &paths::session_skills_dir("picker-fixture"),
+            );
+            assert_eq!(
+                runtime.list().len(),
+                4,
+                "picker entries must also be loadable by the engine"
+            );
+            for id in &ids {
+                assert!(runtime.list().iter().any(|skill| &skill.name == id));
+            }
+            assert_eq!(scope::load_disabled_bundles_for(ConnectorScope::Code), ids);
+            assert!(
+                super::super::skill_materialization::enabled_skills_for(ConnectorScope::Code, None)
+                    .is_empty()
+            );
+        });
+        // SAFETY: the shared environment lock is still held, including on panic.
+        unsafe {
+            match previous {
+                Some(value) => std::env::set_var("PINVOU3_HOME", value),
+                None => std::env::remove_var("PINVOU3_HOME"),
+            }
+        }
+        if let Err(error) = result {
+            std::panic::resume_unwind(error);
+        }
+    }
+
+    #[test]
     fn composer_catalogue_discovers_allowed_directories_and_excludes_siblings() {
         let temp = tempfile::tempdir().unwrap();
         for name in ["visualizer", "disabled-skill"] {

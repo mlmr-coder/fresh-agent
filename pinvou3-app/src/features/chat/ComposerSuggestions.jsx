@@ -33,7 +33,11 @@ export function useComposerSuggestions({ text, setText, inputRef, sessionId, lan
   useEffect(() => {
     const refresh = () => setRevision(value => value + 1);
     window.addEventListener('pinvou:tools-changed', refresh);
-    return () => window.removeEventListener('pinvou:tools-changed', refresh);
+    window.addEventListener('focus', refresh);
+    return () => {
+      window.removeEventListener('pinvou:tools-changed', refresh);
+      window.removeEventListener('focus', refresh);
+    };
   }, []);
 
   useEffect(() => {

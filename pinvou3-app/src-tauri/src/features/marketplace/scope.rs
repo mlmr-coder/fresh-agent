@@ -281,6 +281,54 @@ fn save_disabled_bundles_file(file: &DisabledBundlesFile) {
     }
 }
 
+/// 普通聊天改用 `/` 选择技能后，旧底栏技能开关不再有恢复入口。
+/// 首次升级只清理已安装独立技能的遗留停用记录；连接器（含凭据型技能包）、
+/// 未安装/未知包、hidden 与代码权限都保留。迁移完成后尊重新的显式设置。
+/// 在安装态导入和技能布局迁移完成后、会话引擎创建前调用。
+pub fn migrate_plain_skill_picker() -> Result<usize, String> {
+    use super::bundle::{BundleKind, BundleRegistry};
+    const MIGRATION_KEY: &str = "plain_skill_picker_migrated";
+    let _guard = DISABLED_BUNDLES_FILE_LOCK
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    let mut file: DisabledBundlesFile = match std::fs::read_to_string(disabled_bundles_path()) {
+        Ok(content) => serde_json::from_str(&content)
+            .map_err(|error| format!("读取技能选择状态失败: {error}"))?,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => migrate_from_legacy_files(),
+        Err(error) => return Err(format!("读取技能选择状态失败: {error}")),
+    };
+    if file
+        .extra
+        .get(MIGRATION_KEY)
+        .and_then(|value| value.as_bool())
+        == Some(true)
+    {
+        return Ok(0);
+    }
+    // 登记损坏时不要使用注册表的兼容回退完成迁移，下次启动仍可重试。
+    super::store::BundleStore::new().records()?;
+    let standalone: std::collections::HashSet<String> = BundleRegistry::new()
+        .list_bundles()
+        .into_iter()
+        .filter(|bundle| {
+            bundle.installed && bundle.kind == BundleKind::Skill && bundle.credentials.is_empty()
+        })
+        .map(|bundle| bundle.id)
+        .collect();
+    let mut removed = 0;
+    if let Some(ids) = file.scopes.get_mut(ConnectorScope::Plain.as_str()) {
+        let before = ids.len();
+        ids.retain(|id| !standalone.contains(&to_package_id(id)));
+        removed = before - ids.len();
+    }
+    file.extra
+        .insert(MIGRATION_KEY.to_string(), serde_json::json!(true));
+    let bytes = serde_json::to_vec(&file).map_err(|error| error.to_string())?;
+    deepseek_tui::utils::write_atomic(&disabled_bundles_path(), &bytes)
+        .map_err(|error| format!("迁移技能选择状态失败: {error}"))?;
+    Ok(removed)
+}
+
 /// 读某 scope 被禁用的**包 id** 列表（读不到/空 → 空）。
 ///
 /// 已初始化的 scope 以落盘列表为准；未初始化的 scope 按其模式的包默认策略兜底：
@@ -509,6 +557,78 @@ mod tests {
             None => unsafe { std::env::remove_var("PINVOU3_HOME") },
         }
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn plain_skill_picker_migration_only_resets_installed_independent_skills_once() {
+        with_temp_home(|| {
+            for id in [
+                "visualizer",
+                "package-author",
+                "skill-author",
+                "government-writing",
+                "ima-skills",
+            ] {
+                SkillMarketplaceManager::new().install(id).unwrap();
+            }
+            super::super::store::BundleStore::new()
+                .upsert(super::super::store::BundleRecord::installed_now(
+                    "gongwen".to_string(),
+                    super::super::store::BundleSource::Preset,
+                ))
+                .unwrap();
+            let ids = [
+                "visualizer",
+                "package-author",
+                "skill-author",
+                "government-writing",
+                "feishu",
+                "ima",
+                "unknown",
+                "tencent-docs-skill",
+            ]
+            .map(str::to_string)
+            .to_vec();
+            save_disabled_bundles_for(ConnectorScope::Plain, &ids);
+            save_disabled_bundles_for(ConnectorScope::Code, &ids);
+            save_hidden_bundles_for(ConnectorScope::Plain, &["visualizer".to_string()]);
+            set_project_skills_enabled(true);
+            let before = load_disabled_bundles_file();
+            assert_eq!(migrate_plain_skill_picker().unwrap(), 3);
+            assert_eq!(
+                load_disabled_bundles_for(ConnectorScope::Plain),
+                ["gongwen", "feishu", "ima", "unknown", "tencent-docs-skill"].map(str::to_string)
+            );
+            let after = load_disabled_bundles_file();
+            assert_eq!(before.scopes.get("code"), after.scopes.get("code"));
+            assert_eq!(before.hidden_scopes, after.hidden_scopes);
+            assert_eq!(before.initialized, after.initialized);
+            assert!(after.project_skills_enabled);
+            // 后续显式设置不能在下次启动被重新清空。
+            save_disabled_bundles_for(ConnectorScope::Plain, &["visualizer".to_string()]);
+            assert_eq!(migrate_plain_skill_picker().unwrap(), 0);
+            assert_eq!(
+                load_disabled_bundles_for(ConnectorScope::Plain),
+                vec!["visualizer"]
+            );
+        });
+    }
+
+    #[test]
+    fn plain_skill_picker_migration_keeps_corrupt_state_for_retry() {
+        with_temp_home(|| {
+            let path = disabled_bundles_path();
+            std::fs::write(&path, "{broken").unwrap();
+            assert!(migrate_plain_skill_picker().is_err());
+            assert_eq!(std::fs::read_to_string(&path).unwrap(), "{broken");
+            let valid = r#"{"scopes":{"plain":["visualizer"]}}"#;
+            std::fs::write(&path, valid).unwrap();
+            let registry = super::super::store::BundleStore::new().file_path();
+            std::fs::create_dir_all(registry.parent().unwrap()).unwrap();
+            std::fs::write(registry, "{broken").unwrap();
+            assert!(migrate_plain_skill_picker().is_err());
+            assert_eq!(std::fs::read_to_string(&path).unwrap(), valid);
+        });
     }
 
     #[test]

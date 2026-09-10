@@ -72,7 +72,7 @@ function injectSource() {
           {id:'spreadsheets',title:'电子表格',installed:true,user_uploaded:false},
         ]);
         case 'get_marketplace_tool_auth_status': return Promise.resolve({status:args.toolId==='pending'?'auth_pending':'connected'});
-        case 'list_composer_skills': return Promise.resolve([
+        case 'list_composer_skills': return Promise.resolve(state.skillsOverride || [
           {name:'visualizer',description:'数据分析可视化',aliases:['chart']},
           {name:'database-ops',title:'数据库操作',description:'数据库查询和维护',aliases:[]}
         ]);
@@ -349,6 +349,21 @@ const sleep = ms => new Promise(r => { setTimeout(r, ms); });
   await page.click(menuTrigger);
   await page.waitForFunction(() => !document.querySelector('[data-testid="composer-tool-menu"]')?.textContent.includes('状态刷新失败'));
   await page.screenshot({ path: '/tmp/fresh-connector-status-sync.png' });
+
+  await page.evaluate(() => {
+    window.__COMPOSER_TOOLS_TEST__.skillsOverride = [
+      {name:'visual-design',title:'视觉设计',description:'设计网页'},
+      {name:'visualizer',title:'数据分析可视化',description:'图表分析'},
+      {name:'package-author',title:'插件包标准化',description:'整理插件包'},
+      {name:'skill-author',title:'技能创建',description:'创建技能'},
+    ];
+    window.dispatchEvent(new Event('focus'));
+  });
+  await page.click(inputSelector);
+  await page.keyboard.type('/');
+  await page.waitForFunction(() => document.querySelectorAll('[data-testid="composer-suggestions"] [role="option"]').length === 4);
+  rec('窗口恢复焦点后，已安装技能按中文名称完整显示', await page.$eval('[data-testid="composer-suggestions"]', menu => ['视觉设计', '数据分析可视化', '插件包标准化', '技能创建'].every(title => menu.textContent.includes('/' + title))));
+  await page.screenshot({ path: '/tmp/fresh-four-skills-picker.png' });
 
   rec('页面无未处理 JavaScript 异常', errors.length === 0, errors.slice(0, 2).join(' | '));
 
