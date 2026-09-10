@@ -248,7 +248,11 @@ test('native surface suspension is centrally derived for every occlusion path', 
   assert.match(chatView, /panelId="artifact-preview"[\s\S]*visible=\{rightDockActivePanelId !== 'browser'\}[\s\S]*onToggleFullscreen=\{\(\) => setArtifactsFullscreen\(true\)\}/);
   assert.match(chatView, /'voice-asr-setup',[\s\S]{0,120}voiceAsrSetup\.open && canInstallLocalAsr/);
   assert.match(chatView, /voiceAsrSetupPublicationReady && \(\(\) =>/);
-  assert.match(composerPopover, /useRightDockOcclusion\(`composer-popover-\$\{popoverId\}`, open\)/);
+  assert.match(
+    composerPopover,
+    /useRightDockOcclusion\([\s\S]{0,100}`composer-popover-\$\{popoverId\}`,[\s\S]{0,80}open && occludeRightDock/,
+  );
+  assert.match(composerPopover, /const publicationReady = !occludeRightDock \|\| occlusionPublicationReady/);
   assert.match(composerPopover, /if \(!open \|\| !publicationReady\) return null/);
   assert.match(attachmentDropOverlay, /useRightDockOcclusion\(`attachment-drop-\$\{overlayId\}`, active\)/);
   assert.match(attachmentDropOverlay, /if \(active && !publicationReady\) return null/);

@@ -29,6 +29,7 @@ export function ComposerContextUsage({ tokens, copy }) {
       </svg>
     </button>
     <ComposerPopover open={open} onClose={() => setOpen(false)} triggerRef={triggerRef} portal menuWidth={290}
+      occludeRightDock={false}
       desktopClassName={`absolute bottom-full right-0 ${POPOVER_SURFACE}`}
       menuProps={{ id: tooltipId, role: 'tooltip', 'data-testid': 'composer-context-tooltip' }}>
       <div className="px-2 py-1 text-[12px] leading-5 text-gray-700 dark:text-gray-200">{label}</div>

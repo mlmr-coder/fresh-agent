@@ -117,12 +117,19 @@ function useOutsidePointerClose(open, onClose, insideRefs, opts = {}) {
 // composer 下拉外壳。桌面端保持原来的就地 absolute 下拉（外观行为不变）；移动 WebUI
 // portal 到 <body> 并按触发按钮真实屏幕位置锚定。`desktopClassName` 是各菜单原有的桌面
 // 定位样式，移动端统一用 POPOVER_SURFACE + 计算出的 inline 定位。
-const ComposerPopover = ({ open, onClose, triggerRef, compact, portal = false, menuWidth = 288, desktopClassName, menuProps, children }) => {
+const ComposerPopover = ({ open, onClose, triggerRef, compact, portal = false, menuWidth = 288, desktopClassName, menuProps, occludeRightDock = true, children }) => {
   const popoverId = useId();
   // The system child WebView sits above React compositing. Before opening this menu, use the
   // shared Dock occlusion protocol to hide the native surface; otherwise the full-screen
   // click-away layer cannot receive pointer input over the browser region.
-  const publicationReady = useRightDockOcclusion(`composer-popover-${popoverId}`, open);
+  const occlusionPublicationReady = useRightDockOcclusion(
+    `composer-popover-${popoverId}`,
+    open && occludeRightDock,
+  );
+  // Small anchored tooltips that stay inside the composer do not overlap the
+  // native right dock. Let them render without suspending that surface, which
+  // otherwise makes an open artifact/browser panel disappear on every hover.
+  const publicationReady = !occludeRightDock || occlusionPublicationReady;
   const anchored = portal || (isWeb && compact);
   const style = useAnchoredPosition(open, triggerRef, anchored, menuWidth);
   const panelRef = useRef(null);

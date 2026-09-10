@@ -181,10 +181,18 @@
   function patchItemByIdFor(sid, id, patch) { runOnSession(sid, function () { patchItemById(id, patch); }); }
 
 
-  // ── 思考指示器状态（每次阶段切换重置计时）──────────────────────
-  function startThinking() { state.thinking = { active: true, phase: "thinking", toolName: "", startedAt: Date.now() }; }
-  function thinkingTool(name) { state.thinking = { active: true, phase: "tool", toolName: name || "", startedAt: Date.now() }; }
-  function thinkingIdle() { state.thinking = { active: true, phase: "thinking", toolName: "", startedAt: Date.now() }; }
+  // ── 思考指示器状态（一次回合共用同一起点）────────────────────────
+  // 工具阶段、瞬态失败与自动重试都属于同一回合；只更新阶段，不重置
+  // startedAt，否则输入框的“处理中”耗时会在重试或工具返回后从零开始。
+  function activeThinkingStartedAt() {
+    const current = Number(state.thinking && state.thinking.startedAt);
+    return state.thinking && state.thinking.active && Number.isFinite(current) && current > 0
+      ? current
+      : Date.now();
+  }
+  function startThinking() { state.thinking = { active: true, phase: "thinking", toolName: "", startedAt: activeThinkingStartedAt() }; }
+  function thinkingTool(name) { state.thinking = { active: true, phase: "tool", toolName: name || "", startedAt: activeThinkingStartedAt() }; }
+  function thinkingIdle() { state.thinking = { active: true, phase: "thinking", toolName: "", startedAt: activeThinkingStartedAt() }; }
   function stopThinking() { state.thinking = { active: false, phase: "thinking", toolName: "", startedAt: 0 }; }
 
   function isActionablePlanCard(sid, itemId, planId) {

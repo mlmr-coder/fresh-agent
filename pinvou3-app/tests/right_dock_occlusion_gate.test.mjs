@@ -10,6 +10,7 @@ const read = (path) => readFileSync(new URL(path, import.meta.url), 'utf8');
 
 const rightDock = read('../src/components/layout/RightDock.jsx');
 const composerPopover = read('../src/components/ComposerPopover.jsx');
+const composerContextUsage = read('../src/features/chat/ComposerContextUsage.jsx');
 const attachmentDrop = read('../src/features/attachments/AttachmentDropOverlay.jsx');
 const chatView = read('../src/features/chat/ChatView.jsx');
 const main = read('../src/app/main.jsx');
@@ -35,6 +36,12 @@ test('every child overlay that can cover the native browser waits for the permit
     chatView,
     /artifactsVisible && artifactsFullscreen && artifactFullscreenPublicationReady && createPortal/,
   );
+});
+
+test('composer context tooltip does not suspend an open right dock panel', () => {
+  assert.match(composerPopover, /open && occludeRightDock/);
+  assert.match(composerPopover, /!occludeRightDock \|\| occlusionPublicationReady/);
+  assert.match(composerContextUsage, /occludeRightDock=\{false\}/);
 });
 
 test('App reserves BrowserView suspension in the same gated publication batch', () => {
