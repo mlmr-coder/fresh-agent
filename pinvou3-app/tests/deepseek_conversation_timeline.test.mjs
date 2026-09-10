@@ -471,9 +471,13 @@ try {
   assert.ok(chatView.includes('groupProcess')
     && conversationView.includes('data-testid="conversation-process-summary"')
     && conversationView.includes('data-testid="conversation-process-content"')
+    && conversationView.includes('running && !hasProcessDisclosure')
+    && conversationView.includes('ref={scrollRef} id={detailsId}')
+    && conversationView.includes('transitionConversationScrollState({')
+    && conversationView.includes('element.scrollTop = element.scrollHeight')
     && conversationView.includes('max-h-64')
     && conversationView.includes('overflow-y-auto'),
-  'work conversations must consolidate reasoning and tools into one bounded scrollable process disclosure');
+  'work conversations must show one running status and keep the bounded process disclosure following its latest output');
   assert.ok(toolRenderers.includes('<QuestionChoiceCard'),
     'DeepSeek request_user_input must use the shared Codex-style choice card');
   assert.ok(toolRenderers.includes('isFreeTextPlaceholderOption')

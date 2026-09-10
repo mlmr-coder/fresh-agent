@@ -28,6 +28,32 @@ try {
   await page.setViewport({ width: 1200, height: 1000 });
   await page.goto(`http://127.0.0.1:${vite.httpServer.address().port}/tests/fixtures/conversation_presentation.html`, { waitUntil: 'networkidle0' });
   await page.waitForSelector('[data-testid="conversation-tool-group-content"]');
+  assert.equal(await page.$('[data-testid="conversation-turn-activity"]'), null,
+    'a running process disclosure must replace the duplicate standalone processing row');
+  await page.$eval('[data-testid="conversation-process-content"]', node => { node.style.maxHeight = '72px'; });
+  await page.evaluate(() => window.__presentation.appendProcessItems(12));
+  await page.waitForFunction(() => {
+    const node = document.querySelector('[data-testid="conversation-process-content"]');
+    return node && node.scrollHeight > node.clientHeight
+      && node.scrollHeight - node.scrollTop - node.clientHeight <= 1;
+  });
+  await page.$eval('[data-testid="conversation-process-content"]', node => {
+    node.scrollTop = 0;
+    node.dispatchEvent(new Event('scroll'));
+  });
+  await page.evaluate(() => window.__presentation.appendProcessItems(1));
+  await new Promise(resolve => setTimeout(resolve, 80));
+  assert.equal(await page.$eval('[data-testid="conversation-process-content"]', node => node.scrollTop), 0,
+    'manual upward browsing must pause process auto-follow');
+  await page.$eval('[data-testid="conversation-process-content"]', node => {
+    node.scrollTop = node.scrollHeight;
+    node.dispatchEvent(new Event('scroll'));
+  });
+  await page.evaluate(() => window.__presentation.appendProcessItems(1));
+  await page.waitForFunction(() => {
+    const node = document.querySelector('[data-testid="conversation-process-content"]');
+    return node && node.scrollHeight - node.scrollTop - node.clientHeight <= 1;
+  });
   await page.evaluate(() => window.__presentation.complete());
   await page.waitForFunction(() => !document.querySelector('[data-testid="conversation-tool-group-content"]'));
   assert.equal(await page.$eval('[data-testid="conversation-tool-group-summary"]', node => node.getAttribute('aria-expanded')), 'false');

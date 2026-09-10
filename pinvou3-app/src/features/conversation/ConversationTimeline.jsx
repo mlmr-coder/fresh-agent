@@ -1,4 +1,4 @@
-import React, { useEffect, useId, useMemo, useState, useSyncExternalStore } from 'react';
+import React, { useEffect, useId, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { FileTypeIcon } from '../../components/files/FileTypeIcon.jsx';
 import { StatusDot } from '../../components/StatusDot.jsx';
 import { dict } from '../../shared/i18n.js';
@@ -28,6 +28,7 @@ import {
   workspaceMarkdownResource,
 } from './conversation-model.js';
 import { AssistantMessageActions, AssistantMessageFooter } from './AssistantMessageActions.jsx';
+import { transitionConversationScrollState } from './conversation-scroll.js';
 import { assistantResponseAvailable, assistantResponseText } from './message-clipboard.js';
 import './conversation.css';
 
@@ -771,6 +772,50 @@ function ProcessDisclosure({
   ));
   const [open, setOpen] = useState(true);
   const detailsId = useId();
+  const scrollRef = useRef(null);
+  const followingRef = useRef(true);
+  const lastScrollTopRef = useRef(0);
+  const lastScrollHeightRef = useRef(0);
+
+  // The process pane is its own scroll container. Follow newly streamed
+  // reasoning/tool output while it is already at the bottom; a deliberate
+  // upward scroll pauses following until the user returns to the bottom or
+  // closes and reopens the disclosure.
+  useEffect(() => {
+    if (!open) return;
+    const element = scrollRef.current;
+    if (!element) return;
+    followingRef.current = true;
+    element.scrollTop = element.scrollHeight;
+    lastScrollTopRef.current = element.scrollTop;
+    lastScrollHeightRef.current = element.scrollHeight;
+    const onScroll = () => {
+      const transition = transitionConversationScrollState({
+        scrollElement: element,
+        following: followingRef.current,
+        previousScrollTop: lastScrollTopRef.current,
+        previousScrollHeight: lastScrollHeightRef.current,
+      });
+      followingRef.current = transition.following;
+      lastScrollTopRef.current = transition.scrollTop;
+      lastScrollHeightRef.current = transition.scrollHeight;
+    };
+    element.addEventListener('scroll', onScroll, { passive: true });
+    return () => element.removeEventListener('scroll', onScroll);
+  }, [open]);
+
+  useEffect(() => {
+    if (!open || !followingRef.current) return;
+    const frame = window.requestAnimationFrame(() => {
+      const element = scrollRef.current;
+      if (!element || !followingRef.current) return;
+      element.scrollTop = element.scrollHeight;
+      lastScrollTopRef.current = element.scrollTop;
+      lastScrollHeightRef.current = element.scrollHeight;
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [items, open]);
+
   return (
     <div className="min-w-0 max-w-full">
       <button type="button" onClick={() => setOpen(value => !value)}
@@ -785,7 +830,7 @@ function ProcessDisclosure({
         <ChevronDown size={13} className={`shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
       {open && (
-        <div id={detailsId} data-testid="conversation-process-content"
+        <div ref={scrollRef} id={detailsId} data-testid="conversation-process-content"
           className="ml-1 mt-1 max-h-64 min-w-0 max-w-full overflow-y-auto border-l border-black/10 py-1 pl-3 pr-2 custom-scrollbar dark:border-white/10">
           <div className="mb-1 text-[11px] font-medium text-gray-400">{c.processDetails}</div>
           <div className="space-y-1">
@@ -882,6 +927,15 @@ function areConversationTurnPropsEqual(prev, next) {
   return true;
 }
 
+function shouldShowStandaloneTurnActivity({
+  running,
+  hasProcessDisclosure,
+  waitingAttention,
+  hasRunningActivity,
+}) {
+  return running && !hasProcessDisclosure && (waitingAttention || !hasRunningActivity);
+}
+
 function ConversationTurnView({
   turn,
   now,
@@ -914,9 +968,16 @@ function ConversationTurnView({
   const showTerminalDuration = Boolean(turn.startedAt && turn.completedAt);
   const presentation = turn.presentation || turn.items || [];
   const processItems = groupProcess ? presentation.filter(item => PROCESS_ITEM_TYPES.has(item.type)) : [];
+  const hasProcessDisclosure = groupProcess && processItems.length > 0;
   const visiblePresentation = groupProcess ? presentation.filter(item => !PROCESS_ITEM_TYPES.has(item.type)) : presentation;
   const hasRunningActivity = presentation.some(item => item.type === 'reasoning' && item.status === 'in_progress'
     || item.type === 'tool_group' && item.items?.some(tool => terminalStatus(tool.status) === 'running'));
+  const showStandaloneActivity = shouldShowStandaloneTurnActivity({
+    running,
+    hasProcessDisclosure,
+    waitingAttention,
+    hasRunningActivity,
+  });
   const operationCount = Number(turn.operationCount || 0);
   const failedOperationCount = Number(turn.failedOperationCount || 0);
   const turnUsage = turn.usage || null;
@@ -972,13 +1033,13 @@ function ConversationTurnView({
           </div>
         )}
         <div className="min-w-0 flex-1 space-y-1">
-          {running && (waitingAttention || !hasRunningActivity) && (
-            <div className={`h-7 flex items-center gap-2 text-[12px] ${waitingAttention ? 'text-amber-600 dark:text-amber-300' : 'text-gray-500 dark:text-gray-400'}`}>
+          {showStandaloneActivity && (
+            <div data-testid="conversation-turn-activity" className={`h-7 flex items-center gap-2 text-[12px] ${waitingAttention ? 'text-amber-600 dark:text-amber-300' : 'text-gray-500 dark:text-gray-400'}`}>
               <StatusDot tone={waitingAttention ? 'warn' : 'okPulse'} />
               {waitingPermission ? c.waitingPermission : waitingInput ? c.waitingInputShort : (turn.activityToolName ? c.callingTool(turn.activityToolName) : c.processingActive)} · {duration}
             </div>
           )}
-          {groupProcess && processItems.length > 0 && (
+          {hasProcessDisclosure && (
             <ProcessDisclosure
               items={processItems}
               turn={turn}
