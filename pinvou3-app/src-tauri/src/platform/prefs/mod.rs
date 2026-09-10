@@ -86,7 +86,7 @@ impl Language {
         match primary.as_str() {
             "zh" => Language::ZhHans,
             "en" => Language::En,
-            // 鲜小助当前只提供中文和英文；其它系统语言使用英文。
+            // 智灵当前只提供中文和英文；其它系统语言使用英文。
             _ => Language::En,
         }
     }
@@ -456,7 +456,7 @@ impl Default for SidebarPrefs {
     }
 }
 
-/// 鲜小助原生 code 会话权限模式的全局记忆。产品语义（已拍板）：
+/// 智灵原生 code 会话权限模式的全局记忆。产品语义（已拍板）：
 /// - 从未用过 code 模式时，新建 code 会话默认 Plan（只读）；
 /// - 新建 code 会话的默认 mode = code lane 的全局 last_mode；
 /// - last_mode 只由「code 页草稿态显式切换」写入（已生成会话的切换只写

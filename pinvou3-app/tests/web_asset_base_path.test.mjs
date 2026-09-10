@@ -59,7 +59,8 @@ const knowledgeView = fs.readFileSync(
   path.join(root, 'src', 'features', 'knowledge', 'KnowledgeView.jsx'),
   'utf8',
 );
-assert.match(pinvouLogo, /resolveAppAssetUrl\('assets\/brand\/brand-blue\.png'\)/);
+assert.match(pinvouLogo, /import \{ BRAND_ICON_PATH \} from ['"]\.\.\/shared\/brand\.js['"]/);
+assert.match(pinvouLogo, /resolveAppAssetUrl\(BRAND_ICON_PATH\)/);
 assert.match(knowledgeView, /const fileIconSrc = \(ext, category\) => resolveAppAssetUrl\(/);
 
 const viteConfig = fs.readFileSync(path.join(root, 'vite.config.mjs'), 'utf8');

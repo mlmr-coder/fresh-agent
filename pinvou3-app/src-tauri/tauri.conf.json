@@ -1,6 +1,6 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "鲜小助",
+  "productName": "智灵",
   "mainBinaryName": "pinvou3-tauri",
   "version": "0.9.3",
   "identifier": "com.pinvou.pinvou3",
@@ -17,7 +17,7 @@
       {
         "label": "main",
         "url": "index.html?ui=vite-react-1",
-        "title": "鲜小助",
+        "title": "智灵",
         "width": 1100,
         "height": 760,
         "resizable": true,

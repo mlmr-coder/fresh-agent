@@ -120,7 +120,7 @@ where
 }
 
 /// Check whether a model directory contains the ONNX and tokenizer files
-/// the 鲜小助 knowledge service needs at runtime.
+/// the 智灵 knowledge service needs at runtime.
 ///
 /// The directory may come from caller configuration (e.g. a server CLI flag),
 /// so canonicalize it first: the existence checks then answer for the

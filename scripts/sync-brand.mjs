@@ -5,12 +5,27 @@
 //   node scripts/sync-brand.mjs          # synchronize managed files
 //   node scripts/sync-brand.mjs --check  # verify without writing
 
-import { existsSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { existsSync, readFileSync, readdirSync, realpathSync, writeFileSync } from 'node:fs';
+import { dirname, extname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const SCRIPT_PATH = fileURLToPath(import.meta.url);
 const REPO_ROOT = resolve(dirname(SCRIPT_PATH), '..');
+const BRAND_SCAN_ROOTS = [
+  '.github', 'docs', 'pinvou-cli', 'pinvou-knowledge', 'pinvou3-app/resources',
+  'pinvou3-app/scripts', 'pinvou3-app/src', 'pinvou3-app/src-tauri/resources',
+  'pinvou3-app/src-tauri/src', 'pinvou3-app/src-tauri/tests', 'pinvou3-app/tests',
+  'remote-control-relay', 'scripts',
+];
+const BRAND_SCAN_FILES = [
+  'AGENTS.md', 'CODE_OF_CONDUCT.md', 'CONTRIBUTING.md', 'CONTRIBUTING.zh-CN.md',
+  'README.md', 'README.ja.md', 'SUPPORT.md', 'THIRD_PARTY_NOTICES.md', 'TRADEMARKS.md',
+];
+const BRAND_TEXT_EXTENSIONS = new Set([
+  '.cjs', '.desktop', '.html', '.js', '.jsx', '.json', '.md', '.mjs', '.plist',
+  '.ps1', '.py', '.rs', '.service', '.sh', '.toml', '.ts', '.tsx', '.yaml', '.yml',
+]);
+const BRAND_SCAN_IGNORED_DIRECTORIES = new Set(['.git', 'dist', 'node_modules', 'target']);
 
 function readJson(path) {
   return JSON.parse(readFileSync(path, 'utf8'));
@@ -46,14 +61,58 @@ function validateBrand(brand, repoRoot) {
   if (!Array.isArray(brand.icons.native) || brand.icons.native.length === 0) {
     throw new Error('BRAND.json: icons.native 必须包含至少一个原生图标路径');
   }
+  if (!Array.isArray(brand.legacyDisplayNames)) {
+    throw new Error('BRAND.json: legacyDisplayNames 必须是数组');
+  }
+  const macosScale = Number(brand.icons.macosContentScale);
+  if (!brand.icons.macosSource || !brand.icons.macosPadded || !(macosScale > 0 && macosScale <= 1)) {
+    throw new Error('BRAND.json: macOS 图标源、留白图和内容比例配置无效');
+  }
 
   const assetPaths = [
     resolve(repoRoot, 'pinvou3-app/src', brand.icons.frontend),
+    resolve(repoRoot, 'pinvou3-app/src-tauri', brand.icons.macosSource),
+    resolve(repoRoot, 'pinvou3-app/src-tauri', brand.icons.macosPadded),
     ...brand.icons.native.map((path) => resolve(repoRoot, 'pinvou3-app/src-tauri', path)),
   ];
   for (const path of assetPaths) {
     if (!existsSync(path)) throw new Error(`BRAND.json 引用的图标不存在: ${path}`);
   }
+}
+
+function brandTextFiles(repoRoot) {
+  const files = BRAND_SCAN_FILES.map((path) => resolve(repoRoot, path));
+  const visit = (path) => {
+    if (!existsSync(path)) return;
+    for (const entry of readdirSync(path, { withFileTypes: true })) {
+      const child = resolve(path, entry.name);
+      if (entry.isDirectory() && !BRAND_SCAN_IGNORED_DIRECTORIES.has(entry.name)) visit(child);
+      else if (entry.isFile() && BRAND_TEXT_EXTENSIONS.has(extname(entry.name))) files.push(child);
+    }
+  };
+  for (const path of BRAND_SCAN_ROOTS) visit(resolve(repoRoot, path));
+  return files;
+}
+
+function synchronizeLegacyDisplayNames(repoRoot, brand, checkOnly) {
+  const legacyNames = [...new Set(
+    brand.legacyDisplayNames
+      .map((name) => String(name || '').trim())
+      .filter((name) => name && name !== brand.displayName.trim()),
+  )];
+  if (legacyNames.length === 0) return [];
+  const stale = [];
+  for (const path of brandTextFiles(repoRoot)) {
+    const content = readFileSync(path, 'utf8');
+    if (!legacyNames.some((name) => content.includes(name))) continue;
+    stale.push(path.slice(repoRoot.length + 1));
+    if (!checkOnly) {
+      let next = content;
+      for (const name of legacyNames) next = next.replaceAll(name, brand.displayName.trim());
+      writeFileSync(path, next);
+    }
+  }
+  return stale;
 }
 
 function managedFiles(repoRoot, brand) {
@@ -180,7 +239,7 @@ export function main(repoRoot = REPO_ROOT, { checkOnly = process.argv.includes('
   try {
     const brand = readJson(resolve(repoRoot, 'BRAND.json'));
     validateBrand(brand, repoRoot);
-    const stale = [];
+    const stale = synchronizeLegacyDisplayNames(repoRoot, brand, checkOnly);
     for (const target of managedFiles(repoRoot, brand)) {
       const current = existsSync(target.path) ? readFileSync(target.path, 'utf8') : '';
       if (current === target.content) continue;

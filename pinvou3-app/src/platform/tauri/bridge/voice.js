@@ -58,7 +58,7 @@
   ];
   const VOICE_PROTECTED_TERMS = [
     "金价", "图表", "表格", "PPT", "GPT-5", "Claude Sonnet", "DeepSeek V3",
-    "AI 新闻", "PDF", "鲜小助", "REST API", "401", "token", "高铁票",
+    "AI 新闻", "PDF", "智灵", "REST API", "401", "token", "高铁票",
     "负责人", "截止时间", "预算", "部门", "超支项", "付款风险", "交付风险",
     "客服投诉", "产品线", "高频问题", "语音输入", "模型下载体验", "知识库",
     "差旅报销标准", "住宿上限", "banner", "温暖简洁"
@@ -199,7 +199,7 @@
       .replaceAll(/talken/gi, "token")
       .replaceAll('过期处里', "过期处理")
       // eslint-disable-next-line sonarjs/duplicates-in-character-class -- single lookahead guard per branch; sonarjs miscounts the escaped-class dupes here
-      .replaceAll(/产品民\s*pin\s+vo\b|产品名con(?![a-zA-Z])|\bpin\s+vo\b/gi, "产品名鲜小助")
+      .replaceAll(/产品民\s*pin\s+vo\b|产品名con(?![a-zA-Z])|\bpin\s+vo\b/gi, "产品名智灵")
       .replaceAll(/rest\s*a\s*p\s*i/gi, "REST API")
       .replaceAll('认正', "认证")
       .replaceAll(/错误马(?!上)/g, "错误码")

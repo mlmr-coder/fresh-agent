@@ -1,4 +1,4 @@
-// 连接器技能包口径契约：把历次审查（2026-08-16 六轮）确认的鲜小助适配规则固化为
+// 连接器技能包口径契约：把历次审查（2026-08-16 六轮）确认的智灵适配规则固化为
 // CI 门禁，防止下次上游 sync 时机械迁移把已修复的问题带回来。
 // 规则来源见各 NOTICE 的「本地修改登记」；上游历史登记（NOTICE 文件本身）豁免扫描。
 const assert = require("node:assert/strict");
@@ -88,21 +88,21 @@ for (const f of docs) {
   }
 }
 
-// 3) 安装/升级一律由鲜小助宿主代管
+// 3) 安装/升级一律由智灵宿主代管
 for (const f of docs) {
   const text = read(f);
   assert.ok(
     !/\bnpm\s+(?:-g\s+|--global\s+)?(?:install|i)\s+(?:-g\s+|--global\s+)?\S+/.test(text) &&
       !/\bnpm\s+(?:install|i)\s+[^-\n]*@latest\b/.test(text) &&
       !/\b@[a-z0-9-]+\/[a-z0-9.-]+@latest\b/.test(text),
-    `${rel(f)}: 残留 npm 安装教学（-g/--global/@latest 均禁止，安装由鲜小助代管）`,
+    `${rel(f)}: 残留 npm 安装教学（-g/--global/@latest 均禁止，安装由智灵代管）`,
   );
   assert.ok(!/\bnpx\s+(?:\S*skills\b|(?:@[\w.-]+\/)?[\w.-]+\s+skills\b)/.test(text), `${rel(f)}: 残留 npx skills 教学（含路径与 scoped 子命令形态）`);
   // dws 脚本示例统一 python3：宿主环境无裸 `python` 命令（macOS/Homebrew/Win embeddable 均只装 python3）
   assert.ok(!/\bpython\s+(?!3\b)(?:-\w+\s+)*\S*\.py/.test(text), `${rel(f)}: 脚本调用用裸 python（应为 python3）`);
 }
 
-// 4) 上游宿主断言（Hermes/OpenClaw，含小写形态）必须以鲜小助为锚。
+// 4) 上游宿主断言（Hermes/OpenClaw，含小写形态）必须以智灵为锚。
 // 判定前剥掉 URL 与行内代码段：宿主词仅出现在链接/代码标识符（如
 // https://…/hermes-setup、`hermes_config_path`）时是客观引用而非宿主断言。
 for (const f of docs) {
@@ -114,8 +114,8 @@ for (const f of docs) {
       if (/[（(][^）)]*hermes[^）)]*openclaw[^）)]*[）)]/i.test(line) || /hermes`?\/`?openclaw`?\s*渠道/.test(line)) continue;
       const hostInProse = /(hermes|openclaw(?!_workspace))/i.test(stripAnchors(line));
       assert.ok(
-        !hostInProse || line.includes("鲜小助"),
-        `${rel(f)}: 上游宿主断言未锚定鲜小助语境: ${line.trim()}`,
+        !hostInProse || line.includes("智灵"),
+        `${rel(f)}: 上游宿主断言未锚定智灵语境: ${line.trim()}`,
       );
     }
   }

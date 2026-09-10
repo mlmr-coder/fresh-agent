@@ -35,14 +35,21 @@ function isAllowlisted(relative) {
     || staticRuntimeAssetPrefixes.some(prefix => relative.startsWith(prefix));
 }
 
-test('every resolveAppAssetUrl string literal with a static extension is allowlisted', () => {
-  // Only single-argument string literals are statically checkable; dynamic
-  // paths (template literals, prefixes) are covered by the prefix entries.
+test('every statically declared runtime asset with a static extension is allowlisted', () => {
+  // Single-argument string literals and generated brand path constants are
+  // statically checkable; template literals and prefixes are covered by the
+  // prefix entries.
   const literalCall = /resolveAppAssetUrl\(\s*(['"])([^'"]+)\1/gu;
+  const brandPath = /export const BRAND_ICON_PATH = (['"])([^'"]+)\1/gu;
   const referenced = new Map();
   for (const file of walkSourceFiles(sourceRoot)) {
     const content = readFileSync(file, 'utf8');
     for (const match of content.matchAll(literalCall)) {
+      const relative = match[2].replace(/^\/+/, '');
+      if (!STATIC_EXTENSIONS.has(extname(relative).toLowerCase())) continue;
+      referenced.set(relative, file);
+    }
+    for (const match of content.matchAll(brandPath)) {
       const relative = match[2].replace(/^\/+/, '');
       if (!STATIC_EXTENSIONS.has(extname(relative).toLowerCase())) continue;
       referenced.set(relative, file);

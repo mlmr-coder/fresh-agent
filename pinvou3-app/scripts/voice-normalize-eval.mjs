@@ -450,7 +450,7 @@ function resolveEvalModelConfig() {
 async function callOpenAiCompatible(correctedText, rawText, mode, production, llmConfig) {
   const config = resolveEvalModelConfig();
   if (!config.baseUrl || !config.apiKey || !config.model) {
-    throw new Error('missing PINVOU_VOICE_EVAL_BASE_URL / PINVOU_VOICE_EVAL_API_KEY / PINVOU_VOICE_EVAL_MODEL and no usable 鲜小助 active model credential');
+    throw new Error('missing PINVOU_VOICE_EVAL_BASE_URL / PINVOU_VOICE_EVAL_API_KEY / PINVOU_VOICE_EVAL_MODEL and no usable 智灵 active model credential');
   }
   const normalizedMode = production.normalizeVoiceMode(mode);
   const started = performance.now();

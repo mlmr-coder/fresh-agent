@@ -1,4 +1,4 @@
-//! 鲜小助 Tauri 后端入口。
+//! 智灵 Tauri 后端入口。
 
 mod app;
 mod core;
@@ -1635,7 +1635,7 @@ mod tool_allowlist_contract {
         ] {
             assert!(
                 !is_pinvou3_allowed(excluded),
-                "非 鲜小助 工具家族 {excluded} 不应进入白名单"
+                "非 智灵 工具家族 {excluded} 不应进入白名单"
             );
         }
 
@@ -1939,7 +1939,7 @@ mod release_env_defaults_guard {
             !super::RELEASE_ENV_DEFAULTS
                 .iter()
                 .any(|(k, _)| *k == "PINVOU3_MAX_OUTPUT_TOKENS"),
-            "RELEASE_ENV_DEFAULTS 不得包含 PINVOU3_MAX_OUTPUT_TOKENS（鲜小助侧上限仅经 prefs/route 携带）"
+            "RELEASE_ENV_DEFAULTS 不得包含 PINVOU3_MAX_OUTPUT_TOKENS（智灵侧上限仅经 prefs/route 携带）"
         );
 
         // 第二层：实际注入路径（ensure_release_env 是 run() 启动路径的 release env
@@ -1955,7 +1955,7 @@ mod release_env_defaults_guard {
         );
         assert!(
             std::env::var_os("PINVOU3_MAX_OUTPUT_TOKENS").is_none(),
-            "ensure_release_env must not re-inject PINVOU3_MAX_OUTPUT_TOKENS (the 鲜小助 cap travels only via prefs/route)"
+            "ensure_release_env must not re-inject PINVOU3_MAX_OUTPUT_TOKENS (the 智灵 cap travels only via prefs/route)"
         );
         // 退出时 EnvSnapshot::drop 按快照完整还原（含 PATH / UI env / 常量表变量）。
     }

@@ -325,7 +325,7 @@ async function expand(page) {
   await page.evaluateOnNewDocument(injectSource());
   await page.setViewport({ width: 1440, height: 1000, deviceScaleFactor: 1 });
   await page.goto(INDEX, { waitUntil: 'networkidle0' });
-  await page.waitForFunction(() => window.TauriBridge && document.body && document.body.innerText.includes('鲜小助'), { timeout: 20000 }).catch(() => {});
+  await page.waitForFunction(() => window.TauriBridge && document.body && document.body.innerText.includes('智灵'), { timeout: 20000 }).catch(() => {});
   await sleep(2000);
 
   // 入口能渲染 DOM 不代表样式加载成功：WebKit 若复用旧 index.html、CSS 404，
@@ -2321,14 +2321,14 @@ async function expand(page) {
     cancelFailureState.visible && cancelFailureState.retryable, JSON.stringify(cancelFailureState));
   await page.evaluate(() => { window.__CANCEL_SHELL_ERROR__=false; });
 
-  // ⑤ 鲜小助检阅 modal 本地化渲染:threading t 不报错 + 裁决标签/trace 出现(i18n 回归)
+  // ⑤ 智灵检阅 modal 本地化渲染:threading t 不报错 + 裁决标签/trace 出现(i18n 回归)
   await page.evaluate(() => window.TauriBridge.interaction.summonPinvou('/home/x/会议纪要.md'));
   await sleep(900);
   const modal = await page.evaluate(() => {
     const txt = document.body.innerText;
     return { trace: txt.includes('有几点确认'), adopt: txt.includes('采纳建议'), skip: txt.includes('跳过'), persona: txt.includes('旅行规划') };
   });
-  rec('⑤ 鲜小助检阅卡本地化渲染(t 线程通)', modal.trace && modal.adopt && modal.skip, JSON.stringify(modal));
+  rec('⑤ 智灵检阅卡本地化渲染(t 线程通)', modal.trace && modal.adopt && modal.skip, JSON.stringify(modal));
 
   // ⑥ composer 模式 chip:渲染 + 默认 YOLO + 下拉两项 + 点 Plan 真切到 Plan(防 setPlanModeNext 草稿态静默 return 回归)
   const chip = await page.evaluate(() => {

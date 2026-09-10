@@ -1,6 +1,6 @@
 # 应用更新机制
 
-鲜小助从 GitHub 最新 Release 读取静态更新清单：
+智灵从 GitHub 最新 Release 读取静态更新清单：
 
 ```text
 https://github.com/mlmr-coder/fresh-agent/releases/latest/download/latest.json
@@ -25,7 +25,7 @@ https://github.com/mlmr-coder/fresh-agent/releases/latest/download/latest.json
 {
   "schema_version": 1,
   "version": "0.9.4",
-  "notes": "鲜小助 v0.9.4",
+  "notes": "智灵 v0.9.4",
   "pub_date": "2026-09-09T00:00:00Z",
   "platforms": {
     "linux-x64": {

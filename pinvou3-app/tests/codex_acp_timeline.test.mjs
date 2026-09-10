@@ -74,7 +74,7 @@ try {
       rawInput: { path: 'README.md' },
     } }),
     event(5, 'tool_call_update', { update: {
-      toolCallId: 'tool-1', status: 'completed', rawOutput: { text: '# 鲜小助' },
+      toolCallId: 'tool-1', status: 'completed', rawOutput: { text: '# 智灵' },
     } }),
     event(6, 'permission_requested', { toolCallId: 'tool-2', request: {
       toolCall: { toolCallId: 'tool-2', title: '写入 README' },
@@ -109,7 +109,7 @@ try {
   assert.equal(turn.tools.length, 1, 'tool updates must be merged in place');
   assert.equal(turn.tools[0].status, 'completed');
   assert.deepEqual(turn.tools[0].rawInput, { path: 'README.md' });
-  assert.deepEqual(turn.tools[0].rawOutput, { text: '# 鲜小助' });
+  assert.deepEqual(turn.tools[0].rawOutput, { text: '# 智灵' });
   assert.equal(turn.permissions[0].resolved, true);
   assert.equal(turn.elicitations[0].resolved, true);
   assert.equal(turn.elicitations[0].action, 'accept');
@@ -821,7 +821,7 @@ try {
     && chatView.includes('assistantAvatar={(timelineAssistantAvatar)}')
     && chatView.includes('<PinvouLogo className="h-5 w-5" title={chatViewCopy.agentName}')
     && codexView.includes('<AcpAgentLogo agentId={activeAgentId} className="h-5 w-5"'),
-  'assistant avatars must use the 鲜小助 and selected ACP Agent identity marks');
+  'assistant avatars must use the 智灵 and selected ACP Agent identity marks');
   // Copy fallback has been consolidated into dict.zh.uiConversation (ConversationTimeline references
   // it via copy keys); assert that the key is consumed in the timeline and the zh entry exists.
   const conversationZhDict = readFileSync(path.join(root, 'src', 'shared', 'i18n', 'zh.js'), 'utf8');
@@ -957,7 +957,7 @@ try {
   assert.ok(baseStyles.includes('.codex-markdown ol { list-style:decimal outside; }'),
     'Codex ordered lists must retain numbering after Tailwind preflight');
 
-  // 原生（鲜小助）车道底栏控件契约：仅 isNativeAgent 渲染、与工作/设计页共用同一套
+  // 原生（智灵）车道底栏控件契约：仅 isNativeAgent 渲染、与工作/设计页共用同一套
   // 共享 composer 控件（ComposerModeChip / ComposerModelSelector / ComposerKbSelector，
   // 显式会话态驱动 props 绕开 bridge 聊天 active 绑定）、直调 per-session 命令、
   // 并带与 ChatView 同款的语音输入按钮（bridge.voice 写回 draft）。
@@ -985,7 +985,7 @@ try {
     && codexView.includes('<SubagentTranscriptPanel')
     && codexView.includes("window.addEventListener('pinvou:open-subagent'")
     && codexView.includes('<ToolCard'),
-  'the native lane must always expose factual delegated-agent cards and transcripts; product mode only controls the 鲜小助 roster and reminder');
+  'the native lane must always expose factual delegated-agent cards and transcripts; product mode only controls the 智灵 roster and reminder');
   const interactionCommands = readFileSync(
     path.join(root, 'src-tauri', 'src', 'app', 'commands', 'interaction.rs'),
     'utf8',

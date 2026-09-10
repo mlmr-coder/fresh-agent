@@ -153,7 +153,7 @@ assert.strictEqual(
 );
 assert.strictEqual(
   ruleContext.applyVoiceDeterministicCorrections("产品名con 是什么", ""),
-  "产品名鲜小助 是什么",
+  "产品名智灵 是什么",
   "产品名con misrecognition must still be corrected",
 );
 const evalScriptSource = fs.readFileSync(path.join(__dirname, "..", "scripts", "voice-normalize-eval.mjs"), "utf8");

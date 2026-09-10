@@ -1,7 +1,7 @@
 {
   "name": "pinvou3-app",
   "version": "0.9.3",
-  "description": "鲜小助智能助手桌面应用",
+  "description": "智灵智能助手桌面应用",
   "private": true,
   "scripts": {
     "tauri": "node scripts/tauri/build.js",
@@ -134,6 +134,7 @@
     "test:user-journey": "../scripts/run-user-journey-tests.sh",
     "sync:version": "node ../scripts/sync-version.mjs",
     "sync:brand": "node ../scripts/sync-brand.mjs",
+    "sync:brand:macos-icon": "node scripts/tauri/macos-icon.js",
     "check:brand": "node ../scripts/sync-brand.mjs --check",
     "test:markdown": "node tests/markdown_syntax_highlight.test.mjs && node tests/markdown_bridge_fallback_safety.test.mjs"
   },

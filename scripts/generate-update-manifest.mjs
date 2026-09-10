@@ -62,7 +62,7 @@ export function generateUpdateManifest({ version, repository, assetsDir, pubDate
   return {
     schema_version: 1,
     version,
-    notes: notes || `鲜小助 v${version}`,
+    notes: notes || `智灵 v${version}`,
     pub_date: pubDate,
     platforms,
   };

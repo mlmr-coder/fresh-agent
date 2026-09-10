@@ -2,7 +2,7 @@
 
 ## 我们的承诺
 
-鲜小助社区欢迎不同背景和经验水平的参与者。我们希望协作保持尊重、务实和安全。
+智灵社区欢迎不同背景和经验水平的参与者。我们希望协作保持尊重、务实和安全。
 
 ## 期望的行为
 
@@ -22,7 +22,7 @@
 
 ## 适用范围
 
-本准则适用于本仓库的问题、合并请求、讨论区，以及代表鲜小助社区参与的其他交流场所。
+本准则适用于本仓库的问题、合并请求、讨论区，以及代表智灵社区参与的其他交流场所。
 
 ## 举报与处理
 
@@ -34,4 +34,4 @@
 
 ## 参考来源
 
-本准则参考 [Contributor Covenant 2.1](https://www.contributor-covenant.org/version/2/1/code_of_conduct/)，并根据原 Pinvou Agent 社区准则调整，适用于独立维护的鲜小助项目。
+本准则参考 [Contributor Covenant 2.1](https://www.contributor-covenant.org/version/2/1/code_of_conduct/)，并根据原 Pinvou Agent 社区准则调整，适用于独立维护的智灵项目。

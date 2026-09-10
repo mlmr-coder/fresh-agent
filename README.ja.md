@@ -1,10 +1,10 @@
 <div align="center">
 
-<img src="pinvou3-app/src-tauri/icons/icon.png" alt="鲜小助 图标" width="120" />
+<img src="pinvou3-app/src-tauri/icons/icon.png" alt="智灵 图标" width="120" />
 
-# 鲜小助
+# 智灵
 
-**鲜小助** 由本仓库独立维护。为兼容升级和既有用户数据而保留的技术标识，参见[品牌与兼容性说明](docs/branding.md)。
+**智灵** 由本仓库独立维护。为兼容升级和既有用户数据而保留的技术标识，参见[品牌与兼容性说明](docs/branding.md)。
 
 **面向工作、设计与代码的开源桌面 AI Agent 工作台。**
 
@@ -17,18 +17,18 @@
 [下载预览版](https://github.com/mlmr-coder/fresh-agent/releases) · [问题反馈](https://github.com/mlmr-coder/fresh-agent/issues) · [讨论区](https://github.com/mlmr-coder/fresh-agent/discussions) · [安全政策](SECURITY.md)
 
 <p align="center">
-  <img src="docs/assets/screenshots/mode-work.webp" alt="鲜小助 工作模式">
+  <img src="docs/assets/screenshots/mode-work.webp" alt="智灵 工作模式">
 </p>
 
 </div>
 
-鲜小助 不只是一个聊天界面。它把通用工作、视觉设计和代码开发放进同一个桌面应用，让 AI 从“回答问题”进一步走到“**完成任务**”。你可以让它调用工具、处理文件和沉淀知识，也可以通过 ACP 驱动专业代码 Agent，或把一句描述变成可继续编辑的视觉产物。
+智灵 不只是一个聊天界面。它把通用工作、视觉设计和代码开发放进同一个桌面应用，让 AI 从“回答问题”进一步走到“**完成任务**”。你可以让它调用工具、处理文件和沉淀知识，也可以通过 ACP 驱动专业代码 Agent，或把一句描述变成可继续编辑的视觉产物。
 
 模型既可以运行在本地，也可以接入任意 OpenAI-compatible 服务；工具、Skills 与连接器按需启用。
 
 ## 🌱 项目来源
 
-鲜小助基于开源项目 [Pinvou/pinvou-agent](https://github.com/Pinvou/pinvou-agent.git) 二次开发，并以独立仓库继续维护。Agent 底层能力依赖 [CodeWhale](https://github.com/Pinvou/CodeWhale)；上层产品名称、界面、提示词、发布地址和更新机制由鲜小助项目维护。原项目与第三方组件的许可信息见 [MIT 许可证](LICENSE) 和 [第三方许可声明](THIRD_PARTY_NOTICES.md)。
+智灵基于开源项目 [Pinvou/pinvou-agent](https://github.com/Pinvou/pinvou-agent.git) 二次开发，并以独立仓库继续维护。Agent 底层能力依赖 [CodeWhale](https://github.com/Pinvou/CodeWhale)；上层产品名称、界面、提示词、发布地址和更新机制由智灵项目维护。原项目与第三方组件的许可信息见 [MIT 许可证](LICENSE) 和 [第三方许可声明](THIRD_PARTY_NOTICES.md)。
 
 ## 🧭 一个工作台，三种工作方式
 
@@ -82,8 +82,8 @@
 
 <table>
   <tr>
-    <td width="50%"><img src="docs/assets/screenshots/mode-design.webp" alt="鲜小助 设计模式"></td>
-    <td width="50%"><img src="docs/assets/screenshots/mode-code.webp" alt="鲜小助 代码模式"></td>
+    <td width="50%"><img src="docs/assets/screenshots/mode-design.webp" alt="智灵 设计模式"></td>
+    <td width="50%"><img src="docs/assets/screenshots/mode-code.webp" alt="智灵 代码模式"></td>
   </tr>
   <tr>
     <td align="center">设计模式：海报与数据可视化</td>
@@ -101,7 +101,7 @@
 
 ## 🤖 模型接入
 
-鲜小助 支持**本地 vLLM** 和任意 **OpenAI-compatible API**。应用内可保存多个模型配置，为云端配置设置可选显示别名，并在不改变实际请求模型 ID 的情况下于不同会话间快速切换；当前提供本地 vLLM、DeepSeek、Kimi、通义千问、豆包、MiniMax、智谱、MiMo、OpenAI、Anthropic、Gemini、xAI 等配置模板，也可以填写自定义兼容端点。
+智灵 支持**本地 vLLM** 和任意 **OpenAI-compatible API**。应用内可保存多个模型配置，为云端配置设置可选显示别名，并在不改变实际请求模型 ID 的情况下于不同会话间快速切换；当前提供本地 vLLM、DeepSeek、Kimi、通义千问、豆包、MiniMax、智谱、MiMo、OpenAI、Anthropic、Gemini、xAI 等配置模板，也可以填写自定义兼容端点。
 
 本地 vLLM 示例：
 
@@ -218,8 +218,8 @@ docs/                 架构设计、验证报告与维护文档
 
 <div align="center">
 
-鲜小助 正在持续迭代中，功能状态以 `main` 分支和当前发布版本为准。
+智灵 正在持续迭代中，功能状态以 `main` 分支和当前发布版本为准。
 
-**[MIT License](LICENSE)** · 由 鲜小助 团队与社区贡献者用 ❤️ 打造
+**[MIT License](LICENSE)** · 由 智灵 团队与社区贡献者用 ❤️ 打造
 
 </div>

@@ -1,4 +1,4 @@
-//! Link-local discovery for 鲜小助 shared knowledge hosts.
+//! Link-local discovery for 智灵 shared knowledge hosts.
 //!
 //! mDNS is deliberately treated as an untrusted source of *addresses only*.
 //! It never advertises a server id, the private service CA, an invitation
@@ -97,7 +97,7 @@ pub fn discover_lan_candidates(timeout: Duration) -> Result<Vec<LanDiscoveryCand
         }
         let advertised_name = service
             .get_property_val_str("name")
-            .unwrap_or("鲜小助 Knowledge")
+            .unwrap_or("智灵 Knowledge")
             .trim()
             .chars()
             .take(120)

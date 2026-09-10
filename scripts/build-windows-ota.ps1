@@ -1,6 +1,6 @@
 # 由私有 Windows 发布流水线在构建机上调用(仓库内无 CI 引用属预期)。
 # 输入产物名与 release-packages.yml 的 tauri nsis 默认名
-# 鲜小助_<version>_x64-setup.exe 一致。
+# 智灵_<version>_x64-setup.exe 一致。
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true, Position = 0)]

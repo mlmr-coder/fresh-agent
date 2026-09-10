@@ -1,7 +1,14 @@
 {
-  "displayName": "鲜小助",
+  "displayName": "智灵",
+  "legacyDisplayNames": [
+    "鲜小助",
+    "鲜小智"
+  ],
   "icons": {
     "frontend": "assets/brand/brand-blue.png",
+    "macosSource": "icons/icon.png",
+    "macosPadded": "icons/macos-icon.png",
+    "macosContentScale": 0.8,
     "native": [
       "icons/32x32.png",
       "icons/128x128.png",

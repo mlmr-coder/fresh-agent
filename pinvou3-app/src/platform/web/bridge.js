@@ -120,7 +120,7 @@
   // 抹平裸 <script>/<style>/<iframe> 等危险标签:它们一旦被 marked 透传成真 HTML,
   // 浏览器按 HTML 解析时 script 元素会"吞掉"后续兄弟节点直到 </script>(或文档末尾),
   // 然后 DOMPurify 把整段 script 连同被卷进去的内容一起剥掉。后果:LLM 正文里裸写
-  // "在同一个 <script> 标签内……"会把后续表格/文字整段吞掉(历史上鲜小助报告表格踩过)。
+  // "在同一个 <script> 标签内……"会把后续表格/文字整段吞掉(历史上智灵报告表格踩过)。
   //
   // 关键:在 marked.parse 【之后】做替换,而不是之前。原因:marked 给代码块/inline code 的
   // 输出本身就已经把 < 转义成 &lt;(不会有真 <script>),只有用户在正文里裸写 HTML 时才会
@@ -459,7 +459,7 @@
       targetSessionSyncing: "The target session is still syncing a turn completed elsewhere",
       sessionIdMissing: "The desktop app returned no new session ID",
       turnSyncRetry: "⚠️ This session is still syncing a turn completed elsewhere. Please try again shortly",
-      pinvouNeedSession: "Start a chat first, then summon 鲜小助 for review.",
+      pinvouNeedSession: "Start a chat first, then summon 智灵 for review.",
       remoteDoneUnsynced: "⚠️ The chat finished on the desktop, but the authoritative record is not synced yet. Retry after reconnecting.",
       unknownReason: "unknown reason",
       materialsAdded: (count, names) => "✅ Added " + count + " materials to run materials: " + names.join(", "),
@@ -589,7 +589,7 @@
       targetSessionSyncing: "目标会话仍在同步另一端完成的回合",
       sessionIdMissing: "桌面端未返回新会话 ID",
       turnSyncRetry: "⚠️ 该会话仍在同步另一端完成的回合，请稍后重试",
-      pinvouNeedSession: "先开始一个对话,再召唤 鲜小助 检阅。",
+      pinvouNeedSession: "先开始一个对话,再召唤 智灵 检阅。",
       remoteDoneUnsynced: "⚠️ 对话已在桌面端完成，但权威记录暂未同步；恢复连接后可重试。",
       unknownReason: "未知原因",
       materialsAdded: (count, names) => "✅ 已添加 " + count + " 个素材到配套材料：" + names.join("、"),
@@ -1604,7 +1604,7 @@
   async function persistMessagesFor(sid) {
     if (!sid) return;
     if (isScheduledRunSession(sid)) return;
-    // 代码会话（鲜小助原生/ACP）不在 list_sessions 里：它不是桥接聊天会话——
+    // 代码会话（智灵原生/ACP）不在 list_sessions 里：它不是桥接聊天会话——
     // 消息由后端 persist_chat_engine_state 持久化、标题由后端自动命名管理。
     // 跳过产物索引与自动重命名：meta 缺失时 msgs 会错读 active 聊天 state 的
     // 首条用户消息，把别的会话文本命名到代码会话上。正常聊天会话经

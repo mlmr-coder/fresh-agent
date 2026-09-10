@@ -53,7 +53,7 @@ pub(super) const WORK_CONTEXT_AUTO_THRESHOLD_RELAXED: f32 = 0.90;
 /// rule-following model would emit pending_confirm inside the relaxed band, making
 /// the code-side adjustment a no-op. Brace sentinels go through `replace` instead of
 /// `format!` to avoid escaping the JSON examples.
-pub(super) const LLM_REVIEW_PROMPT_TEMPLATE: &str = r#"你是鲜小助的后台记忆整理器。你只做一件事：复盘刚刚这一轮对话，并对照已有记忆，输出是否需要保存、更新或跳过记忆。不要回答用户问题，不要解释你的判断。
+pub(super) const LLM_REVIEW_PROMPT_TEMPLATE: &str = r#"你是智灵的后台记忆整理器。你只做一件事：复盘刚刚这一轮对话，并对照已有记忆，输出是否需要保存、更新或跳过记忆。不要回答用户问题，不要解释你的判断。
 
 你必须只输出 JSON，不要解释。格式：
 {
@@ -88,7 +88,7 @@ pub(super) const LLM_REVIEW_PROMPT_TEMPLATE: &str = r#"你是鲜小助的后台�
 记忆类别：
 - profile：稳定、低敏的用户资料，例如用户希望被如何称呼、用户如何称呼助手。
 - preference：长期使用习惯，例如回答风格、工作方式、文档偏好。
-- work_context：用户长期工作背景，例如长期角色、领域、项目、任务类型、工具流、交付物期待。它描述用户，不描述鲜小助的运行环境。
+- work_context：用户长期工作背景，例如长期角色、领域、项目、任务类型、工具流、交付物期待。它描述用户，不描述智灵的运行环境。
 - current_focus：用户最近正在推进、后续短期内可能继续聊的事项，会过期。
 - recent_activity：用户最近刚完成的交付、修复、报告、文档或调研，会过期。
 
@@ -101,7 +101,7 @@ topic 规则：
 
 判断原则：
 1. 只记录以后仍然有用的信息。一次性问答、普通闲聊、临时情绪、问题本身、模型猜测都不要记。
-2. 记忆必须以用户为中心。不要把鲜小助当前模型、临时路径、调试状态、工具日志、文件原文当作用户记忆。
+2. 记忆必须以用户为中心。不要把智灵当前模型、临时路径、调试状态、工具日志、文件原文当作用户记忆。
 3. 不记录密码、手机号、证件号、token、API key、地址等敏感信息。
 4. content 必须是清洗后的事实摘要，不要照抄整句，不要包含“请记住/以后你要”等命令口吻。
 5. 同一主题已有记忆或 pending_memory 已覆盖时输出 skip。

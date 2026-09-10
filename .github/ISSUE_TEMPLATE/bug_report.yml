@@ -1,5 +1,5 @@
 name: 缺陷报告
-description: 报告鲜小助中可以稳定复现的问题
+description: 报告智灵中可以稳定复现的问题
 title: "[缺陷] "
 labels:
   - bug
@@ -7,7 +7,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        感谢你帮助改进鲜小助。提交前请删除凭据、私人数据、账号标识和内部地址。
+        感谢你帮助改进智灵。提交前请删除凭据、私人数据、账号标识和内部地址。
         安全漏洞请使用私密安全报告入口，不要在这里公开。
   - type: input
     id: version
@@ -43,7 +43,7 @@ body:
       label: 复现步骤
       description: 请提供可以稳定复现问题的最短步骤。
       placeholder: |
-        1. 启动鲜小助……
+        1. 启动智灵……
         2. 打开……
         3. 执行……
         4. 观察到……

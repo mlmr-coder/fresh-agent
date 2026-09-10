@@ -237,7 +237,7 @@ pub fn instructions_md() -> &'static str {
     })
 }
 
-/// 代码模式层（鲜小助原生代码会话）：§工作环境（代码模式身份 + `{{PINVOU3_WORKSPACE_HINT}}`
+/// 代码模式层（智灵原生代码会话）：§工作环境（代码模式身份 + `{{PINVOU3_WORKSPACE_HINT}}`
 /// 工作区占位）+ ## 代码场景纪律 增量段，两段以空行分隔。
 /// 底座 `CORE_EXECUTION_PROFILE_PROMPT` 不复制进文件，由 [`instructions_code_md`]
 /// 在渲染层原样拼接——上游更新自动跟随。
@@ -295,7 +295,7 @@ pub const BASE_PROMPT_MD: &str = include_str!("../../../../resources/common/bund
 /// `reasoning_effort=off` 无 thinking,该 failure mode 不存在;回复语言由
 /// 用户消息驱动,这里只补"判断不了时的默认语言"。closer 同理。
 pub const LOCALE_PREAMBLE_ZH_HANS: &str = "## 语言要求\n\n\
-鲜小助界面语言为简体中文。跟随用户消息的语言回复;无法判断时用简体中文。\
+智灵界面语言为简体中文。跟随用户消息的语言回复;无法判断时用简体中文。\
 代码、路径、工具名、URL 保持原样。";
 
 /// pinvou3 版简体中文 locale 收尾段（替换底座 `LOCALE_CLOSER_ZH_HANS` ~660B）。
@@ -2232,7 +2232,7 @@ mod tests {
                     .as_str()
                     .unwrap()
                     .ends_with("browser-wrapper.mjs"),
-                "the session-reserved browser name must always target the 鲜小助 wrapper"
+                "the session-reserved browser name must always target the 智灵 wrapper"
             );
             assert_eq!(
                 conflict["servers"]["browser_user_3"], global_with_conflict["servers"]["browser"],
