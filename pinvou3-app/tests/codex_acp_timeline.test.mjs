@@ -563,9 +563,10 @@ try {
   assert.ok(main.includes('leadingIcon: <SessionIdentityIcons')
     && main.includes('data-testid="session-persona-icons"')
     && main.includes('<AppIcon card={persona}')
+    && main.includes('s.id === bs.activeSessionId ? bs.activePersona : s.persona')
     && main.includes('<AcpAgentLogo agentId={session.agent_id} className="h-[18px] w-[18px]"')
     && main.includes('<Clock size={18} />'),
-  'work sessions must combine app and expert identities while Codex and scheduled sessions keep their type icons');
+  'work sessions must combine app and currently attached expert identities while Codex and scheduled sessions keep their type icons');
   assert.ok(navigationComponents.includes('group flex h-11 items-center')
     && navigationComponents.includes("chat.leadingIconWide ? 'w-7' : 'w-5'"),
   'all recent-session rows keep a consistent height while expert identity pairs receive a wider icon canvas');
@@ -813,8 +814,9 @@ try {
     && main.includes('<AcpAgentLogo')
     && codexView.includes('<AcpAgentLogo'),
   'ACP sessions must keep the Codex mark and expose distinct Claude/Kimi identities');
-  assert.ok(pinvouLogo.includes("resolveAppAssetUrl('assets/brand/brand-blue.png')")
-    && chatView.includes('assistantAvatar={(')
+  assert.ok(pinvouLogo.includes('resolveAppAssetUrl(BRAND_ICON_PATH)')
+    && pinvouLogo.includes("from '../shared/brand.js'")
+    && chatView.includes('assistantAvatar={(timelineAssistantAvatar)}')
     && chatView.includes('<PinvouLogo className="h-5 w-5" title={chatViewCopy.agentName}')
     && codexView.includes('<AcpAgentLogo agentId={activeAgentId} className="h-5 w-5"'),
   'assistant avatars must use the 鲜小助 and selected ACP Agent identity marks');

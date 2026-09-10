@@ -2537,7 +2537,7 @@ fn persona_binding_survives_reopen_and_restores_runtime_once() {
 }
 
 #[test]
-fn persona_binding_recovers_legacy_events_and_explicit_removal_wins() {
+fn persona_binding_ignores_historical_events_without_current_binding() {
     let (store, _g) = isolated_store();
     let id = store
         .create_new("test-model".into(), None, std::env::temp_dir())
@@ -2549,32 +2549,18 @@ fn persona_binding_recovers_legacy_events_and_explicit_removal_wins() {
     let events = root.join("persona_events.json");
     std::fs::write(&events, r#"[{"kind":"equip","card":{"id":"missing-old-card"}},{"kind":"unequip"},{"kind":"equip","card":{"id":"pinvou-card-creator","body":"untrusted event body"}},{"kind":"card_creator_intro"}]"#).unwrap();
     let restored = reopen_store(&store).unwrap();
-    assert_eq!(
-        restored.persisted_persona_id(&id).unwrap().as_deref(),
-        Some("pinvou-card-creator"),
-        "legacy bindings are visible in history before the session is opened"
-    );
-    assert_eq!(
-        restored.active_persona_id(&id).unwrap().as_deref(),
-        Some("pinvou-card-creator")
-    );
-    let body = restored.take_pending_turn_injections(&id).unwrap();
+    assert!(restored.persisted_persona_id(&id).unwrap().is_none());
+    assert!(restored.active_persona_id(&id).unwrap().is_none());
     assert!(
-        !body
+        restored
+            .take_pending_turn_injections(&id)
+            .unwrap()
             .persona_body()
-            .unwrap()
-            .contains("untrusted event body")
-    );
-    drop(body);
-    assert!(root.join("persona.json").is_file());
-    restored.set_session_persona(&id, None, None).unwrap();
-    // Even a stale frontend re-saving old events cannot resurrect the removed card.
-    assert!(
-        reopen_store(&restored)
-            .unwrap()
-            .active_persona_id(&id)
-            .unwrap()
             .is_none()
+    );
+    assert!(
+        !root.join("persona.json").exists(),
+        "opening history must not turn a timeline event into current state"
     );
 
     let removed = store

@@ -1,6 +1,6 @@
 //! Durable expert selection belongs to the conversation, not the app bundle.
-//! Restore only the selected card ID from legacy display events; card bodies
-//! always come from the expert registry, never from the event payload.
+//! The binding file is the source of truth for the current selection; timeline
+//! events are display history and must never resurrect a removed expert.
 
 use std::io::ErrorKind;
 
@@ -26,41 +26,14 @@ fn write_binding(path: &std::path::Path, binding: &PersonaBinding) -> Result<()>
     deepseek_tui::utils::write_atomic(path, &bytes).context("save expert binding")
 }
 
-fn read_binding(root: &std::path::Path) -> Result<(PersonaBinding, bool)> {
+fn read_binding(root: &std::path::Path) -> Result<PersonaBinding> {
     let path = root.join(BINDING_FILE);
     match std::fs::read_to_string(&path) {
-        Ok(content) => Ok((
-            serde_json::from_str::<PersonaBinding>(&content).context("read expert binding")?,
-            false,
-        )),
+        Ok(content) => {
+            serde_json::from_str::<PersonaBinding>(&content).context("read expert binding")
+        }
         Err(error) if error.kind() == ErrorKind::NotFound => {
-            let mut binding = PersonaBinding { persona_id: None };
-            let mut found = false;
-            match std::fs::read_to_string(root.join("persona_events.json")) {
-                Ok(content) => {
-                    let events: Vec<serde_json::Value> =
-                        serde_json::from_str(&content).context("read legacy expert events")?;
-                    for event in events {
-                        match event.get("kind").and_then(|kind| kind.as_str()) {
-                            Some("equip") => {
-                                binding.persona_id = event
-                                    .pointer("/card/id")
-                                    .and_then(|id| id.as_str())
-                                    .map(str::to_string);
-                                found = true;
-                            }
-                            Some("unequip") => {
-                                binding.persona_id = None;
-                                found = true;
-                            }
-                            _ => {}
-                        }
-                    }
-                }
-                Err(error) if error.kind() == ErrorKind::NotFound => {}
-                Err(error) => return Err(error).context("read legacy expert events"),
-            }
-            Ok((binding, found))
+            Ok(PersonaBinding { persona_id: None })
         }
         Err(error) => Err(error).context("read expert binding"),
     }
@@ -72,7 +45,7 @@ impl SessionStore {
     pub(crate) fn persisted_persona_id(&self, id: &str) -> Result<Option<String>> {
         validate_session_id(id)?;
         let root = self.manager.sessions_dir().join(id);
-        Ok(read_binding(&root)?.0.persona_id)
+        Ok(read_binding(&root)?.persona_id)
     }
 
     /// Commit the binding before publishing it to the UI/runtime. A failed
@@ -114,17 +87,13 @@ impl SessionStore {
         self.load(id)
             .context("load session for expert restoration")?;
         let root = self.manager.sessions_dir().join(id);
-        let path = root.join(BINDING_FILE);
         let default_mode = self.resolved_default_mode(id);
         let mut states = self.mode_states.write();
         let state = Self::mode_state_entry(&mut states, id, default_mode);
         if state.persona_loaded {
             return Ok(()); // An equip/unequip completed while the session was loading.
         }
-        let (binding, migrate_legacy) = read_binding(&root)?;
-        if migrate_legacy {
-            write_binding(&path, &binding)?;
-        }
+        let binding = read_binding(&root)?;
         // Re-establish the full persona once on the first resumed turn. The
         // existing transactional injection guard handles submission failures;
         // later reads/turns keep the normal short persona anchor.

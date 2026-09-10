@@ -1434,6 +1434,9 @@ function workspaceDisplayName(path) {
       // Build chat history from sessions
       const sessionBusy = (bs && bs.sessionBusy) || {};
       const chatHistory = bs && bs.sessions ? bs.sessions.map(s => {
+        // The active working set is the freshest source after an equip/remove
+        // action; inactive rows use their persisted current binding summary.
+        const currentPersona = s.id === bs.activeSessionId ? bs.activePersona : s.persona;
         const isPlaceholder = !s.title || isDefaultChatTitle(s.title);
         const titlePresentation = isPlaceholder
           ? { text: t.newChat, attachments: [] }
@@ -1450,8 +1453,8 @@ function workspaceDisplayName(path) {
           pinned: !!s.pinned,
           pinnedAt: s.pinned_at || '',
           working: !!sessionBusy[s.id], // 多 session 并发:该 session 是否正在后台生成
-          leadingIcon: <SessionIdentityIcons persona={personaText(s.persona || null, t)} />,
-          leadingIconWide: !!s.persona,
+          leadingIcon: <SessionIdentityIcons persona={personaText(currentPersona || null, t)} />,
+          leadingIconWide: !!currentPersona,
           testId: 'regular-sidebar-item',
           menuTestId: 'regular-sidebar-menu',
         };
