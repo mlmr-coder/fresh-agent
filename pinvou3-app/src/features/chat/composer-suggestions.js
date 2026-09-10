@@ -24,7 +24,7 @@ export function insertComposerSuggestion(text, token, insertion) {
 export function composerSuggestions(kind, catalogue, query) {
   const entries = kind === 'files'
     ? catalogue.map(file => ({ id: file.path, title: file.name, description: file.path, insertion: `@${JSON.stringify(file.path)}`, kind: 'file' }))
-    : catalogue.map(skill => ({ id: `skill:${skill.name}`, title: `/${skill.title || skill.name}`, description: skill.description, aliases: [skill.name, ...(skill.aliases || [])], insertion: `/${skill.title || skill.name}`, kind: 'skill', icon: skill.icon, color: skill.color }));
+    : catalogue.map(skill => ({ id: `skill:${skill.name}`, title: `/${skill.title || skill.name}`, code: skill.name, description: skill.description, aliases: [skill.name, ...(skill.aliases || [])], insertion: `/${skill.title || skill.name}`, kind: 'skill', icon: skill.icon, color: skill.color }));
   const needle = query.toLocaleLowerCase();
   return entries.filter(entry => [entry.title, entry.description, ...(entry.aliases || [])].join(' ').toLocaleLowerCase().includes(needle));
 }

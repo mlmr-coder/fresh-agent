@@ -11,6 +11,8 @@ import { isImeComposing } from '../../shared/ime-guard.mjs';
 import { getSyntaxHighlightVersion, subscribeSyntaxHighlight } from '../../shared/syntax-highlighter.js';
 import { renderMarkdown } from '../../shared/markdown-renderer.js';
 import { AppIcon, DEPT_ORDER, deptLabelFor, personaText } from '../personas/persona-shared.jsx';
+import { PersonaChatNotice } from '../personas/PersonaChatNotice.jsx';
+import { removedPersonaName } from '../personas/persona-notice.mjs';
 import { ComposerModelSelector, ComposerToolMenu } from '../settings/composer-shared.jsx';
 import { ComposerPopover, POPOVER_SURFACE, useOutsidePointerClose } from '../../components/ComposerPopover.jsx';
 import { PinvouLogo } from '../../components/PinvouLogo.jsx';
@@ -19,7 +21,6 @@ import { ArtifactCard, localizeTool, tsToolsData, tsToolWelcomeData } from '../t
 import { RightDockPanel, useRightDockOcclusion } from '../../components/layout/RightDock.jsx';
 import { CarefulBlockedCard, PlanCard, PlanStuckCard, ToolCard, UserInputCard, cardBtnCls } from '../tools/tool-renderers.jsx';
 import {
-  ConversationActivityIndicator,
   ConversationTimeline,
   useConversationSecondClock,
 } from '../conversation/ConversationTimeline.jsx';
@@ -40,6 +41,13 @@ import {
   isSearchTool,
   restoreConversationScrollPosition,
 } from '../conversation/conversation-model.js';
+import {
+  CONVERSATION_COLUMN_CLASS,
+  CONVERSATION_COMPOSER_FOOTER_CLASS,
+  CONVERSATION_COMPOSER_INPUT_CLASS,
+  CONVERSATION_COMPOSER_SURFACE_CLASS,
+  conversationGutterStyle,
+} from '../conversation/conversation-layout.js';
 import { useComposerSuggestions } from './ComposerSuggestions.jsx';
 import { ComposerInput } from './ComposerInput.jsx';
 import { composerSkillSegments, skillIconShapes } from './composer-input-dom.js';
@@ -162,32 +170,6 @@ const MULTI_AGENT_ENABLED = can('multiAgent');
 // Shift+Enter still inserts a newline; Enter during IME composition confirms the candidate text
 // and must not also trigger submit — otherwise one Enter both commits and sends. Matches PetWindow.
 const isPlainEnter = (e) => e.key === 'Enter' && !e.shiftKey && !isImeComposing(e);
-
-// Second-clock wrapper for the composer activity indicator: the tick used to live on ChatView
-// top-level state, so while busy the whole ChatView (including all transcript coordination)
-// re-rendered once per second; the indicator is the only place showing elapsed time, and now the
-// tick re-renders just this small subtree.
-/**
- * @param {object} props - component props
- * @param {{ status: string } | null} props.turn - active conversation turn, if any
- * @param {() => void} props.onRequestAttention - scroll-to-bottom request handler
- * @param {string} props.className - extra class for the indicator
- * @param {object} props.copy - conversation copy table
- * @returns {React.ReactElement | null} the ticking activity indicator
- */
-function LiveConversationActivityIndicator({ turn, onRequestAttention, className, copy }) {
-  const running = !!turn && turn.status === 'running';
-  const now = useConversationSecondClock(running);
-  return (
-    <ConversationActivityIndicator
-      turn={turn}
-      now={now}
-      onRequestAttention={onRequestAttention}
-      className={className}
-      copy={copy}
-    />
-  );
-}
 
 const WORK_MODE_SUBTABS = [
   { key: PERSONAL_WORKBENCH_SCENE_KEY, labelKey: 'personalWorkbench', Icon: Briefcase },
@@ -690,7 +672,7 @@ const ToolWelcomeCard = ({ toolId, _theme, t, onSend }) => {
       // created only while active, cleaned up on unmount). Do not fold the second tick into the
       // global chatItems reconcile — that would re-render all of ChatView every second while a
       // background task lives (why the second clock left ChatView top level; see the comment
-      // above LiveConversationActivityIndicator).
+      // above the transcript-level process disclosure).
       const now = useConversationSecondClock(true);
       // 服务端 elapsedMs 变化（新输出触发 reconcile）时，渲染期同步换基线
       // （React "adjust state when a prop changes" 模式）；基线时间戳直接用
@@ -1296,16 +1278,9 @@ const ToolWelcomeCard = ({ toolId, _theme, t, onSend }) => {
           language: modelServiceLanguage,
           modelServiceState: chatModelServiceState,
         });
-        // Equivalent to [...turns].reverse().find(turn => turn.status === 'running'):
-        // scan backwards for the last running turn, skipping the full reversed copy.
-        let activeConversationTurn = null;
-        const turns = conversationProjection.turns;
-        for (let i = turns.length - 1; i >= 0; i--) {
-          if (turns[i].status === 'running') { activeConversationTurn = turns[i]; break; }
-        }
-        return { latestArtifactIds, latestArtifactIdsKey, lastUserId, conversationProjection, activeConversationTurn };
+        return { latestArtifactIds, latestArtifactIdsKey, lastUserId, conversationProjection };
       }, [chatItems, busy, ctxTokens, isScheduledTaskCreationChat, chatThinking, turnTimeline, activeSessionId, modelServiceLanguage, chatModelServiceState]);
-      const { latestArtifactIds, latestArtifactIdsKey, lastUserId, conversationProjection, activeConversationTurn } = derivedConversation;
+      const { latestArtifactIds, latestArtifactIdsKey, lastUserId, conversationProjection } = derivedConversation;
 
 
       // External entries can prefill the composer and focus its end.
@@ -1692,6 +1667,7 @@ const ToolWelcomeCard = ({ toolId, _theme, t, onSend }) => {
       const suggestions = useComposerSuggestions({
         text: inputText, setText: handleComposerInputChange, inputRef: composerRef,
         sessionId: activeSessionId, language: bs?.settings?.language,
+        scope: 'plain',
         copy: t.uiComposerSuggestions, disabled: isMultiAgentReadOnly,
         onManageSkills: onGotoSkills,
         skillLabels: t.uiToolStore.storeData.skills, builtinSkillTitle: t.uiSettingsView.visualDesignSkillName,
@@ -1799,9 +1775,9 @@ const ToolWelcomeCard = ({ toolId, _theme, t, onSend }) => {
           t={t}
           editable={!busy && !isMultiAgentReadOnly && item.id === lastUserId}
           conversationVariant="unified"
-          skills={suggestions.skills}
+          skills={suggestions.displaySkills}
         />
-      ), [activeSessionId, busy, isMultiAgentReadOnly, lastUserId, suggestions.skills, t, theme]);
+      ), [activeSessionId, busy, isMultiAgentReadOnly, lastUserId, suggestions.displaySkills, t, theme]);
       const handleTimelineRenderItem = useCallback((item) => {
         // reasoning items are handled by ConversationTimeline's ReasoningItem and must not be handed to
         // the legacy ChatBubble; the latter does not know the type and would return null, silently
@@ -2286,9 +2262,7 @@ const ToolWelcomeCard = ({ toolId, _theme, t, onSend }) => {
         }
       }
 
-      const responsiveGutterStyle = {
-        paddingInline: 'clamp(16px, calc((100% - 850px) / 2), 160px)',
-      };
+      const responsiveGutterStyle = conversationGutterStyle();
 
       // The two ArtifactsPanel mounts (fullscreen portal / right Dock) share the same 18-prop
       // list through this single source; isFullscreen and onToggleFullscreen are passed per
@@ -2381,7 +2355,7 @@ const ToolWelcomeCard = ({ toolId, _theme, t, onSend }) => {
             )}
 
             {!hasMessages && welcomeToolId && (
-              <div className="max-w-[850px] w-full mx-auto mt-8">
+              <div className={`${CONVERSATION_COLUMN_CLASS} mt-8`}>
                 <ToolWelcomeCard
                   toolId={welcomeToolId}
                   theme={theme}
@@ -2401,7 +2375,7 @@ const ToolWelcomeCard = ({ toolId, _theme, t, onSend }) => {
             )}
 
             {hasMessages && (
-              <div ref={conversationContentRef} className="max-w-[850px] w-full min-w-0 mx-auto space-y-4">
+              <div ref={conversationContentRef} data-testid="chat-conversation-column" className={`${CONVERSATION_COLUMN_CLASS} min-w-0 space-y-4`}>
                 <ConversationTimeline
                     turns={conversationProjection.turns}
                     copy={t.uiConversation}
@@ -2443,7 +2417,7 @@ const ToolWelcomeCard = ({ toolId, _theme, t, onSend }) => {
           {hasMessages && chatItems.some((item) => item.type === 'memory_candidate' && !item.resolved) && (
             <div className="pointer-events-none absolute inset-x-0 z-[24]"
               style={{ ...responsiveGutterStyle, bottom: (composerH ? composerH + 28 : 148) + 'px' }}>
-              <div className="max-w-[850px] w-full mx-auto flex flex-col items-end gap-3">
+              <div className={`${CONVERSATION_COLUMN_CLASS} flex flex-col items-end gap-3`}>
                 {chatItems
                   .filter((item) => item.type === 'memory_candidate' && !item.resolved)
                   .slice(-2)
@@ -2470,7 +2444,7 @@ const ToolWelcomeCard = ({ toolId, _theme, t, onSend }) => {
             className={`absolute ${isWeb ? 'bottom-2 sm:bottom-8' : 'bottom-8'} inset-x-0 z-20`}
             style={responsiveGutterStyle}
           >
-            <div className="max-w-[850px] w-full mx-auto">
+            <div className={CONVERSATION_COLUMN_CLASS}>
               {!scheduledRunContext && !conversationStarted && (
                 <HomeModeSwitcher
                   mode={pinvouMode}
@@ -2717,7 +2691,7 @@ const ToolWelcomeCard = ({ toolId, _theme, t, onSend }) => {
                 </div>
               );
             })()}
-            <div className="relative bg-white/80 dark:bg-[#161618]/85 backdrop-blur-2xl border border-black/[0.06] dark:border-white/10 rounded-[28px] shadow-lg focus-within:border-blue-400/50 dark:focus-within:border-blue-500/50 transition-colors px-4 pt-3 pb-2.5">
+            <div data-testid="chat-composer-surface" className={CONVERSATION_COMPOSER_SURFACE_CLASS}>
               <VoiceComposerPillLayer
                 voiceInput={voiceInput}
                 voiceMode={voiceMode}
@@ -2754,12 +2728,8 @@ const ToolWelcomeCard = ({ toolId, _theme, t, onSend }) => {
                 />
               )}
               <div className="flex items-center gap-2 mb-0.5">
-                <LiveConversationActivityIndicator
-                  turn={activeConversationTurn}
-                  onRequestAttention={scrollChatToBottom}
-                  copy={t.uiConversation}
-                />
-                {/* 后台 shell 任务胶囊：跟随"处理中"提示行，任务存续期间常驻（轮次结束后仍运行时也保留入口） */}
+                {/* 当前轮次状态只在正文的统一过程入口出现，避免输入框上方再显示一次“正在处理”。 */}
+                {/* 后台 shell 任务胶囊：任务存续期间常驻（轮次结束后仍运行时也保留入口）。 */}
                 <BackgroundTasksIndicator tasks={runningShellTasks} t={t} chatCopy={chatCopy} compact={composerCompact} />
               </div>
               {isMultiAgentReadOnly ? (
@@ -2792,7 +2762,7 @@ const ToolWelcomeCard = ({ toolId, _theme, t, onSend }) => {
                 onPaste={handlePaste}
                 maxLength={CHAT_INPUT_MAX_LENGTH}
                 placeholder={composerPlaceholder}
-                className="w-full bg-transparent resize-none outline-none text-gray-800 dark:text-gray-100 text-[16px] leading-relaxed min-h-[88px] overflow-y-auto hide-scrollbar placeholder:text-gray-400 dark:placeholder:text-gray-500"
+                className={CONVERSATION_COMPOSER_INPUT_CLASS}
               />
               {suggestions.menu}
               <TextareaContextMenu inputRef={composerRef} setValue={setInputText} theme={theme} t={t} />
@@ -2802,7 +2772,7 @@ const ToolWelcomeCard = ({ toolId, _theme, t, onSend }) => {
                   {t.chatInputLimitReached(CHAT_INPUT_MAX_LENGTH.toLocaleString())}
                 </div>
               )}
-              <div className="flex items-center justify-between mt-1.5 gap-2">
+              <div className={CONVERSATION_COMPOSER_FOOTER_CLASS}>
                 <div className="flex min-w-0 flex-1 items-center gap-1 overflow-visible">
                   <ComposerAttachButton t={t} compact={composerCompact} />
                   <ComposerModeChip t={t} bs={bs} compact={composerCompact} />
@@ -3178,7 +3148,7 @@ const SkillReferenceIcon = ({ name, className = '' }) => (
   </svg>
 );
 
-const UserMessageText = ({ text, skills }) => composerSkillSegments(String(text || ''), skills || []).map((segment, index) => (
+const UserMessageText = ({ text, skills }) => composerSkillSegments(String(text || ''), skills || [], true).map((segment, index) => (
   segment.name ? (
     <span key={`${segment.text}-${index}`} data-testid="user-message-skill"
       className="mx-0.5 inline-flex max-w-full align-middle items-center gap-1.5 rounded-full bg-black/[0.055] dark:bg-white/[0.10] px-2 py-0.5 text-[13px] font-medium leading-5">
@@ -3448,7 +3418,7 @@ const UserBubble = ({ item, sessionId, _theme, editable, t, conversationVariant,
     }
 
     // eslint-disable-next-line sonarjs/cognitive-complexity -- legacy bubble dispatches rendering by message type; split refactor tracked separately
-    const ChatBubble = ({ item, sessionId, theme, onPrefill, onSend, editable, onOpenEditor, t, isLatestArtifact, allowScheduledTaskDraft, conversationVariant, showAssistantActions = true }) => {
+    const ChatBubble = ({ item, sessionId, theme, onPrefill, onSend, editable, onOpenEditor, t, isLatestArtifact, allowScheduledTaskDraft, conversationVariant, skills = EMPTY_MESSAGE_SKILLS, showAssistantActions = true }) => {
       const chatCopy = t.uiChat;
       const chatViewCopy = t.uiChatView;
       // 后端持久化的记忆状态值是固定中文数据，仅在 UI 边界映射为当前语言；未识别值原样透传
@@ -3475,7 +3445,7 @@ const UserBubble = ({ item, sessionId, _theme, editable, t, conversationVariant,
       if (item.type === 'careful_blocked') return <CarefulBlockedCard item={item} t={t} />;
       if (item.type === 'user_input') return <UserInputCard item={item} t={t} />;
       if (item.type === 'user') {
-        return <UserBubble item={item} sessionId={sessionId} theme={theme} editable={editable} t={t} conversationVariant={conversationVariant} />;
+        return <UserBubble item={item} sessionId={sessionId} theme={theme} editable={editable} t={t} conversationVariant={conversationVariant} skills={skills} />;
       }
 
       if (item.type === 'card_creator_intro') {
@@ -3572,27 +3542,11 @@ const UserBubble = ({ item, sessionId, _theme, editable, t, conversationVariant,
       }
 
       if (item.type === 'persona_equip') {
-        const c = item.card || {};
-        const deptLabel = deptLabelFor(t, c.dept);
-        const cd = personaText(c, t);
-        return (
-          <div className="flex flex-col gap-1.5" style={{ fontFamily:'-apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Microsoft YaHei", sans-serif' }}>
-            <div className="text-[12px] font-medium" style={{ color: '#8E8E93' }}>{t.cpEquipBubbleSys}</div>
-            <div className="rounded-[14px] p-4 max-w-[560px]" style={{ background: theme === 'dark' ? '#1C1C1E' : '#F2F2F7' }}>
-              <div className="flex items-center gap-3 mb-3">
-                <AppIcon card={c} cls="w-11 h-11 rounded-[12px]" fb={22} />
-                <div className="text-[15px] font-semibold leading-snug" style={{ color: theme === 'dark' ? '#fff' : '#000' }}>{t.cpEquipBubbleTitle(cd.name)}</div>
-              </div>
-              <div className="text-[13px] space-y-1" style={{ color: theme === 'dark' ? '#C7C7CC' : '#3C3C43' }}>
-                <div>{t.cpDept}: <span style={{ color: theme === 'dark' ? '#0A84FF' : '#007AFF', fontWeight: 600 }}>{deptLabel}</span></div>
-                <div>{t.cpDescLabel}: {cd.description}</div>
-              </div>
-              <div className="text-[12px] mt-2.5" style={{ color: '#8E8E93' }}>{t.cpEquipBubbleNote}</div>
-            </div>
-          </div>
-        );
+        return <PersonaChatNotice card={item.card} t={t} />;
       }
       if (item.type === 'system') {
+        const removedName = removedPersonaName(item);
+        if (removedName !== null) return <PersonaChatNotice removedName={removedName} t={t} />;
         return (
           <div className="flex justify-center">
             <div className={`text-[13px] px-4 py-1.5 rounded-full ${'bg-[#F0F4F9] text-[#757575] dark:bg-[#1E1F20] dark:text-[#8E8E8E]'}`}>

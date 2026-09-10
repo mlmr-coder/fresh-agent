@@ -1,8 +1,34 @@
 use crate::features::{assistant::composer, sessions::SessionStore};
+use std::path::Path;
 
 #[tauri::command]
-pub fn list_composer_skills(language: Option<String>) -> Vec<composer::ComposerSkill> {
-    composer::skills(language.as_deref().unwrap_or("zh"))
+pub fn list_composer_skills(
+    language: Option<String>,
+    scope: Option<String>,
+    workspace_path: Option<String>,
+) -> Result<Vec<composer::ComposerSkill>, String> {
+    use crate::core::session_mode::SessionMode;
+    let scope = match scope.as_deref() {
+        Some(value) if !value.trim().is_empty() => SessionMode::from_scope_str(value)
+            .ok_or_else(|| format!("未知的技能 scope '{value}'，仅支持 \"plain\" 或 \"code\""))?,
+        _ => SessionMode::Plain,
+    };
+    Ok(composer::skills_for_scope(
+        language.as_deref().unwrap_or("zh"),
+        scope,
+        workspace_path.as_deref().map(Path::new),
+    ))
+}
+
+#[tauri::command]
+pub fn list_composer_display_skills(
+    language: Option<String>,
+    workspace_path: Option<String>,
+) -> Result<Vec<composer::ComposerSkill>, String> {
+    Ok(composer::display_skills(
+        language.as_deref().unwrap_or("zh"),
+        workspace_path.as_deref().map(Path::new),
+    ))
 }
 
 #[tauri::command]
@@ -20,6 +46,7 @@ pub struct ComposerConnector {
     installed: bool,
     connected: bool,
     companion_skills: Vec<String>,
+    icon_data_url: Option<String>,
 }
 
 #[tauri::command]
@@ -42,6 +69,9 @@ pub async fn list_composer_connectors() -> Vec<ComposerConnector> {
                     .is_ok_and(|auth| auth.status == "connected");
             }
             Some(ComposerConnector {
+                icon_data_url: crate::features::marketplace::bundle::bundle_icon_data_url(
+                    &bundle.id,
+                ),
                 id: bundle.id,
                 name: bundle.name,
                 installed,

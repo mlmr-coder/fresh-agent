@@ -120,7 +120,12 @@ const expectedProtocolHashes = {
   // the browser lane's bilingual mapping instead of only the message text.
   remoteControl: 'c8eb6ece7e5eac8349420282b0ae5487567f5863186df9a8fdeaea488e278b80',
   scheduled: '7d6ca9783925a5071a364097ebdf0112511f9503b5e4534346b9fda6873ec036',
-  sessions: '7dd63b9cb4ab7b7e03f81abc0822baa9bd1dd61f27fa8b8d2df009126d1c6c60',
+  // Recomputed after 10eaea4 ("show expert identity in session list") reworked
+  // the session:persona_changed listener: the active-expert refresh and the
+  // history list refresh are now two awaited steps, and the failure log lines
+  // (part of the hashed source) were split accordingly. No invoke surface was
+  // added or removed, only the listen handler body and its wording.
+  sessions: 'cc3cdc78bf9a9f5a91e0d1f800ac119f2a0fa68eeb59c45efedc8e192cffc430',
   settings: 'a44929caff59641eb059f28885f1674d4e277412526d31c1d3ddfd75e44d0496',
   // Recomputed for the hourly update checker and the complete platform
   // download/install flow. The updater now binds one immutable manifest

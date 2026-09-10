@@ -18,13 +18,41 @@ pub struct ComposerSkill {
 }
 
 pub fn skills(language: &str) -> Vec<ComposerSkill> {
+    skills_for_scope(
+        language,
+        crate::features::marketplace::ConnectorScope::Plain,
+        None,
+    )
+}
+
+/// Build the picker from the same scope-specific skill set that is materialized
+/// into the target conversation. Code mode must never advertise a skill that is
+/// disabled in its independent capability scope.
+pub fn skills_for_scope(
+    language: &str,
+    scope: crate::features::marketplace::ConnectorScope,
+    project_workspace: Option<&Path>,
+) -> Vec<ComposerSkill> {
     let metadata = crate::features::marketplace::skill_marketplace::SkillMarketplaceManager::new()
         .list_skills();
     catalogue_from_sources(
-        super::skill_materialization::enabled_skills_for(
-            crate::features::marketplace::ConnectorScope::Plain,
-            None,
-        ),
+        super::skill_materialization::enabled_skills_for(scope, project_workspace),
+        &metadata,
+        &connector_bundles()
+            .into_iter()
+            .flat_map(|bundle| bundle.skills)
+            .collect(),
+        language,
+    )
+}
+
+/// Presentation-only catalogue for historical messages. It includes installed
+/// independent skills even when the active mode currently disables them.
+pub fn display_skills(language: &str, project_workspace: Option<&Path>) -> Vec<ComposerSkill> {
+    let metadata = crate::features::marketplace::skill_marketplace::SkillMarketplaceManager::new()
+        .list_skills();
+    catalogue_from_sources(
+        super::skill_materialization::installed_skills_for_display(project_workspace),
         &metadata,
         &connector_bundles()
             .into_iter()
@@ -253,8 +281,21 @@ mod tests {
             }
             assert_eq!(scope::load_disabled_bundles_for(ConnectorScope::Code), ids);
             assert!(
-                super::super::skill_materialization::enabled_skills_for(ConnectorScope::Code, None)
-                    .is_empty()
+                skills_for_scope("zh", ConnectorScope::Code, None).is_empty(),
+                "code picker must follow the independent code-scope switches"
+            );
+            assert_eq!(
+                display_skills("zh", None).len(),
+                4,
+                "history presentation must retain installed skills disabled in code scope"
+            );
+            scope::save_disabled_bundles_for(ConnectorScope::Code, &[]);
+            let code_catalogue = skills_for_scope("zh", ConnectorScope::Code, None);
+            assert_eq!(code_catalogue.len(), 3);
+            assert!(
+                !code_catalogue
+                    .iter()
+                    .any(|skill| skill.name == "visual-design")
             );
         });
         // SAFETY: the shared environment lock is still held, including on panic.

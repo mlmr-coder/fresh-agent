@@ -1,21 +1,25 @@
+import { skillReferenceNames } from './skill-display-catalogue.js';
+
 // Skills remain ordinary /name references in drafts and outgoing messages.
 // Only the editor renders them as atomic inline labels.
-export function composerSkillSegments(value, skills) {
-  const names = [...new Set(skills.map(skill => skill.title || skill.name).filter(Boolean))]
-    .sort((a, b) => b.length - a.length);
+export function composerSkillSegments(value, skills, includeReferences = false) {
+  const references = (Array.isArray(skills) ? skills : []).flatMap(skill => (
+    (includeReferences ? skillReferenceNames(skill) : [skill.title || skill.name].filter(Boolean))
+      .map(name => ({ name, skill }))
+  )).sort((a, b) => b.name.length - a.name.length);
   const segments = [];
   let plain = 0;
   for (let at = 0; at < value.length; at += 1) {
     if (value[at] !== '/') continue;
     const word = value.slice(0, at).split(/\s/u).pop();
     if (word.includes('/') || word.includes('\\') || word.endsWith(':')) continue;
-    const name = names.find(title => value.startsWith(title, at + 1)
-      && (at + title.length + 1 === value.length || /\s/u.test(value[at + title.length + 1])));
-    if (!name) continue;
+    const reference = references.find(candidate => value.startsWith(candidate.name, at + 1)
+      && (at + candidate.name.length + 1 === value.length || /\s/u.test(value[at + candidate.name.length + 1])));
+    if (!reference) continue;
     if (at > plain) segments.push({ text: value.slice(plain, at) });
-    const skill = skills.find(candidate => (candidate.title || candidate.name) === name);
-    segments.push({ text: `/${name}`, name, skill });
-    at += name.length;
+    const displayName = reference.skill.title || reference.skill.name || reference.name;
+    segments.push({ text: `/${reference.name}`, name: displayName, reference: reference.name, skill: reference.skill });
+    at += reference.name.length;
     plain = at + 1;
   }
   if (plain < value.length) segments.push({ text: value.slice(plain) });

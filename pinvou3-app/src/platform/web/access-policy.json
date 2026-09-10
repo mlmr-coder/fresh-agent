@@ -68,6 +68,7 @@
     "kb_type_counts",
     "list_deliverable_index",
     "list_composer_skills",
+    "list_composer_display_skills",
     "list_composer_files",
     "list_composer_connectors",
     "list_marketplace_skills",

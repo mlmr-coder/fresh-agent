@@ -196,6 +196,14 @@ for (const command of [
   assert.equal(allowed.has(command), true, `${command} must be allowed on Web (KB import controls)`);
 }
 
+// 历史消息的 /skill 标签走独立展示目录（list_composer_display_skills），不依赖
+// 当前模式启用列表：Web 端 localStorage 缓存通常为空，若该命令不在白名单，重开会话
+// 时旧消息里的技能引用会静默退化成普通文本。与 list_composer_skills（输入框候选）
+// 成对放行，二者缺一即出现"过去能渲染、现在变纯文本"的回归。
+for (const command of ['list_composer_skills', 'list_composer_display_skills']) {
+  assert.equal(allowed.has(command), true, `${command} must be allowed on Web (composer skill catalogue)`);
+}
+
 // Memory organize is a global action (no session scope, same surface as
 // get_memory_overview): the settings "AI 整理记忆" (AI organize memory) button and
 // the "上次整理" (last organized) history read must work on WebUI too; missing
@@ -722,7 +730,9 @@ assert.match(composerShared, /const toolSwitchDisabled = !canMutateToolStore \|\
 // code scope 保持只增不减 + 未提交可撤销；普通聊天由后端热刷能力目录和规则，
 // 因此不套活动会话的关闭锁。
 assert.match(composerShared, /const removalLocked = toolScope === 'code' && !!activeSessionIdProp;/);
-assert.match(composerShared, /if \(toolSwitchDisabled \|\| \(removalLocked && enabled && !pending\.ids\.has\(id\)\)\) return;/);
+// savingToolRef 是防重入锁（保存中忽略二次点击），与能力门禁是两个独立前置条件；
+// 契约只约束能力门禁与 code scope 锁必须同时生效，故允许它在前。
+assert.match(composerShared, /if \((?:savingToolRef\.current \|\| )?toolSwitchDisabled \|\| \(removalLocked && enabled && !pending\.ids\.has\(id\)\)\) return;/);
 assert.match(composerShared, /if \(toolSwitchDisabled \|\| \(removalLocked && projectSkillsEnabled && !pending\.projectSkills\)\) return;/);
 assert.match(composerShared, /if \(enabled\) pending\.ids\.delete\(id\); else pending\.ids\.add\(id\);/);
 assert.match(composerShared, /window\.addEventListener\('pinvou:chat-round-committed', onCommitted\)/);

@@ -1275,6 +1275,7 @@ pub fn run() {
             commands::sessions::get_session_steered_messages,
             commands::sessions::list_workspace_files,
             commands::composer::list_composer_skills,
+            commands::composer::list_composer_display_skills,
             commands::composer::list_composer_files,
             commands::composer::list_composer_connectors,
             commands::runtime::cancel_generation,

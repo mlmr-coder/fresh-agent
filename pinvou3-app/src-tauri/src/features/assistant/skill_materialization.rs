@@ -114,6 +114,27 @@ pub fn enabled_skills_for(
     out
 }
 
+/// All installed skill sources for presentation metadata. Unlike
+/// `enabled_skills_for`, this deliberately ignores mode switches: disabling a
+/// capability changes future execution, but must not rewrite how an existing
+/// `/skill-name` reference is shown in conversation history.
+pub fn installed_skills_for_display(project_workspace: Option<&Path>) -> Vec<(String, PathBuf)> {
+    let mut seen: HashSet<String> = HashSet::new();
+    let mut out: Vec<(String, PathBuf)> = Vec::new();
+    let disabled = HashSet::new();
+    if project_skills_enabled() {
+        if let Some(workspace) = project_workspace {
+            for src in project_skill_source_dirs(workspace) {
+                collect_source_skills(&src, &disabled, &mut seen, &mut out);
+            }
+        }
+    }
+    for src in skill_source_dirs() {
+        collect_source_skills(&src, &disabled, &mut seen, &mut out);
+    }
+    out
+}
+
 /// 枚举单个来源目录的技能（first-wins 同名去重 + 禁用过滤）。
 fn collect_source_skills(
     src: &Path,

@@ -3,7 +3,7 @@ import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, use
 import { createPortal } from 'react-dom';
 import { isImeComposing } from '../../shared/ime-guard.mjs';
 import {
-  Brain, Check, ChevronDown, FileText, FolderOpen, GitBranch, Monitor, Paperclip,
+  Brain, Check, ChevronDown, FileText, FolderOpen, GitBranch, Monitor,
   Plus, RefreshCw, Send, Sparkles, StopCircle, Upload, User,
 } from '../../components/icons.jsx';
 import { AcpAgentLogo } from './AcpAgentLogo.jsx';
@@ -84,7 +84,6 @@ import {
   useDialogFocusRestore,
 } from './RewindChip.jsx';
 import {
-  ConversationActivityIndicator,
   ConversationMarkdown,
   ConversationStatusBadge,
   ConversationTurn,
@@ -101,6 +100,9 @@ import {
   ComposerKbSelector,
   ComposerModeChip,
 } from '../chat/composer-controls.jsx';
+import { useComposerSuggestions } from '../chat/ComposerSuggestions.jsx';
+import { ComposerInput } from '../chat/ComposerInput.jsx';
+import { CHAT_INPUT_MAX_LENGTH } from '../chat/chat-input-limit.js';
 import {
   VoiceComposerButton,
   VoiceEditPreview,
@@ -123,6 +125,13 @@ import {
   isSearchTool,
   restoreConversationScrollPosition,
 } from '../conversation/conversation-model.js';
+import {
+  CONVERSATION_COLUMN_CLASS,
+  CONVERSATION_COMPOSER_FOOTER_CLASS,
+  CONVERSATION_COMPOSER_INPUT_CLASS,
+  CONVERSATION_COMPOSER_SURFACE_CLASS,
+  conversationGutterStyle,
+} from '../conversation/conversation-layout.js';
 import { QuestionChoiceCard } from '../conversation/QuestionChoiceCard.jsx';
 import { PlanLayer, ToolCard, cardBoxCls, cardBtnCls } from '../tools/tool-renderers.jsx';
 import { notifyChatRoundCommitted } from '../tools/tool-events.js';
@@ -710,6 +719,7 @@ export function CodexAcpView({
   onOpenSettingsSection,
   bs = null,
   onGotoTools,
+  onGotoSkills,
   onGotoModelSettings,
   onGotoSettings,
   fixedSession = false,
@@ -1028,6 +1038,23 @@ export function CodexAcpView({
   // 原生（智灵 Engine）代码会话：发消息走 chat 命令 + chat:* 事件，会话状态按
   // session 缓存在 lane Map 里（后台会话的 turn 也能继续推进，切回不丢流式内容）。
   const isNativeAgent = activeAgentId === 'pinvou';
+  const codeSkillWorkspacePath = String(
+    activeSession?.workspace_path || draftWorkspacePath || '',
+  ).trim() || null;
+  const codeSuggestions = useComposerSuggestions({
+    text: draft,
+    setText: setDraft,
+    inputRef: voiceComposerTextareaRef,
+    sessionId: activeId || `code-draft-${draftEpoch}`,
+    language: bs?.settings?.language,
+    scope: 'code',
+    workspacePath: codeSkillWorkspacePath,
+    copy: t.uiComposerSuggestions,
+    disabled: !isNativeAgent,
+    onManageSkills: onGotoSkills,
+    skillLabels: t.uiToolStore.storeData.skills,
+    builtinSkillTitle: t.uiSettingsView.visualDesignSkillName,
+  });
   const nativeLanesRef = useRef(new Map());
   const [nativeLaneTick, setNativeLaneTick] = useState(0);
   const nativeSessionIdsRef = useRef(new Set());
@@ -1188,15 +1215,6 @@ export function CodexAcpView({
       setRewindUndoEntry(current => (current && current.reloadFailed ? current : null));
     }
   }, [rewindUndoState]);
-  // Equivalent to [...visibleTurns].reverse().find(status === 'running'): scan backwards for the last
-  // running turn, memoized on the turns reference (both turns branches come from memoized projections,
-  // and the draft empty state uses the module-level constant array), so no reversed copy is rebuilt per render.
-  const activeConversationTurn = useMemo(() => {
-    for (let index = visibleTurns.length - 1; index >= 0; index -= 1) {
-      if (visibleTurns[index].status === 'running') return visibleTurns[index];
-    }
-    return null;
-  }, [visibleTurns]);
   // 原生车道底栏控件的展示值（归属保护：refresh 返回前按默认/暂存显示；
   // 默认 = 全局 code_last_mode，从未用过 code 模式 → Plan 只读）。
   const nativeDraftControlsHandoff = nativeDraftControlsHandoffRef.current?.sessionId === activeId
@@ -3253,7 +3271,7 @@ export function CodexAcpView({
             : codexCopy.compactDone;
         return (
           <div className="px-1 text-[11px] text-gray-400">
-            {label}{legacy.text ? ` · ${legacy.text}` : ''}
+            {label}{legacy.compactAuto ? ` · ${codexCopy.compactAuto}` : ''}{legacy.text ? ` · ${legacy.text}` : ''}
           </div>
         );
       }
@@ -3449,8 +3467,8 @@ export function CodexAcpView({
 
         <div className="flex-1 min-h-0 flex">
         <div className="relative min-w-0 flex-1 min-h-0 flex flex-col">
-        <div ref={scroller} className="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
-          <div ref={conversationContentRef} className="w-full max-w-[920px] min-h-full mx-auto px-6 py-6 flex flex-col gap-7">
+        <div ref={scroller} style={conversationGutterStyle()} className="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
+          <div ref={conversationContentRef} data-testid="codex-conversation-column" className={`${CONVERSATION_COLUMN_CLASS} min-h-full min-w-0 py-6 flex flex-col gap-4`}>
             {workspaceUnavailable ? (
               <div
                 data-testid="codex-workspace-unavailable"
@@ -3540,6 +3558,7 @@ export function CodexAcpView({
                       turn={turn}
                       now={now}
                       copy={t.uiConversation}
+                      groupProcess
                       pendingByTool={pendingByTool}
                       onRespond={respond}
                       responding={responding}
@@ -3596,7 +3615,10 @@ export function CodexAcpView({
           </div>
         </div>
 
-        <div className={`relative shrink-0 px-6 pt-2 ${activeId ? 'pb-5' : 'pb-[60px]'}`}>
+        <div
+          className={`relative shrink-0 pt-2 ${isWeb ? 'pb-2 sm:pb-8' : 'pb-8'}`}
+          style={conversationGutterStyle()}
+        >
           {showScrollBottom && (
             <div className="pointer-events-none absolute inset-x-0 bottom-full z-20 flex justify-center pb-2">
               <button
@@ -3614,7 +3636,7 @@ export function CodexAcpView({
               </button>
             </div>
           )}
-          <div className={`w-full mx-auto ${activeId ? 'max-w-[920px]' : 'max-w-[800px]'}`}>
+          <div className={CONVERSATION_COLUMN_CLASS}>
             {!activeId && (
               <HomeModeSwitcher
                 mode="code"
@@ -3653,7 +3675,7 @@ export function CodexAcpView({
               onCancel={handleNativeVoiceCancel}
               onClose={handleNativeVoiceClose}
             />
-            <div className="relative rounded-[24px] border border-black/[0.08] dark:border-white/10 bg-white/85 dark:bg-[#1B1C1E]/90 backdrop-blur-xl shadow-lg px-4 pt-3 pb-2.5 focus-within:border-blue-400/50">
+            <div data-testid="codex-composer-surface" className={CONVERSATION_COMPOSER_SURFACE_CLASS}>
               <VoiceComposerPillLayer
                 voiceInput={nativeVoiceInput}
                 voiceMode={nativeVoiceMode}
@@ -3667,13 +3689,6 @@ export function CodexAcpView({
                 onApply={() => nativeVoice.applyVoiceEditPreview()}
                 onApplyAndSend={() => nativeVoice.applyVoiceEditPreview({ send: true })}
                 onCancel={nativeVoice.cancelVoiceEditPreview}
-              />
-              <ConversationActivityIndicator
-                turn={activeConversationTurn}
-                now={now}
-                onRequestAttention={scrollConversationToBottom}
-                className="mb-0.5"
-                copy={t.uiConversation}
               />
               <AttachmentChips
                 attachments={attachments}
@@ -3723,7 +3738,15 @@ export function CodexAcpView({
                   ))}
                 </div>
               )}
-              <textarea ref={voiceComposerTextareaRef} value={draft} onChange={event => setDraft(event.target.value)}
+              <ComposerInput
+                ref={voiceComposerTextareaRef}
+                data-testid="codex-composer-input"
+                value={draft}
+                skills={isNativeAgent ? codeSuggestions.skills : []}
+                resetKey={`${activeId || 'code-draft'}:${draftEpoch}:${activeAgentId}`}
+                onChange={event => setDraft(event.target.value)}
+                onSelect={codeSuggestions.onSelect}
+                {...codeSuggestions.inputProps}
                 onPaste={handlePaste}
                 onKeyDown={event => {
                   if (nativeVoice.editPreview) {
@@ -3738,6 +3761,7 @@ export function CodexAcpView({
                       return;
                     }
                   }
+                  if (isNativeAgent && codeSuggestions.onKeyDown(event)) return;
                   // 输入法合成期间(例如中文输入法敲回车确认候选词)不要触发发送,
                   // 否则一次回车会既上屏又发送。与 ChatView / PetWindow 保持一致。
                   if (event.key === 'Enter' && !event.shiftKey && !isImeComposing(event)) {
@@ -3745,12 +3769,15 @@ export function CodexAcpView({
                     if (!sessionSyncing) send();
                   }
                 }}
+                maxLength={CHAT_INPUT_MAX_LENGTH}
                 placeholder={codexCopy.placeholder}
-                rows={1} className="w-full min-h-[48px] max-h-48 resize-none bg-transparent outline-none text-[15px] leading-6 placeholder:text-gray-400" />
-              <div data-testid="codex-composer-footer" className="flex items-center justify-between mt-1">
-                <div className="flex min-w-0 flex-wrap items-center gap-2 text-[10px] text-gray-400">
+                className={CONVERSATION_COMPOSER_INPUT_CLASS}
+              />
+              {isNativeAgent && codeSuggestions.menu}
+              <div data-testid="codex-composer-footer" className={CONVERSATION_COMPOSER_FOOTER_CLASS}>
+                <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1 overflow-visible text-[10px] text-gray-400">
                   {!activeId && (
-                    <div className="relative min-w-0">
+                    <div className="relative order-2 min-w-0">
                       <button
                         type="button"
                         ref={workspaceMenuTriggerRef}
@@ -3799,7 +3826,7 @@ export function CodexAcpView({
                       )}
                     </div>
                   )}
-                  <div className="relative">
+                  <div className="relative order-1">
                     <button
                       ref={attachmentMenuTriggerRef}
                       type="button"
@@ -3811,7 +3838,7 @@ export function CodexAcpView({
                       title={codexCopy.addAttachment}
                       aria-label={codexCopy.addAttachment}
                     >
-                      <Paperclip size={18} />
+                      <Plus size={20} />
                     </button>
                     <input
                       ref={deviceFileInputRef}
@@ -3853,7 +3880,7 @@ export function CodexAcpView({
                   {!isNativeAgent && (
                     <button type="button" ref={commandMenuTriggerRef} onClick={() => setCommandOpen(value => !value)}
                       disabled={!availableCommands.length}
-                      className={`h-7 px-2 rounded-lg text-[11px] font-mono hover:bg-black/[0.05] dark:hover:bg-white/[0.07] ${
+                      className={`order-3 h-7 px-2 rounded-lg text-[11px] font-mono hover:bg-black/[0.05] dark:hover:bg-white/[0.07] ${
                         // 父容器是 text-gray-400，可用态必须显式加深，否则与禁用态肉眼无差别。
                         availableCommands.length
                           ? 'font-semibold text-gray-900 dark:text-gray-100'
@@ -3867,7 +3894,7 @@ export function CodexAcpView({
                     // 显式会话态驱动 props 绕开 bridge 聊天 active 绑定）；行为（直调
                     // per-session 命令、草稿暂存、busy 禁用、归属保护）不变。Plan 说明：
                     // 原生车道已接 plan_snapshot/plan_ready，切 Plan 后方案以审批卡呈现。
-                    <div data-testid="native-composer-controls" className="flex min-w-0 flex-wrap items-center gap-2">
+                    <div data-testid="native-composer-controls" className="order-3 flex min-w-0 flex-wrap items-center gap-1">
                       <ComposerModeChip
                         t={t}
                         bs={bs}
@@ -3875,26 +3902,12 @@ export function CodexAcpView({
                         busy={busy || working}
                         onSwitch={switchNativeMode}
                       />
-                      {nativeModelChoices.length > 0 && (
-                        <ComposerModelSelector
-                          t={t}
-                          bs={bs}
-                          onGotoSettings={onGotoModelSettings}
-                          sessionId={activeId}
-                          sessionModelId={nativeSessionModelId}
-                          busy={busy || working}
-                          onSwitchModel={(sessionId, modelId) => switchNativeModel(sessionId, String(modelId))}
-                          multiAgentEnabled={nativeMultiAgentEnabled}
-                          multiAgentAvailable={nativeMultiAgentAvailable}
-                          onToggleMultiAgent={switchNativeMultiAgent}
-                        />
-                      )}
                       <ComposerToolMenu
                         t={t}
                         onGotoTools={onGotoTools}
                         compact={false}
                         activeSkill={null}
-                        triggerVariant="pill"
+                        triggerVariant="capability-groups"
                         triggerTestId="native-tools"
                         scope="code"
                         activeSessionId={activeId}
@@ -3906,62 +3919,10 @@ export function CodexAcpView({
                         onMount={mountNativeKb}
                         onUnmount={unmountNativeKb}
                       />
-                      {activeId && nativeTokensInput > 0 && (
-                        // The usage chip is also the manual-compaction action. Its background
-                        // shows the percentage while the tooltip carries the full description.
-                        <button
-                          type="button"
-                          data-testid="native-usage-chip"
-                          onClick={() => compactNativeSession().catch(showError)}
-                          disabled={busy || working || nativeCompacting}
-                          title={codexCopy.nativeUsageTitle(formatCompactCount(nativeTokensInput), nativeCtxPct)}
-                          aria-label={codexCopy.nativeUsageTitle(formatCompactCount(nativeTokensInput), nativeCtxPct)}
-                          className="relative inline-flex h-8 items-center gap-1.5 overflow-hidden rounded-xl border border-black/[0.07] bg-black/[0.025] px-2.5 text-[11px] font-semibold text-[#1F1F1F] transition-all hover:-translate-y-px hover:shadow-sm disabled:cursor-default disabled:opacity-50 dark:border-white/[0.09] dark:bg-white/[0.055] dark:text-[#E8EAED]"
-                        >
-                          {nativeCtxPct != null && (
-                            <span
-                              aria-hidden="true"
-                              className="absolute inset-y-0 left-0 bg-blue-500/15 dark:bg-blue-400/20"
-                              style={{ width: `${nativeCtxPct}%` }}
-                            />
-                          )}
-                          <span className="relative">{nativeCompacting ? codexCopy.compactStart : formatCompactCount(nativeTokensInput)}</span>
-                        </button>
-                      )}
-                      {nativeMemoryItems.length > 0 && (
-                        // 记忆轻量展示：条数徽标 + 点击弹层列出本会话注入的记忆条目
-                        // （不照搬 work 的完整记忆面板；无条目时不占位）。
-                        <div className="relative min-w-0">
-                          <button
-                            type="button"
-                            ref={memoryTriggerRef}
-                            data-testid="native-memory-badge"
-                            onClick={() => setMemoryOpen(value => !value)}
-                            title={codexCopy.nativeMemoryTitle}
-                            aria-label={codexCopy.nativeMemoryTitle}
-                            aria-expanded={memoryOpen}
-                            className="inline-flex h-8 items-center gap-1.5 rounded-xl border border-black/[0.07] bg-black/[0.025] px-2.5 text-[11px] font-semibold text-[#1F1F1F] transition-all hover:-translate-y-px hover:shadow-sm dark:border-white/[0.09] dark:bg-white/[0.055] dark:text-[#E8EAED]"
-                          >
-                            <Brain size={13} className="shrink-0 text-gray-400" />
-                            {`${codexCopy.nativeMemory} ${nativeMemoryItems.length}`}
-                          </button>
-                          {memoryOpen && (
-                            <div ref={memoryPanelRef} data-testid="native-memory-panel" className="absolute bottom-full left-0 z-40 mb-2 max-h-72 w-[320px] max-w-[calc(100vw-32px)] overflow-y-auto rounded-2xl border border-black/[0.08] bg-white/95 p-2 shadow-xl backdrop-blur-xl dark:border-white/10 dark:bg-[#202124]/95">
-                              <div className="px-2 py-1 text-[10px] uppercase tracking-wider text-gray-400">{codexCopy.nativeMemoryTitle}</div>
-                              {nativeMemoryItems.map((item, index) => (
-                                <div key={item.id || `memory-${index}`} className="rounded-xl px-3 py-2">
-                                  <span className="block text-[10px] font-medium text-gray-400">{nativeMemoryKindLabel(item.kind)}</span>
-                                  <span className="mt-0.5 block text-[12px] text-gray-700 dark:text-gray-200">{item.text}</span>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      )}
                     </div>
                   )}
                   {!isNativeAgent && (
-                  <div className="relative min-w-0">
+                  <div className="relative order-4 min-w-0">
                     <button
                       type="button"
                       ref={accountMenuTriggerRef}
@@ -4042,7 +4003,7 @@ export function CodexAcpView({
                   </div>
                   )}
                   {composerControlsVisible && !isNativeAgent && (
-                    <div data-testid="codex-composer-configs" className="flex flex-wrap items-center gap-2">
+                    <div data-testid="codex-composer-configs" className="order-5 flex flex-wrap items-center gap-2">
                       {codexRelayNoModel && (
                         <span className="text-[11px] opacity-60">{codexCopy.relayNoModelHint}</span>
                       )}
@@ -4116,41 +4077,106 @@ export function CodexAcpView({
                     </div>
                   )}
                 </div>
+                {isNativeAgent && activeId && nativeTokensInput > 0 && (
+                  // Match Work's right-side context position. Automatic compaction stays the
+                  // default; clicking this compact usage chip only runs it earlier.
+                  <button
+                    type="button"
+                    data-testid="native-usage-chip"
+                    onClick={() => compactNativeSession().catch(showError)}
+                    disabled={busy || working || nativeCompacting}
+                    title={codexCopy.nativeUsageTitle(formatCompactCount(nativeTokensInput), nativeCtxPct)}
+                    aria-label={codexCopy.nativeUsageTitle(formatCompactCount(nativeTokensInput), nativeCtxPct)}
+                    className="relative inline-flex h-8 shrink-0 items-center gap-1.5 overflow-hidden rounded-xl border border-black/[0.07] bg-black/[0.025] px-2.5 text-[11px] font-semibold text-[#1F1F1F] transition-all hover:-translate-y-px hover:shadow-sm disabled:cursor-default disabled:opacity-50 dark:border-white/[0.09] dark:bg-white/[0.055] dark:text-[#E8EAED]"
+                  >
+                    {nativeCtxPct != null && (
+                      <span
+                        aria-hidden="true"
+                        className="absolute inset-y-0 left-0 bg-blue-500/15 dark:bg-blue-400/20"
+                        style={{ width: `${nativeCtxPct}%` }}
+                      />
+                    )}
+                    <span className="relative">{nativeCompacting ? codexCopy.compactStart : formatCompactCount(nativeTokensInput)}</span>
+                  </button>
+                )}
+                {isNativeAgent && nativeMemoryItems.length > 0 && (
+                  <div className="relative min-w-0 shrink-0">
+                    <button
+                      type="button"
+                      ref={memoryTriggerRef}
+                      data-testid="native-memory-badge"
+                      onClick={() => setMemoryOpen(value => !value)}
+                      title={codexCopy.nativeMemoryTitle}
+                      aria-label={codexCopy.nativeMemoryTitle}
+                      aria-expanded={memoryOpen}
+                      className="inline-flex h-8 items-center gap-1.5 rounded-xl border border-black/[0.07] bg-black/[0.025] px-2.5 text-[11px] font-semibold text-[#1F1F1F] transition-all hover:-translate-y-px hover:shadow-sm dark:border-white/[0.09] dark:bg-white/[0.055] dark:text-[#E8EAED]"
+                    >
+                      <Brain size={13} className="shrink-0 text-gray-400" />
+                      {`${codexCopy.nativeMemory} ${nativeMemoryItems.length}`}
+                    </button>
+                    {memoryOpen && (
+                      <div ref={memoryPanelRef} data-testid="native-memory-panel" className="absolute bottom-full right-0 z-40 mb-2 max-h-72 w-[320px] max-w-[calc(100vw-32px)] overflow-y-auto rounded-2xl border border-black/[0.08] bg-white/95 p-2 shadow-xl backdrop-blur-xl dark:border-white/10 dark:bg-[#202124]/95">
+                        <div className="px-2 py-1 text-[10px] uppercase tracking-wider text-gray-400">{codexCopy.nativeMemoryTitle}</div>
+                        {nativeMemoryItems.map((item, index) => (
+                          <div key={item.id || `memory-${index}`} className="rounded-xl px-3 py-2">
+                            <span className="block text-[10px] font-medium text-gray-400">{nativeMemoryKindLabel(item.kind)}</span>
+                            <span className="mt-0.5 block text-[12px] text-gray-700 dark:text-gray-200">{item.text}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+                {isNativeAgent && nativeModelChoices.length > 0 && (
+                  <ComposerModelSelector
+                    t={t}
+                    bs={bs}
+                    onGotoSettings={onGotoModelSettings}
+                    sessionId={activeId}
+                    sessionModelId={nativeSessionModelId}
+                    busy={busy || working}
+                    onSwitchModel={(sessionId, modelId) => switchNativeModel(sessionId, String(modelId))}
+                    multiAgentEnabled={nativeMultiAgentEnabled}
+                    multiAgentAvailable={nativeMultiAgentAvailable}
+                    onToggleMultiAgent={switchNativeMultiAgent}
+                  />
+                )}
+                <VoiceComposerButton
+                  refProp={voiceAsrPopoverRef}
+                  voiceInput={nativeVoiceInput}
+                  voiceMode={nativeVoiceMode}
+                  voiceAsrSetup={nativeVoiceAsrSetup}
+                  voiceAsrPopoverOpen={voiceAsrPopoverOpen}
+                  copy={t}
+                  disabled={nativeVoiceDisabled}
+                  testId="codex-voice-input"
+                  onClick={() => handleNativeVoiceTrigger('dictation', { source: 'button' })}
+                  onToggleAsrPopover={() => setVoiceAsrPopoverOpen(open => !open)}
+                  onCloseAsrPopover={() => setVoiceAsrPopoverOpen(false)}
+                  onCancelAsr={() => {
+                    // Close the popover first to show a terminal state, then best-effort cancel
+                    // the install; a failed cancel still leaves no unresponsive popover.
+                    setVoiceAsrPopoverOpen(false);
+                    if (bridge.available && bridge.voice.cancelVoiceAsrSetup) {
+                      bridge.voice.cancelVoiceAsrSetup();
+                    }
+                  }}
+                />
                 {busy ? (
                   <button type="button" onClick={cancel} className="w-9 h-9 rounded-full flex items-center justify-center bg-red-500/10 text-red-500 hover:bg-red-500/15"><StopCircle size={18} /></button>
                 ) : (
-                  <>
-                    <VoiceComposerButton
-                      refProp={voiceAsrPopoverRef}
-                      voiceInput={nativeVoiceInput}
-                      voiceMode={nativeVoiceMode}
-                      voiceAsrSetup={nativeVoiceAsrSetup}
-                      voiceAsrPopoverOpen={voiceAsrPopoverOpen}
-                      copy={t}
-                      disabled={nativeVoiceDisabled}
-                      testId="codex-voice-input"
-                      onClick={() => handleNativeVoiceTrigger('dictation', { source: 'button' })}
-                      onToggleAsrPopover={() => setVoiceAsrPopoverOpen(open => !open)}
-                      onCloseAsrPopover={() => setVoiceAsrPopoverOpen(false)}
-                      onCancelAsr={() => {
-                        // Close the popover first to show a terminal state, then best-effort cancel
-                        // the install; a failed cancel still leaves no unresponsive popover.
-                        setVoiceAsrPopoverOpen(false);
-                        if (bridge.available && bridge.voice.cancelVoiceAsrSetup) {
-                          bridge.voice.cancelVoiceAsrSetup();
-                        }
-                      }}
-                    />
-                    {/* While a voice rewrite preview is open, disable the primary send: sending is
-                        funneled into the preview card (apply and send), so buttons based on draft
-                        cannot send the raw text or double-send during the preview. */}
-                    <button type="button" onClick={() => send()} disabled={!!nativeVoice.editPreview || !sessionReady || (!draft.trim() && attachments.every(attachment => attachment.status !== 'ready') && !workspaceReferences.length) || working || activeRuntimeBusy || Boolean(configApplying) || (!isNativeAgent && (!activeStatus || !activeStatus.installed || !activeStatus.authenticated))}
-                      className="w-9 h-9 rounded-full flex items-center justify-center bg-[#007AFF] text-white shadow-sm hover:bg-[#006EE6] disabled:bg-black/[0.06] dark:disabled:bg-white/10 disabled:text-gray-400 disabled:shadow-none">
-                      <Send size={16} />
-                    </button>
-                  </>
+                  // While a voice rewrite preview is open, disable the primary send: sending is
+                  // funneled into the preview card (apply and send), so buttons based on draft
+                  // cannot send the raw text or double-send during the preview.
+                  <button type="button" onClick={() => send()} disabled={!!nativeVoice.editPreview || !sessionReady || (!draft.trim() && attachments.every(attachment => attachment.status !== 'ready') && !workspaceReferences.length) || working || activeRuntimeBusy || Boolean(configApplying) || (!isNativeAgent && (!activeStatus || !activeStatus.installed || !activeStatus.authenticated))}
+                    className="w-9 h-9 rounded-full flex items-center justify-center bg-[#007AFF] text-white shadow-sm hover:bg-[#006EE6] disabled:bg-black/[0.06] dark:disabled:bg-white/10 disabled:text-gray-400 disabled:shadow-none">
+                    <Send size={16} />
+                  </button>
                 )}
               </div>
+            </div>
+            <div className="mt-3 flex items-center justify-center">
+              <p data-testid="codex-disclaimer" className="text-[12px] text-[#757575] dark:text-[#8E8E8E]">{t.disclaimer}</p>
             </div>
           </div>
         </div>
