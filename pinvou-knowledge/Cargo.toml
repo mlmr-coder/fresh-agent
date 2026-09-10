@@ -1,6 +1,6 @@
 [package]
 name = "pinvou-knowledge"
-version = "0.9.3"
+version = "0.9.4"
 description = "智灵 可复用知识库核心与自包含服务器"
 authors = ["智灵 contributors"]
 license = "MIT"
