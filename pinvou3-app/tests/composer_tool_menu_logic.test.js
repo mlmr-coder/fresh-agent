@@ -34,7 +34,7 @@ assert.strictEqual(preview.overflow, 0);
 
 // ── 开关（disabled）与可见性（hidden）正交 ────────────────────────────
 let state = buildComposerToolMenuState({
-  marketplaceTools: [{ id: 'weather', name: '高德天气', installed: true }],
+  marketplaceTools: [{ id: 'weather', name: '高德天气', installed: true, connected: true }],
 });
 assert.strictEqual(state.toolRows.length, 1);
 assert.strictEqual(state.toolRows[0].id, 'weather');
@@ -43,7 +43,7 @@ assert.strictEqual(state.enabledCount, 2); // weather + builtin visual-design
 
 // 开关关（disabled）：工具仍在列表，仅 enabled=false
 state = buildComposerToolMenuState({
-  marketplaceTools: [{ id: 'weather', name: '高德天气', installed: true }],
+  marketplaceTools: [{ id: 'weather', name: '高德天气', installed: true, connected: true }],
   disabledIds: ['weather'],
 });
 assert.strictEqual(state.toolRows.length, 1, '开关关的工具应仍在列表');
@@ -52,7 +52,7 @@ assert.strictEqual(state.enabledCount, 1); // 仅 builtin visual-design
 
 // 不可见（hidden）：工具从列表直接消失
 state = buildComposerToolMenuState({
-  marketplaceTools: [{ id: 'weather', name: '高德天气', installed: true }],
+  marketplaceTools: [{ id: 'weather', name: '高德天气', installed: true, connected: true }],
   hiddenIds: ['weather'],
 });
 assert.strictEqual(state.toolRows.length, 0, '不可见工具应从 composer 菜单过滤');
@@ -135,7 +135,7 @@ assert.strictEqual(state.connectedServices[0].enabled, false);
 // ── code scope：视觉设计设计期隐藏 ───────────────────────────────────
 state = buildComposerToolMenuState({
   scope: 'code',
-  marketplaceTools: [{ id: 'weather', name: '高德天气', installed: true }],
+  marketplaceTools: [{ id: 'weather', name: '高德天气', installed: true, connected: true }],
   marketplaceSkills: [{ id: 'visualizer', title: '数据分析可视化', installed: true }],
 });
 visualizer = state.skillRows.find(row => row.id === 'visualizer');
@@ -186,5 +186,40 @@ state = buildComposerToolMenuState({
   serviceStates: [{ id: 'feishu', title: '飞书（Lark）', connected: true }],
 });
 assert.strictEqual(state.allSkillsDisabled, false, '开启 feishu(CLI companion)后不应提示');
+
+// ── 连接器就绪状态、模式开关、头像与计数共用一个可用态 ────────────────
+for (const connected of [false, true]) {
+  for (const enabled of [false, true]) {
+    state = buildComposerToolMenuState({
+      marketplaceTools: [{ id: 'connector', installed: true, connected }],
+      disabledIds: enabled ? [] : ['connector'],
+      builtinSkills: [],
+    });
+    const row = state.connectorRows[0];
+    assert.strictEqual(row.enabled, enabled, '连接变化不能改写保存的开关偏好');
+    assert.strictEqual(row.available, connected && enabled);
+    assert.strictEqual(state.connectorPreview.total, row.available ? 1 : 0);
+    assert.strictEqual(state.enabledCount, state.connectorPreview.total);
+  }
+}
+state = buildComposerToolMenuState({
+  marketplaceTools: [
+    { id: 'gongwen', installed: true, connected: true },
+    { id: 'law', installed: true, connected: false },
+    { id: 'feishu', installed: true, connected: false },
+    { id: 'tmeet', installed: true },
+  ],
+  builtinSkills: [],
+});
+assert.strictEqual(state.connectorRows.length, 4, '待授权与状态未知的连接器仍可前往连接');
+assert.strictEqual(state.connectorRows.filter(row => row.available).length, 1, '只有就绪的连接器显示开启');
+assert.deepStrictEqual(Array.from(state.connectorPreview.rows, row => row.id), ['gongwen']);
+state = buildComposerToolMenuState({
+  marketplaceTools: ['a', 'b', 'c', 'd', 'off', 'hidden'].map(id => ({ id, installed: true, connected: true })),
+  disabledIds: ['off'], hiddenIds: ['hidden'], builtinSkills: [],
+});
+assert.strictEqual(state.connectorPreview.total, 4);
+assert.strictEqual(state.connectorPreview.overflow, 1);
+assert.strictEqual(state.enabledCount, 4);
 
 console.log('composer_tool_menu_logic: ok');

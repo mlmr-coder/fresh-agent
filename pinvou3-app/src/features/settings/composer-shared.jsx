@@ -3,7 +3,7 @@
 // 留在 SettingsView.jsx 里,SettingsView(3389 行)就永远进不了独立懒加载
 // chunk。抽到本模块后 SettingsView 可整体懒加载,共享件随主 chunk 常驻。
 // 组件实现与 SettingsView.jsx 原版逐字节一致。
-import { useEffect, useReducer, useRef, useState } from 'react';
+import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Check, ChevronDown, Cpu, Plus, Sparkles, Store, Users, Wrench, X } from '../../components/icons.jsx';
 import { ComposerPopover } from '../../components/ComposerPopover.jsx';
@@ -11,7 +11,7 @@ import { Toggle } from '../../components/Toggle.jsx';
 import { bridge } from '../../hooks/useBridge.js';
 import { visibleUserModels } from '../../shared/model-options.js';
 import { can } from '../../shared/platform.js';
-import { buildCapabilityPreview, buildComposerToolMenuState } from './composer-tool-menu-logic.js';
+import { buildComposerToolMenuState } from './composer-tool-menu-logic.js';
 import { invokeTauri } from '../../platform/tauri/client.js';
 import { THIRD_PARTY_TOOL_LOGOS } from '../tools/tool-visuals.js';
 import {
@@ -495,8 +495,10 @@ window.addEventListener('pinvou:chat-round-committed', (event) => {
       const triggerRef = useRef(null);
       const connectorTriggerRef = useRef(null);
       const refreshSequence = useRef(0);
+      const savingToolRef = useRef(false);
       const [savingTool, setSavingTool] = useState(false);
       const [toolSaveError, setToolSaveError] = useState(false);
+      const [toolLoadError, setToolLoadError] = useState(false);
       const canMutateToolStore = can('toolStoreMutations');
       // 代码会话保持只增不减：有活动会话时只阻隔「关闭」——已进入上下文的
       // 工具撤不回。普通聊天支持热刷能力目录与工具规则，因此允许随时开关。
@@ -519,30 +521,29 @@ window.addEventListener('pinvou:chat-round-committed', (event) => {
       const [projectSkillsEnabled, setProjectSkillsEnabled] = useState(false); // 项目级 skills(仅 code scope 生效)
       const [projectSkillsHelp, setProjectSkillsHelp] = useState(false); // 项目技能帮助弹窗(功能说明+扫描目录)
       // 启动时加载已装工具 + 全局持久的禁用列表(持久语义:新窗口/新对话都继承)
-      async function refreshToolsMenu(isMounted) {
+      const refreshToolsMenu = useCallback(async (isMounted) => {
+        if (savingToolRef.current) return;
         const sequence = ++refreshSequence.current;
         const isAlive = () => isMounted() && sequence === refreshSequence.current;
-        try {
-          const list = await invokeTauri('list_composer_connectors');
-          if (isAlive()) setMarketplaceTools((Array.isArray(list) ? list : []).map(tool => ({ ...tool, name: t.uiToolDetails?.tools?.[tool.id]?.title || tool.name })));
-        } catch { /* retain the last known state until the next refresh */ }
-        try {
-          const skills = await invokeTauri('list_marketplace_skills');
-          if (isAlive()) setMarketplaceSkills(Array.isArray(skills) ? skills : []);
-        } catch { /* ignore */ }
-        try {
-          const dis = await invokeTauri('get_disabled_connectors', { scope: toolScope });
-          if (isAlive()) setDisabled(new Set(dis || []));
-        } catch { /* ignore */ }
-        try {
-          const hid = await invokeTauri('get_bundle_visibility', { scope: toolScope });
-          if (isAlive()) setHidden(new Set(hid || []));
-        } catch { /* ignore */ }
-        try {
-          const proj = await invokeTauri('get_project_skills_enabled');
-          if (isAlive()) setProjectSkillsEnabled(!!proj);
-        } catch { /* ignore */ }
-      }
+        const [tools, dis, hid, skills, proj] = await Promise.allSettled([
+          invokeTauri('list_composer_connectors'),
+          invokeTauri('get_disabled_connectors', { scope: toolScope }),
+          invokeTauri('get_bundle_visibility', { scope: toolScope }),
+          invokeTauri('list_marketplace_skills'),
+          invokeTauri('get_project_skills_enabled'),
+        ]);
+        if (!isAlive()) return;
+        // 同一轮连接状态、开关和可见性一起发布，避免混用新旧结果短暂亮起头像。
+        const loaded = [tools, dis, hid].every(result => result.status === 'fulfilled');
+        setToolLoadError(!loaded);
+        if (loaded) {
+          setMarketplaceTools(Array.isArray(tools.value) ? tools.value : []);
+          setDisabled(new Set(dis.value || []));
+          setHidden(new Set(hid.value || []));
+        }
+        if (skills.status === 'fulfilled') setMarketplaceSkills(Array.isArray(skills.value) ? skills.value : []);
+        if (proj.status === 'fulfilled') setProjectSkillsEnabled(!!proj.value);
+      }, [toolScope]);
       useEffect(() => {
         let alive = true;
         const isAlive = () => alive;
@@ -551,8 +552,13 @@ window.addEventListener('pinvou:chat-round-committed', (event) => {
         window.addEventListener('pinvou:tools-changed', onChanged);
         window.addEventListener('focus', onChanged);
         return () => { alive = false; window.removeEventListener('pinvou:tools-changed', onChanged); window.removeEventListener('focus', onChanged); };
-      // eslint-disable-next-line react-hooks/exhaustive-deps -- fetch once on mount; refreshToolsMenu is an in-component closure and tool changes refresh via events
-      }, []);
+      }, [refreshToolsMenu]);
+      useEffect(() => {
+        if (!open) return;
+        let alive = true;
+        refreshToolsMenu(() => alive); // eslint-disable-line react-hooks/set-state-in-effect -- reopening queries the external store; state updates only occur after Promise.allSettled resolves
+        return () => { alive = false; };
+      }, [open, refreshToolsMenu]);
       // 新一轮对话已被后端受理 → 本 scope 未提交的「打开」已由文件头的模块级
       // 监听清空（组件不在场也清）。此处仅 bump 版本号触发重渲染刷新开关禁用
       // 态；模块级监听先注册先执行，保证先清后刷。
@@ -575,19 +581,20 @@ window.addEventListener('pinvou:chat-round-committed', (event) => {
       }, [projectSkillsHelp]);
       async function toggleTool(id, enabled) {
         const pending = pendingEnablesFor(toolScope);
-        if (toolSwitchDisabled || (removalLocked && enabled && !pending.ids.has(id))) return;
+        if (savingToolRef.current || toolSwitchDisabled || (removalLocked && enabled && !pending.ids.has(id))) return;
         const next = new Set(disabled);
         next.has(id) ? next.delete(id) : next.add(id);
         const wasPending = pending.ids.has(id);
         const revision = pending.revision;
         // Record before awaiting: a Code turn may be accepted while saving.
         if (enabled) pending.ids.delete(id); else pending.ids.add(id);
+        savingToolRef.current = true;
+        refreshSequence.current += 1; // 保存开始后，旧的刷新结果不能覆盖本次开关。
         setSavingTool(true);
         setToolSaveError(false);
         try {
           if (bridge.available) await invokeTauri('set_disabled_connectors', { connectorIds: [...next], scope: toolScope });
           setDisabled(next);
-          window.dispatchEvent(new Event('pinvou:tools-changed'));
         } catch {
           // Do not revive pending permissions consumed by an intervening turn.
           if (pending.revision === revision) {
@@ -595,7 +602,9 @@ window.addEventListener('pinvou:chat-round-committed', (event) => {
           }
           setToolSaveError(true);
         } finally {
+          savingToolRef.current = false;
           setSavingTool(false);
+          window.dispatchEvent(new Event('pinvou:tools-changed'));
         }
       }
       function toggleProjectSkills() {
@@ -610,20 +619,18 @@ window.addEventListener('pinvou:chat-round-committed', (event) => {
         }
       }
       const menuState = buildComposerToolMenuState({
-        marketplaceTools,
+        marketplaceTools: marketplaceTools.map(tool => ({ ...tool, name: t.uiToolDetails?.tools?.[tool.id]?.title || tool.name })),
         marketplaceSkills,
         disabledIds: [...disabled],
         hiddenIds: [...hidden],
         activeSkill,
         scope: toolScope,
       });
-      const { connectedServices, toolRows, skillRows, enabledCount, allSkillsDisabled } = menuState;
+      const { connectorRows, connectorPreview, skillRows, enabledCount, allSkillsDisabled } = menuState;
       // 内置技能名称/描述由 composer-tool-menu-logic.js 数据提供，在 UI 边界按当前语言覆盖
       const localizedSkillRows = skillRows.map(row => (row.kind === 'builtin-skill' && row.skillId === 'visual-design')
         ? { ...row, title: t.uiSettingsView.visualDesignSkillName, description: t.uiSettingsView.visualDesignSkillDesc }
         : row);
-      const connectorRows = [...connectedServices, ...toolRows];
-      const connectorPreview = buildCapabilityPreview(connectorRows.filter(row => row.connected));
       const avatarGroups = triggerVariant === 'capability-groups';
       const showConnectors = true;
       const showSkills = !avatarGroups;
@@ -634,16 +641,25 @@ window.addEventListener('pinvou:chat-round-committed', (event) => {
         return <span className={`shrink-0 inline-flex items-center gap-1 text-[10px] font-semibold ${cls} px-2 py-0.5 rounded-full leading-none`}><span className={`w-1.5 h-1.5 rounded-full ${tone === 'blue' ? 'bg-[#007AFF] dark:bg-[#5AC8FA]' : 'bg-[#34C759]'}`} />{label}</span>;
       };
       const switchRow = (row) => {
+        const isConnector = row.kind === 'tool' || row.kind === 'service';
+        const needsConnection = isConnector && !row.connected;
         // 未提交的「打开」（pending）不锁：发送新一轮前允许改回。
         const rowDisabled = toolSwitchDisabled
           || (removalLocked && row.enabled && !pendingEnablesFor(toolScope).ids.has(row.id));
         return (
-        <div key={row.id} className="flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl font-medium">
+        <div key={row.id} data-connector-id={isConnector ? row.id : undefined} className="flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl font-medium">
           <span className="min-w-0 flex items-center gap-1.5">
             <span className="block text-[13px] text-gray-700 dark:text-gray-200 truncate">{row.title}</span>
-            {row.connected && statusBadge(t.composerConnected, 'green')}
+            {row.available && statusBadge(t.composerConnected, 'green')}
+            {isConnector && !row.available && <span className="shrink-0 text-[10px] text-gray-400 dark:text-gray-500">{needsConnection ? t.composerNeedsConnection : t.composerConnectorOff}</span>}
           </span>
-          <Toggle checked={row.enabled} onChange={() => toggleTool(row.id, row.enabled)} aria-label={row.id} disabled={rowDisabled} size="sm" />
+          {needsConnection ? (
+            <button type="button" disabled={!canMutateToolStore || busy || savingTool} aria-label={t.composerConnectNamed(row.title)} title={t.composerConnectHint}
+              onClick={() => { setOpen(false); onGotoTools?.(); }}
+              className="shrink-0 rounded-lg px-1.5 py-1 text-[12px] text-[#007AFF] hover:bg-[#007AFF]/10 disabled:opacity-45 dark:text-[#5AC8FA]">
+              {t.composerGoConnect}
+            </button>
+          ) : <Toggle checked={isConnector ? row.available : row.enabled} onChange={() => toggleTool(row.id, row.enabled)} aria-label={row.id} disabled={rowDisabled} size="sm" />}
         </div>
         );
       };
@@ -731,6 +747,7 @@ window.addEventListener('pinvou:chat-round-committed', (event) => {
                   </div>
                 )}
                 {toolSaveError && <div role="alert" className="px-3 py-2 text-[12px] text-red-500">{t.composerUpdateFailed}</div>}
+                {toolLoadError && <div role="alert" className="px-3 py-2 text-[12px] text-red-500">{t.composerStatusRefreshFailed}</div>}
                 {showConnectors && connectorRows.map(switchRow)}
                 {showConnectors && connectorRows.length === 0 && (
                   <div className="px-3 py-2 text-[13px] text-gray-400 dark:text-gray-500">{t.composerNoConnectors}</div>

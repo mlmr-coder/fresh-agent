@@ -509,6 +509,9 @@ export const dictEn = {
         voiceIntroEnable: 'Enable and continue',
         voiceShortcutEnableTitle: 'Enable voice shortcuts',
         composerUpdateFailed: 'Could not save the change. Please retry.',
+        composerStatusRefreshFailed: 'Could not refresh status. Reopen the menu to try again.',
+        composerNeedsConnection: 'Not connected', composerConnectorOff: 'Off', composerGoConnect: 'Connect',
+        composerConnectNamed: name => `Connect ${name}`, composerConnectHint: 'Complete connection or setup in the capability center to show this connector here.',
         uiComposerSuggestions: {
           hint: '@ reference conversation files, / choose a skill', files: 'Conversation files', skillsAndCommands: 'Choose a skill',
           loading: 'Loading…', loadFailed: 'Could not load suggestions. Please retry.', noFiles: 'No matching conversation files. Use + to add a file.', noMatches: 'No matching enabled skills',

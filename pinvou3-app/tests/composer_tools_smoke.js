@@ -37,7 +37,7 @@ const PROFILE = fs.mkdtempSync(path.join(os.tmpdir(), 'pinvou-composer-tools-'))
 
 function injectSource() {
   return `(function(){
-    const state=window.__COMPOSER_TOOLS_TEST__={calls:[],disabled:[],disabledSkills:[]};
+    const state=window.__COMPOSER_TOOLS_TEST__={calls:[],disabled:[],disabledSkills:[],readiness:{},failSave:false,failRead:false};
     function record(cmd,args){state.calls.push({cmd,args:args||{}});}
     function invoke(cmd,args){
       record(cmd,args);
@@ -63,7 +63,7 @@ function injectSource() {
           {id:'obsidian',name:'Obsidian',installed:true,connected:true},
           {id:'qcc',name:'企查查',installed:true,connected:true},
           {id:'pending',name:'待授权',installed:true},
-        ]);
+        ].map(tool => ({...tool,connected:state.readiness[tool.id]??tool.connected})));
         case 'list_marketplace_skills': return Promise.resolve([
           {id:'government-writing',title:'数据库操作',description:'配套技能',installed:true,user_uploaded:false},
           {id:'visualizer',title:'数据分析可视化',description:'Chart.js 仪表盘',installed:true,user_uploaded:false},
@@ -76,8 +76,15 @@ function injectSource() {
           {name:'visualizer',description:'数据分析可视化',aliases:['chart']},
           {name:'database-ops',title:'数据库操作',description:'数据库查询和维护',aliases:[]}
         ]);
-        case 'get_disabled_connectors': return Promise.resolve(state.disabled);
-        case 'set_disabled_connectors': state.disabled=(args&&args.connectorIds)||[]; return Promise.resolve(null);
+        case 'get_disabled_connectors': {
+          if(state.failRead) return Promise.reject(new Error('mock read failed'));
+          const disabled=[...state.disabled];
+          if(state.holdRead){state.holdRead=false;return new Promise(resolve=>{state.releaseRead=()=>resolve(disabled);});}
+          return Promise.resolve(disabled);
+        }
+        case 'set_disabled_connectors':
+          if(state.failSave) return Promise.reject(new Error('mock save failed'));
+          state.disabled=(args&&args.connectorIds)||[]; return Promise.resolve(null);
         case 'get_disabled_skills': return Promise.resolve(state.disabledSkills);
         case 'set_disabled_skills': state.disabledSkills=(args&&args.skillIds)||[]; return Promise.resolve(null);
         case 'feishu_skills_state': return Promise.resolve({connected:true,enabled:true});
@@ -152,6 +159,7 @@ const sleep = ms => new Promise(r => { setTimeout(r, ms); });
   rec('连接器弹层完整显示在输入框上方', connectorPopoverVisible);
   const connectorMenu = await page.evaluate(() => document.querySelector('[data-testid="composer-tool-menu"]')?.innerText || '');
   rec('连接器菜单可关闭并添加连接器', connectorMenu.includes('公文写作') && connectorMenu.includes('飞书') && connectorMenu.includes('添加连接器') && !connectorMenu.includes('数据分析可视化'), connectorMenu);
+  rec('待授权连接器显示连接入口，不显示绿色开关', await page.$eval('[data-connector-id="pending"]', row => row.textContent.includes('待连接') && row.textContent.includes('去连接') && !row.querySelector('[role="switch"]')));
 
   await page.evaluate(() => document.querySelector('[data-testid="composer-tool-menu-trigger"]').click());
   await page.click('[data-testid="chat-composer-input"]');
@@ -252,6 +260,95 @@ const sleep = ms => new Promise(r => { setTimeout(r, ms); });
   await page.keyboard.type('x');
   await page.keyboard.press('Backspace');
   rec('删除最后一个普通字符后恢复空输入框', await page.$eval(inputSelector, node => node.value === '' && !node.childNodes.length));
+
+  // 连接状态与开关更改必须同时作用到菜单和头像，而不只是静态筛选头像。
+  const menuTrigger = '[data-testid="composer-tool-menu-trigger"]';
+  const rowSelector = '[data-connector-id="feishu"]';
+  const readConnectors = () => page.evaluate(() => {
+    const trigger = document.querySelector('[data-testid="composer-tool-menu-trigger"]');
+    return {
+      total: Number(trigger.title.split(' · ')[1] || 0),
+      avatars: [...trigger.querySelectorAll('span[title]')].map(node => node.title),
+      checked: document.querySelector('[data-connector-id="feishu"] [role="switch"]')?.getAttribute('aria-checked'),
+      row: document.querySelector('[data-connector-id="feishu"]')?.textContent,
+    };
+  });
+  await page.click(menuTrigger);
+  await page.waitForSelector(`${rowSelector} [role="switch"]`);
+  await page.click(`${rowSelector} [role="switch"]`);
+  await page.waitForFunction(() => document.querySelector('[data-connector-id="feishu"] [role="switch"]')?.getAttribute('aria-checked') === 'false');
+  let connectorState = await readConnectors();
+  rec('关闭连接器同时移除头像、更新数量和菜单状态', connectorState.total === 5 && !connectorState.avatars.some(name => name.includes('飞书')) && connectorState.row.includes('已关闭'), JSON.stringify(connectorState));
+  await page.click(`${rowSelector} [role="switch"]`);
+  await page.waitForFunction(() => document.querySelector('[data-connector-id="feishu"] [role="switch"]')?.getAttribute('aria-checked') === 'true');
+  connectorState = await readConnectors();
+  rec('重新开启同时恢复头像与已连接状态', connectorState.total === 6 && connectorState.avatars.some(name => name.includes('飞书')) && connectorState.row.includes('已连接'), JSON.stringify(connectorState));
+
+  await page.evaluate(() => {
+    window.__COMPOSER_TOOLS_TEST__.readiness.feishu = false;
+    window.dispatchEvent(new Event('pinvou:tools-changed'));
+  });
+  await page.waitForFunction(() => document.querySelector('[data-connector-id="feishu"]')?.textContent.includes('待连接'));
+  connectorState = await readConnectors();
+  rec('失去授权同步撤下头像并显示待连接', connectorState.total === 5 && connectorState.checked === undefined && !connectorState.avatars.some(name => name.includes('飞书')), JSON.stringify(connectorState));
+  rec('连接失效不改写用户保存的开关', await page.evaluate(() => !window.__COMPOSER_TOOLS_TEST__.disabled.includes('feishu')));
+  await page.evaluate(() => {
+    window.__COMPOSER_TOOLS_TEST__.readiness.feishu = true;
+    window.dispatchEvent(new Event('pinvou:tools-changed'));
+  });
+  await page.waitForFunction(() => document.querySelector('[data-connector-id="feishu"] [role="switch"]')?.getAttribute('aria-checked') === 'true');
+  connectorState = await readConnectors();
+  rec('授权完成事件同步恢复头像和绿色开关', connectorState.total === 6 && connectorState.avatars.some(name => name.includes('飞书')));
+
+  await page.click(menuTrigger);
+  await page.evaluate(() => { window.__COMPOSER_TOOLS_TEST__.disabled = ['feishu']; });
+  await page.click(menuTrigger);
+  await page.waitForFunction(() => document.querySelector('[data-connector-id="feishu"] [role="switch"]')?.getAttribute('aria-checked') === 'false');
+  connectorState = await readConnectors();
+  rec('重新打开菜单会读取外部修改的开关状态', connectorState.total === 5 && connectorState.row.includes('已关闭'));
+
+  await page.evaluate(() => { window.__COMPOSER_TOOLS_TEST__.failSave = true; });
+  await page.click(`${rowSelector} [role="switch"]`);
+  await page.waitForFunction(() => document.querySelector('[data-testid="composer-tool-menu"] [role="alert"]')?.textContent.includes('更新失败'));
+  connectorState = await readConnectors();
+  rec('保存失败保留原开关和头像，并提示错误', connectorState.total === 5 && connectorState.checked === 'false');
+  await page.evaluate(() => { window.__COMPOSER_TOOLS_TEST__.failSave = false; });
+
+  // 模拟旧刷新慢于新事件返回：不能混用就绪状态与旧开关，也不能覆盖新状态。
+  await page.evaluate(() => {
+    const state = window.__COMPOSER_TOOLS_TEST__;
+    state.readiness.feishu = false;
+    state.holdRead = true;
+    window.dispatchEvent(new Event('pinvou:tools-changed'));
+  });
+  await page.waitForFunction(() => !!window.__COMPOSER_TOOLS_TEST__.releaseRead);
+  await sleep(100);
+  connectorState = await readConnectors();
+  rec('同轮状态未收齐前保留完整旧快照', connectorState.checked === 'false' && connectorState.row.includes('已关闭'));
+  await page.evaluate(() => {
+    const state = window.__COMPOSER_TOOLS_TEST__;
+    state.readiness.feishu = true;
+    state.disabled = [];
+    window.dispatchEvent(new Event('pinvou:tools-changed'));
+  });
+  await page.waitForFunction(() => document.querySelector('[data-connector-id="feishu"] [role="switch"]')?.getAttribute('aria-checked') === 'true');
+  await page.evaluate(() => { window.__COMPOSER_TOOLS_TEST__.releaseRead(); });
+  await sleep(100);
+  connectorState = await readConnectors();
+  rec('旧请求晚返回不会覆盖新开关或移除头像', connectorState.checked === 'true' && connectorState.total === 6);
+
+  await page.evaluate(() => {
+    window.__COMPOSER_TOOLS_TEST__.failRead = true;
+    window.dispatchEvent(new Event('pinvou:tools-changed'));
+  });
+  await page.waitForFunction(() => document.querySelector('[data-testid="composer-tool-menu"]')?.textContent.includes('状态刷新失败'));
+  connectorState = await readConnectors();
+  rec('刷新失败保留上次状态并提示，避免假开关', connectorState.checked === 'true' && connectorState.total === 6);
+  await page.evaluate(() => { window.__COMPOSER_TOOLS_TEST__.failRead = false; });
+  await page.click(menuTrigger);
+  await page.click(menuTrigger);
+  await page.waitForFunction(() => !document.querySelector('[data-testid="composer-tool-menu"]')?.textContent.includes('状态刷新失败'));
+  await page.screenshot({ path: '/tmp/fresh-connector-status-sync.png' });
 
   rec('页面无未处理 JavaScript 异常', errors.length === 0, errors.slice(0, 2).join(' | '));
 

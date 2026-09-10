@@ -49,6 +49,7 @@ function buildComposerToolMenuState({
       description: service.description || '',
       enabled: service.enabled !== false && !disabled.has(service.id),
       connected: true,
+      available: service.enabled !== false && !disabled.has(service.id),
       switchable: true,
     }));
 
@@ -58,6 +59,7 @@ function buildComposerToolMenuState({
       id: tool.id,
       kind: 'tool',
       connected: tool.connected === true,
+      available: tool.connected === true && !disabled.has(tool.id),
       title: tool.name || tool.title || tool.id,
       description: tool.description || tool.subtitle || '',
       enabled: !disabled.has(tool.id),
@@ -97,9 +99,12 @@ function buildComposerToolMenuState({
     }));
 
   const allSkillRows = [...skillRows, ...builtinRows];
+  // 连接就绪与用户开关是两个事实；头像、绿色开关和计数共用实际可用态。
+  // 未就绪的连接器保留在菜单中引导连接，不把默认启用误报为已经可用。
+  const connectorRows = [...connectedServices, ...toolRows];
+  const connectorPreview = buildCapabilityPreview(connectorRows.filter(row => row.available));
   const enabledCount =
-    connectedServices.filter(row => row.enabled).length +
-    toolRows.filter(row => row.enabled).length +
+    connectorPreview.total +
     allSkillRows.filter(row => row.enabled).length;
 
   // 「所有技能已关闭」应覆盖三类携带技能的行：独立技能 + 带 companion_skills 的
@@ -116,6 +121,8 @@ function buildComposerToolMenuState({
   return {
     connectedServices,
     toolRows,
+    connectorRows,
+    connectorPreview,
     skillRows: allSkillRows,
     enabledCount,
     allSkillsDisabled,

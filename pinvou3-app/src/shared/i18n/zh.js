@@ -509,6 +509,9 @@ export const dictZh = {
         voiceIntroEnable: '启用并继续',
         voiceShortcutEnableTitle: '启用快捷键唤醒语音',
         composerUpdateFailed: '更新失败，请重试',
+        composerStatusRefreshFailed: '状态刷新失败，请重新打开菜单重试',
+        composerNeedsConnection: '待连接', composerConnectorOff: '已关闭', composerGoConnect: '去连接',
+        composerConnectNamed: name => `连接 ${name}`, composerConnectHint: '前往能力中心完成连接或配置，连接就绪后显示头像',
         uiComposerSuggestions: {
           hint: '@ 引用对话文件，/ 选择技能', files: '对话文件', skillsAndCommands: '选择技能',
           loading: '正在加载…', loadFailed: '加载失败，请重试', noFiles: '没有匹配的对话文件，可先用 + 添加文件', noMatches: '没有匹配的已启用技能',
