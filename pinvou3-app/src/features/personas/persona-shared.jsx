@@ -10,8 +10,9 @@ const DEPT_LABELS = { academic:'学术', design:'设计', engineering:'工程', 
 export function deptLabelFor(t, k) { return (t && t.depts && t.depts[k]) || DEPT_LABELS[k] || k; }
     // 内置卡名称/简介按 UI 语言显示(personas-i18n.js overlay,按 id 查),中文兜底;自制卡不翻
 export function personaText(c, t) {
+      if (!c) return null;
       const L = t && t.langTag;
-      if (!c || !L || L === 'zh' || c.source === 'user') return c || {};
+      if (!L || L === 'zh' || c.source === 'user') return c;
       const overlays = window.PERSONA_I18N;
       const tr = (overlays && overlays[c.id] && overlays[c.id][L]) || null;
       if (!tr) return c;

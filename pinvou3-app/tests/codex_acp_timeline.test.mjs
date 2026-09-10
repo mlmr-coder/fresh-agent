@@ -502,6 +502,7 @@ try {
   assert.ok(!chatView.includes('sessionAgentBackend'), 'DeepSeek ChatView must not branch on Codex state');
 
   const main = readFileSync(path.join(root, 'src', 'app', 'main.jsx'), 'utf8');
+  const personaShared = readFileSync(path.join(root, 'src', 'features', 'personas', 'persona-shared.jsx'), 'utf8');
   const detachedShell = readFileSync(path.join(root, 'src', 'app', 'DetachedShell.jsx'), 'utf8');
   const lazyCodexView = readFileSync(
     path.join(root, 'src', 'features', 'codex', 'LazyCodexAcpView.jsx'),
@@ -563,10 +564,11 @@ try {
   assert.ok(main.includes('leadingIcon: <SessionIdentityIcons')
     && main.includes('data-testid="session-persona-icons"')
     && main.includes('<AppIcon card={persona}')
+    && personaShared.includes('if (!c) return null;')
     && main.includes('s.id === bs.activeSessionId ? bs.activePersona : s.persona')
     && main.includes('<AcpAgentLogo agentId={session.agent_id} className="h-[18px] w-[18px]"')
     && main.includes('<Clock size={18} />'),
-  'work sessions must combine app and currently attached expert identities while Codex and scheduled sessions keep their type icons');
+  'work sessions must combine app and currently attached expert identities, preserving null after removal, while Codex and scheduled sessions keep their type icons');
   assert.ok(navigationComponents.includes('group flex h-11 items-center')
     && navigationComponents.includes("chat.leadingIconWide ? 'w-7' : 'w-5'"),
   'all recent-session rows keep a consistent height while expert identity pairs receive a wider icon canvas');
