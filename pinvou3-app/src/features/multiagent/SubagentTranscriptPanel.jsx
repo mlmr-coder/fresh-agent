@@ -406,6 +406,7 @@ export function SubagentTranscriptPanel({
                 now={0}
                 copy={conversationCopy}
                 agentLabel={detailSubtitle || detailName}
+                groupProcess
                 assistantAvatar={detailIdentity ? (
                   <AppIcon
                     card={{ id: detailIdentity.avatarKey, name: detailSubtitle || detailName, dept: detailIdentity.personaDept }}

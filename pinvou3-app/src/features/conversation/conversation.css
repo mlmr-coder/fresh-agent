@@ -13,12 +13,76 @@
 }
 .conversation-process-row:hover { color: #242629; }
 .dark .conversation-process-row:hover { color: #e5e7eb; }
+.conversation-work-summary {
+  gap: 8px;
+  min-height: 30px;
+  font-size: 13px;
+}
+.conversation-ordered-content > .conversation-message-entry { margin: 12px 0; }
+.conversation-process-reasoning {
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 4px 8px 4px 12px;
+  margin: 5px 0;
+  max-height: 12rem;
+  overflow-y: auto;
+  border-left: 1px solid rgb(0 0 0 / 9%);
+}
+.dark .conversation-process-reasoning { border-left-color: rgb(255 255 255 / 12%); }
+.conversation-process-marker {
+  display: flex;
+  width: 10px;
+  min-height: 24px;
+  flex: 0 0 10px;
+  align-items: center;
+  justify-content: center;
+  color: #9aa0a6;
+  font-size: 15px;
+  line-height: 24px;
+}
+.conversation-turn .conversation-process-reasoning .conversation-prose {
+  margin: 0;
+  font-size: 13px;
+  font-style: normal;
+  line-height: 1.65;
+}
+.conversation-turn .conversation-process-reasoning .conversation-prose p { margin: .3em 0; }
+.conversation-process-tool { min-width: 0; }
+.conversation-process-tool > .rounded-xl.border {
+  border-color: transparent;
+  background: transparent;
+}
+.conversation-process-tool [data-testid="conversation-compact-item-toggle"] {
+  min-height: 36px;
+  border-radius: 8px;
+  padding-left: 2px;
+  padding-right: 4px;
+}
+.conversation-process-tool [data-testid="conversation-compact-item-toggle"]:hover {
+  background: rgb(0 0 0 / 3%);
+}
+.dark .conversation-process-tool [data-testid="conversation-compact-item-toggle"]:hover {
+  background: rgb(255 255 255 / 4%);
+}
 .conversation-turn .conversation-prose {
+  color: #202329;
   margin: 12px 0 4px;
   font-size: 15px;
   line-height: 1.8;
   overflow-wrap: anywhere;
 }
+.dark .conversation-turn .conversation-prose { color: #eceef2; }
+.conversation-turn .conversation-process-reasoning .conversation-prose { color: #858d99; }
+.dark .conversation-turn .conversation-process-reasoning .conversation-prose { color: #8f97a3; }
+.conversation-turn .conversation-process-reasoning .conversation-prose :is(strong, code, a) { color: inherit; }
+.conversation-turn .conversation-process-reasoning .conversation-prose code { background: rgb(128 138 152 / 7%); }
+.conversation-turn .conversation-tool-label { color: #858d99; font-weight: 400; }
+.conversation-turn .conversation-tool-meta { color: #9ba2ad; }
+.dark .conversation-turn .conversation-tool-label { color: #929aa6; }
+.dark .conversation-turn .conversation-tool-meta { color: #7e8794; }
+.conversation-turn .conversation-tool-batch { color: #929aa6; }
 .conversation-turn .conversation-prose > :first-child { margin-top: 0; }
 .conversation-turn .conversation-prose > :last-child { margin-bottom: 0; }
 .conversation-turn .conversation-prose p { margin: .8em 0; line-height: inherit; }
@@ -65,3 +129,32 @@
 .dark .conversation-turn .conversation-prose th { background: #25262a; }
 .dark .conversation-turn .conversation-prose th,
 .dark .conversation-turn .conversation-prose td { border-bottom-color: #35373d; }
+
+/* Consecutive tool calls remain local to their position in the conversation. */
+.conversation-tool-batch { margin: 6px 0; color: #788393; }
+.conversation-tool-batch-content { max-height: 240px; overflow-y: auto; overflow-x: hidden; padding-left: 10px; border-left: 1px solid rgb(0 0 0 / 8%); }
+.dark .conversation-tool-batch-content { border-left-color: rgb(255 255 255 / 12%); }
+
+/* Process panes are supporting detail. Keep their scroll affordance quiet. */
+.conversation-process-reasoning,
+.conversation-tool-batch-content {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(106 114 126 / 18%) transparent;
+}
+.conversation-process-reasoning::-webkit-scrollbar,
+.conversation-tool-batch-content::-webkit-scrollbar { width: 4px; height: 4px; }
+.conversation-process-reasoning::-webkit-scrollbar-track,
+.conversation-tool-batch-content::-webkit-scrollbar-track { background: transparent; }
+.conversation-process-reasoning::-webkit-scrollbar-thumb,
+.conversation-tool-batch-content::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgb(106 114 126 / 18%);
+}
+.conversation-process-reasoning:hover::-webkit-scrollbar-thumb,
+.conversation-tool-batch-content:hover::-webkit-scrollbar-thumb { background: rgb(106 114 126 / 32%); }
+.dark .conversation-process-reasoning,
+.dark .conversation-tool-batch-content { scrollbar-color: rgb(205 211 221 / 18%) transparent; }
+.dark .conversation-process-reasoning::-webkit-scrollbar-thumb,
+.dark .conversation-tool-batch-content::-webkit-scrollbar-thumb { background: rgb(205 211 221 / 18%); }
+.dark .conversation-process-reasoning:hover::-webkit-scrollbar-thumb,
+.dark .conversation-tool-batch-content:hover::-webkit-scrollbar-thumb { background: rgb(205 211 221 / 30%); }

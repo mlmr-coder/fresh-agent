@@ -1298,6 +1298,38 @@ async function expand(page) {
     codexManagedOpen.found && codexManagedState.view === 'codex' && codexManagedState.activeId === 'codex-1',
     JSON.stringify({ ...codexManagedOpen, ...codexManagedState }));
 
+  const codexConversationLayout = await page.evaluate(() => {
+    const column = document.querySelector('[data-testid="codex-conversation-column"]');
+    const surface = document.querySelector('[data-testid="codex-composer-surface"]');
+    const input = surface?.querySelector('textarea');
+    const footer = document.querySelector('[data-testid="codex-composer-footer"]');
+    const columnRect = column?.getBoundingClientRect();
+    const surfaceRect = surface?.getBoundingClientRect();
+    const surfaceStyle = surface ? getComputedStyle(surface) : null;
+    const inputStyle = input ? getComputedStyle(input) : null;
+    return {
+      columnWidth: columnRect?.width || 0,
+      surfaceWidth: surfaceRect?.width || 0,
+      aligned: Boolean(columnRect && surfaceRect && Math.abs(columnRect.left - surfaceRect.left) < 2
+        && Math.abs(columnRect.right - surfaceRect.right) < 2),
+      radius: surfaceStyle?.borderRadius || '',
+      inputMinHeight: inputStyle?.minHeight || '',
+      inputFontSize: inputStyle?.fontSize || '',
+      footerGap: footer ? getComputedStyle(footer).gap : '',
+      disclaimer: Boolean(document.querySelector('[data-testid="codex-disclaimer"]')),
+    };
+  });
+  rec('①a-3a 代码输出与输入框采用工作页共享宽度和输入面板标准',
+    codexConversationLayout.columnWidth > 900
+      && codexConversationLayout.surfaceWidth > 900
+      && codexConversationLayout.aligned
+      && codexConversationLayout.radius === '28px'
+      && codexConversationLayout.inputMinHeight === '88px'
+      && codexConversationLayout.inputFontSize === '16px'
+      && codexConversationLayout.footerGap === '8px'
+      && codexConversationLayout.disclaimer,
+    JSON.stringify(codexConversationLayout));
+
   const codexAssistantCopy = await page.evaluate(async () => {
     Object.defineProperty(navigator, 'clipboard', {
       configurable: true,
@@ -1340,7 +1372,7 @@ async function expand(page) {
 
   const codexStreamingOverflow = await page.evaluate(async () => {
     const turn = document.querySelector('[data-conversation-turn="overflow-turn"]');
-    const summary = turn?.querySelector('[data-testid="conversation-tool-group-summary"]');
+    const summary = turn?.querySelector('[data-testid="conversation-process-summary"]');
     const plan = turn?.querySelector('[data-testid="conversation-plan"]');
     const controlledState = (toggle) => {
       const controls = toggle?.getAttribute('aria-controls') || '';
@@ -1351,12 +1383,7 @@ async function expand(page) {
       };
     };
     const summaryState = controlledState(summary);
-    const reasoningToggle = turn?.querySelector('[data-testid="conversation-reasoning-toggle"]');
-    const reasoningBefore = controlledState(reasoningToggle);
-    reasoningToggle?.click();
-    await new Promise(resolve => { requestAnimationFrame(() => requestAnimationFrame(resolve)); });
-    const reasoningAfter = controlledState(reasoningToggle);
-    const reasoning = turn?.querySelector('[data-testid="conversation-reasoning-content"]');
+    const reasoning = turn?.querySelector('[data-testid="conversation-process-reasoning"]');
     const commandButton = turn?.querySelector('[data-testid="conversation-compact-item-toggle"]');
     const commandTitle = commandButton?.querySelector('span.min-w-0.flex-1 > span.truncate');
     const turnRect = turn?.getBoundingClientRect();
@@ -1365,12 +1392,11 @@ async function expand(page) {
       const rect = node.getBoundingClientRect();
       return rect.left >= turnRect.left - 1 && rect.right <= turnRect.right + 1;
     });
-    const reasoningRect = reasoning?.getBoundingClientRect();
+    const processContent = turn?.querySelector('[data-testid="conversation-ordered-content"]');
+    const processContentRect = processContent?.getBoundingClientRect();
     const planRect = plan?.getBoundingClientRect();
     const summaryRect = summary?.getBoundingClientRect();
-    reasoningToggle?.click();
-    await new Promise(resolve => { requestAnimationFrame(() => requestAnimationFrame(resolve)); });
-    const reasoningCollapsed = controlledState(reasoningToggle);
+    const commandRect = commandButton?.getBoundingClientRect();
     const commandClipped = Boolean(commandTitle && commandTitle.scrollWidth > commandTitle.clientWidth
       && commandButton.scrollWidth <= commandButton.clientWidth + 1);
     const commandBefore = controlledState(commandButton);
@@ -1385,19 +1411,17 @@ async function expand(page) {
       turnIds: [...document.querySelectorAll('[data-conversation-turn]')]
         .map(node => node.getAttribute('data-conversation-turn')),
       hasOverflowText: document.body.innerText.includes('Test streaming overflow'),
-      summaryCount: document.querySelectorAll('[data-testid="conversation-tool-group-summary"]').length,
+      summaryCount: document.querySelectorAll('[data-testid="conversation-process-summary"]').length,
+      toolGroupSummaryCount: turn?.querySelectorAll('[data-testid="conversation-tool-group-summary"]').length || 0,
       summary: summary?.textContent.trim() || '',
       summaryContainsRawCommand: Boolean(summary?.textContent.includes('overflow-marker-')),
       contained,
-      ordered: Boolean(reasoningRect && planRect && summaryRect
-        && reasoningRect.bottom <= planRect.top + 1
-        && planRect.bottom <= summaryRect.top + 1),
+      ordered: Boolean(processContentRect && planRect && summaryRect && commandRect
+        && summaryRect.bottom <= processContentRect.top + 1
+        && planRect.bottom <= commandRect.top + 1),
       commandClipped,
       accessibility: {
         summaryState,
-        reasoningBefore,
-        reasoningAfter,
-        reasoningCollapsed,
         commandBefore,
         commandAfter,
         commandCollapsed,
@@ -1406,7 +1430,8 @@ async function expand(page) {
   });
   rec('①a-3c Codex 流式超长命令保持在工具卡内',
     codexStreamingOverflow.found
-      && codexStreamingOverflow.summary === '正在执行 · 执行 Shell 命令 · 1 项'
+      && codexStreamingOverflow.summary.startsWith('正在工作 · ')
+      && codexStreamingOverflow.toolGroupSummaryCount === 0
       && !codexStreamingOverflow.summaryContainsRawCommand
       && codexStreamingOverflow.contained
       && codexStreamingOverflow.ordered
@@ -1416,15 +1441,6 @@ async function expand(page) {
   rec('①a-3c-1 统一对话详情向辅助技术同步展开状态',
     unifiedA11y.summaryState?.expanded === 'true'
       && unifiedA11y.summaryState?.detailsPresent
-      && unifiedA11y.reasoningBefore?.expanded === 'false'
-      && !unifiedA11y.reasoningBefore?.controls
-      && !unifiedA11y.reasoningBefore?.detailsPresent
-      && unifiedA11y.reasoningAfter?.expanded === 'true'
-      && Boolean(unifiedA11y.reasoningAfter?.controls)
-      && unifiedA11y.reasoningAfter?.detailsPresent
-      && unifiedA11y.reasoningCollapsed?.expanded === 'false'
-      && !unifiedA11y.reasoningCollapsed?.controls
-      && !unifiedA11y.reasoningCollapsed?.detailsPresent
       && unifiedA11y.commandBefore?.expanded === 'false'
       && !unifiedA11y.commandBefore?.controls
       && !unifiedA11y.commandBefore?.detailsPresent
@@ -1448,7 +1464,7 @@ async function expand(page) {
   await sleep(100);
   const codexCompletedOverflow = await page.evaluate(async () => {
     const turn = document.querySelector('[data-conversation-turn="overflow-turn"]');
-    const summary = turn?.querySelector('[data-testid="conversation-tool-group-summary"]');
+    const summary = turn?.querySelector('[data-testid="conversation-process-summary"]');
     const turnRect = turn?.getBoundingClientRect();
     const summaryRect = summary?.getBoundingClientRect();
     const controls = summary?.getAttribute('aria-controls') || '';
@@ -1469,14 +1485,14 @@ async function expand(page) {
     };
   });
   rec('①a-3d Codex 工具完成后摘要保持稳定',
-    codexCompletedOverflow.summary === '执行步骤 · 1 项'
+    codexCompletedOverflow.summary.startsWith('已工作 ')
       && !codexCompletedOverflow.containsRawCommand
       && codexCompletedOverflow.contained,
     JSON.stringify(codexCompletedOverflow));
-  rec('①a-3d-1 统一工具组折叠状态与详情 DOM 一致',
+  rec('①a-3d-1 统一过程折叠状态与详情 DOM 一致',
     codexCompletedOverflow.expandedBefore === 'false'
-      && !codexCompletedOverflow.controls
-      && !codexCompletedOverflow.detailsBefore
+      && Boolean(codexCompletedOverflow.controls)
+      && codexCompletedOverflow.detailsBefore
       && codexCompletedOverflow.expandedAfter === 'true'
       && Boolean(codexCompletedOverflow.controlsAfter)
       && codexCompletedOverflow.detailsAfter,
@@ -2072,6 +2088,9 @@ async function expand(page) {
     await emit('chat:tool_delta', { session_id:'s1', id:'live-shell-wait', stream:'stdout', content:'tick 42\n' });
   });
   await sleep(100);
+  // Tool activity now starts as a compact batch; inspect details through its disclosure.
+  await page.evaluate(() => document.querySelectorAll('[data-testid="conversation-tool-batch-summary"][aria-expanded="false"]').forEach(button => button.click()));
+  await sleep(80);
   const liveShellWait = await page.evaluate(() => {
     const item = window.TauriBridge.state.getMany(['chat', 'vllm']).chatItems.find(item => item.toolId === 'live-shell-wait');
     return {
@@ -2132,6 +2151,9 @@ async function expand(page) {
     await emit('chat:done', { session_id:'s1', status:'Completed' });
   });
   await sleep(150);
+  // Tool activity now starts as a compact batch; inspect details through its disclosure.
+  await page.evaluate(() => document.querySelectorAll('[data-testid="conversation-tool-batch-summary"][aria-expanded="false"]').forEach(button => button.click()));
+  await sleep(80);
   const backgroundShell = await page.evaluate(() => {
     const item = window.TauriBridge.state.getMany(['chat', 'vllm']).chatItems.find(item => item.toolId === 'background-shell');
     const button = document.querySelector('[data-testid="cancel-shell-task"][data-shell-task-id="shell-bg-1"]');
@@ -2305,6 +2327,8 @@ async function expand(page) {
   });
   rec('③d-2 Shell 快照未变化时不做全量状态广播', unchangedPollNotifications===0, String(unchangedPollNotifications));
 
+  await page.evaluate(() => document.querySelectorAll('[data-testid="conversation-tool-batch-summary"][aria-expanded="false"]').forEach(button => button.click()));
+  await sleep(80);
   await page.evaluate(() => {
     window.__CANCEL_SHELL_ERROR__=true;
     const button=[...document.querySelectorAll('button')].find(node=>
@@ -2312,6 +2336,9 @@ async function expand(page) {
     if(button) button.click();
   });
   await sleep(400);
+  // Tool activity now starts as a compact batch; inspect details through its disclosure.
+  await page.evaluate(() => document.querySelectorAll('[data-testid="conversation-tool-batch-summary"][aria-expanded="false"]').forEach(button => button.click()));
+  await sleep(80);
   const cancelFailureState = await page.evaluate(() => {
     const button=[...document.querySelectorAll('button')].find(node=>
       node.textContent.trim()==='取消' && node.parentElement && node.parentElement.textContent.includes('same-command'));

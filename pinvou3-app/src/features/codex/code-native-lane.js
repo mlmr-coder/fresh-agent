@@ -564,6 +564,7 @@ export function applyNativeChatEvent(lane, name, payload, options = {}) {
         id: nextId(lane),
         type: 'system',
         compactPhase: phase,
+        compactAuto: Boolean(p.auto),
         text: String(p.message || ''),
         time: timeStr(),
       });

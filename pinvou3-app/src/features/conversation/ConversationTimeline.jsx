@@ -257,8 +257,8 @@ export function CompactItemRow({ icon, title, meta, status, open, onToggle, cont
       className="w-full min-w-0 min-h-10 overflow-hidden px-2.5 py-2 flex items-center gap-2.5 text-left rounded-xl hover:bg-black/[0.025] dark:hover:bg-white/[0.035]">
       <span className={`w-6 h-6 shrink-0 rounded-lg flex items-center justify-center ${tone}`}>{icon}</span>
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-[12px] font-medium">{title}</span>
-        {meta && <span className="block mt-0.5 text-[10px] text-gray-400">{meta}</span>}
+        <span className="conversation-tool-label block truncate text-[12px] font-medium">{title}</span>
+        {meta && <span className="conversation-tool-meta block mt-0.5 text-[10px] text-gray-400">{meta}</span>}
       </span>
       {status === 'running' && <StatusDot tone="run" />}
       <ChevronDown size={13} className={`shrink-0 text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`} />
@@ -617,6 +617,112 @@ function ReasoningItem({ item, now, copy }) {
   );
 }
 
+function ProcessReasoningEntry({ item, onOpenExternal, onOpenResource }) {
+  const running = item.status === 'in_progress';
+  const scrollRef = useRef(null);
+  const followingRef = useRef(true);
+  const previousRef = useRef({ top: 0, height: 0 });
+  useEffect(() => {
+    const node = scrollRef.current;
+    if (!node || !followingRef.current) return;
+    node.scrollTop = node.scrollHeight;
+    previousRef.current = { top: node.scrollTop, height: node.scrollHeight };
+  }, [item.text]);
+  // Markdown can render after a streaming throttle; follow actual layout growth.
+  const hasText = Boolean(item.text);
+  useEffect(() => {
+    const node = scrollRef.current;
+    if (!node || !node.lastElementChild) return;
+    const observer = new ResizeObserver(() => {
+      if (!followingRef.current) return;
+      node.scrollTop = node.scrollHeight;
+      previousRef.current = { top: node.scrollTop, height: node.scrollHeight };
+    });
+    observer.observe(node.lastElementChild);
+    return () => observer.disconnect();
+  }, [hasText]);
+  const onScroll = () => {
+    const node = scrollRef.current;
+    if (!node) return;
+    const state = transitionConversationScrollState({ scrollElement: node, following: followingRef.current,
+      previousScrollTop: previousRef.current.top, previousScrollHeight: previousRef.current.height });
+    followingRef.current = state.following;
+    previousRef.current = { top: state.scrollTop, height: state.scrollHeight };
+  };
+  if (!item.text) return null;
+  return (
+    <div ref={scrollRef} onScroll={onScroll} data-testid="conversation-process-reasoning" className="conversation-process-reasoning">
+      <span className="conversation-process-marker" aria-hidden="true">
+        {running
+          ? <span className="block h-2.5 w-2.5 animate-spin rounded-full border border-current/20 border-t-current" />
+          : '•'}
+      </span>
+      <ConversationMarkdown
+        text={item.text}
+        onOpenExternal={onOpenExternal}
+        onOpenResource={onOpenResource}
+        streaming={running}
+        className="min-w-0 flex-1 text-gray-500 dark:text-gray-400"
+      />
+    </div>
+  );
+}
+
+function ProcessToolEntries({ group, now, renderToolItem, onOpenExternal, onOpenResource, copy }) {
+  const c = conversationCopy(copy);
+  const entries = useMemo(() => group.items || [], [group.items]);
+  const [expanded, setExpanded] = useState(false);
+  const detailsId = useId();
+  const scrollRef = useRef(null);
+  const followingRef = useRef(true);
+  const previousRef = useRef({ top: 0, height: 0 });
+  const active = entries.filter(item => terminalStatus(item.status) === 'running').length;
+  const failed = entries.filter(countsAsFailedOperation).length;
+  const grouped = entries.length > 1;
+  useEffect(() => {
+    const node = scrollRef.current;
+    if (!expanded || !node) { followingRef.current = true; return; }
+    const follow = () => {
+      if (!followingRef.current) return;
+      node.scrollTop = node.scrollHeight;
+      previousRef.current = { top: node.scrollTop, height: node.scrollHeight };
+    };
+    follow();
+    const observer = new ResizeObserver(follow);
+    observer.observe(node.firstElementChild);
+    return () => observer.disconnect();
+  }, [expanded, entries]);
+  const onScroll = () => {
+    const node = scrollRef.current;
+    const state = transitionConversationScrollState({ scrollElement: node, following: followingRef.current,
+      previousScrollTop: previousRef.current.top, previousScrollHeight: previousRef.current.height });
+    followingRef.current = state.following;
+    previousRef.current = { top: state.scrollTop, height: state.scrollHeight };
+  };
+  const tools = () => entries.map((item, index) => (
+    <div key={item.id || `${group.id || 'tool'}-${index}`} className="conversation-process-tool">
+      <ToolItem item={item} now={now} renderToolItem={renderToolItem}
+        onOpenExternal={onOpenExternal} onOpenResource={onOpenResource} copy={c} />
+    </div>
+  ));
+  if (!grouped) return tools();
+  return <div className="conversation-tool-batch">
+    <button type="button" data-testid="conversation-tool-batch-summary" className="conversation-process-row"
+      aria-expanded={expanded} aria-controls={expanded ? detailsId : undefined}
+      onClick={() => setExpanded(value => !value)}>
+      <Wrench size={13} className="shrink-0" />
+      <span>{c.toolBatch(entries.length)}</span>
+      {active > 0 && <span className="text-blue-500">{c.toolBatchRunning(active)}</span>}
+      {failed > 0 && <span className="text-red-500">{c.failedItems(failed)}</span>}
+      <ChevronDown size={12} className={`shrink-0 ${expanded ? 'rotate-180' : ''}`} />
+    </button>
+    {expanded && <div id={detailsId} ref={scrollRef} onScroll={onScroll}
+      data-testid="conversation-tool-batch-content" className="conversation-tool-batch-content">
+      <div>{tools()}</div>
+    </div>}
+  </div>;
+}
+
 export function PlanBlock({ plan, copy }) {
   const c = conversationCopy(copy);
   const entries = plan && plan.entries || [];
@@ -765,100 +871,57 @@ function ProcessDisclosure({
   copy,
 }) {
   const c = conversationCopy(copy);
-  const failed = items.some(item => (
-    item.type === 'tool_group'
-      ? item.items?.some(countsAsFailedOperation)
-      : countsAsFailedOperation(item)
-  ));
-  const [open, setOpen] = useState(true);
+  const failed = terminalStatus(turn.status) === 'failed';
+  const liveTools = items.some(item => item.type === 'tool_group'
+    ? item.items?.some(tool => terminalStatus(tool.status) === 'running')
+    : ['tool', 'command_execution', 'file_change'].includes(item.type) && terminalStatus(item.status) === 'running');
+  const [manualOpen, setManualOpen] = useState(null);
+  const open = manualOpen ?? (running || liveTools || failed);
   const detailsId = useId();
-  const scrollRef = useRef(null);
-  const followingRef = useRef(true);
-  const lastScrollTopRef = useRef(0);
-  const lastScrollHeightRef = useRef(0);
-
-  // The process pane is its own scroll container. Follow newly streamed
-  // reasoning/tool output while it is already at the bottom; a deliberate
-  // upward scroll pauses following until the user returns to the bottom or
-  // closes and reopens the disclosure.
-  useEffect(() => {
-    if (!open) return;
-    const element = scrollRef.current;
-    if (!element) return;
-    followingRef.current = true;
-    element.scrollTop = element.scrollHeight;
-    lastScrollTopRef.current = element.scrollTop;
-    lastScrollHeightRef.current = element.scrollHeight;
-    const onScroll = () => {
-      const transition = transitionConversationScrollState({
-        scrollElement: element,
-        following: followingRef.current,
-        previousScrollTop: lastScrollTopRef.current,
-        previousScrollHeight: lastScrollHeightRef.current,
-      });
-      followingRef.current = transition.following;
-      lastScrollTopRef.current = transition.scrollTop;
-      lastScrollHeightRef.current = transition.scrollHeight;
-    };
-    element.addEventListener('scroll', onScroll, { passive: true });
-    return () => element.removeEventListener('scroll', onScroll);
-  }, [open]);
-
-  useEffect(() => {
-    if (!open || !followingRef.current) return;
-    const frame = window.requestAnimationFrame(() => {
-      const element = scrollRef.current;
-      if (!element || !followingRef.current) return;
-      element.scrollTop = element.scrollHeight;
-      lastScrollTopRef.current = element.scrollTop;
-      lastScrollHeightRef.current = element.scrollHeight;
-    });
-    return () => window.cancelAnimationFrame(frame);
-  }, [items, open]);
+  const waitingPermission = turn.waitingPermission || (turn.permissions || []).some(p => !p.resolved);
+  const waitingInput = turn.waitingInput || (turn.elicitations || []).some(e => !e.resolved);
+  const workingLabel = waitingPermission ? c.waitingPermission : waitingInput ? c.waitingInput : c.working;
+  const statusLabel = running ? workingLabel : failed ? c.failed : c.processed;
+  const summary = running || failed ? `${statusLabel} · ${duration}` : c.worked(duration);
 
   return (
     <div className="min-w-0 max-w-full">
-      <button type="button" onClick={() => setOpen(value => !value)}
+      <button type="button" onClick={() => setManualOpen(!open)}
         data-testid="conversation-process-summary"
         aria-expanded={open}
-        aria-controls={open ? detailsId : undefined}
-        className={`conversation-process-row ${failed ? 'text-red-500' : 'text-gray-500 dark:text-gray-400'}`}>
+        aria-controls={detailsId}
+        className={`conversation-process-row conversation-work-summary ${failed ? 'text-red-500' : 'text-gray-500 dark:text-gray-400'}`}>
         {running
           ? <span className="h-2.5 w-2.5 shrink-0 animate-spin rounded-full border border-current/20 border-t-current" />
-          : <StatusDot tone={failed ? 'fail' : 'ok'} />}
-        <span>{running ? c.processingActive : c.processed}{duration ? ` · ${duration}` : ''}</span>
+          : <StatusDot tone={failed ? 'fail' : 'idle'} />}
+        <span>{summary}</span>
         <ChevronDown size={13} className={`shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
-      {open && (
-        <div ref={scrollRef} id={detailsId} data-testid="conversation-process-content"
-          className="ml-1 mt-1 max-h-64 min-w-0 max-w-full overflow-y-auto border-l border-black/10 py-1 pl-3 pr-2 custom-scrollbar dark:border-white/10">
-          <div className="mb-1 text-[11px] font-medium text-gray-400">{c.processDetails}</div>
-          <div className="space-y-1">
-            {items.map((item, index) => {
-              const context = { turn, now, pendingByTool, onRespond, responding };
-              const custom = renderItem && renderItem(item, context);
-              if (custom !== undefined) {
-                return <React.Fragment key={item.id || `${item.type}-${index}`}>{custom}</React.Fragment>;
-              }
-              return (
-                <DefaultItem
-                  key={item.id || `${item.type}-${index}`}
-                  item={item}
-                  now={now}
-                  pendingByTool={pendingByTool}
-                  onRespond={onRespond}
-                  responding={responding}
-                  renderToolItem={renderToolItem}
-                  onOpenExternal={onOpenExternal}
-                  onOpenResource={onOpenResource}
-                  agentLabel={agentLabel}
-                  copy={c}
-                />
-              );
-            })}
-          </div>
-        </div>
-      )}
+      <div id={detailsId} data-testid="conversation-ordered-content" className="conversation-ordered-content">
+        {items.map((item, index) => {
+          const key = item.id || `${item.type}-${index}`;
+          // Preserve event order. Only process details fold; user-facing updates,
+          // questions, artifacts and answers remain at their original positions.
+          if (PROCESS_ITEM_TYPES.has(item.type) && !open) return null;
+          const context = { turn, now, pendingByTool, onRespond, responding };
+          const custom = renderItem && renderItem(item, context);
+          if (custom !== undefined) return <React.Fragment key={key}>{custom}</React.Fragment>;
+          if (item.type === 'reasoning') {
+            return <ProcessReasoningEntry key={key} item={item} onOpenExternal={onOpenExternal} onOpenResource={onOpenResource} />;
+          }
+          if (item.type === 'tool_group') {
+            return <ProcessToolEntries key={key} group={item} now={now} renderToolItem={renderToolItem}
+              onOpenExternal={onOpenExternal} onOpenResource={onOpenResource} copy={c} />;
+          }
+          return (
+            <div key={key} className={PROCESS_ITEM_TYPES.has(item.type) ? 'conversation-process-tool' : 'conversation-message-entry'}>
+              <DefaultItem item={item} now={now} pendingByTool={pendingByTool} onRespond={onRespond}
+                responding={responding} renderToolItem={renderToolItem} onOpenExternal={onOpenExternal}
+                onOpenResource={onOpenResource} agentLabel={agentLabel} copy={c} />
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -969,7 +1032,7 @@ function ConversationTurnView({
   const presentation = turn.presentation || turn.items || [];
   const processItems = groupProcess ? presentation.filter(item => PROCESS_ITEM_TYPES.has(item.type)) : [];
   const hasProcessDisclosure = groupProcess && processItems.length > 0;
-  const visiblePresentation = groupProcess ? presentation.filter(item => !PROCESS_ITEM_TYPES.has(item.type)) : presentation;
+  const visiblePresentation = hasProcessDisclosure ? [] : presentation;
   const hasRunningActivity = presentation.some(item => item.type === 'reasoning' && item.status === 'in_progress'
     || item.type === 'tool_group' && item.items?.some(tool => terminalStatus(tool.status) === 'running'));
   const showStandaloneActivity = shouldShowStandaloneTurnActivity({
@@ -1041,7 +1104,7 @@ function ConversationTurnView({
           )}
           {hasProcessDisclosure && (
             <ProcessDisclosure
-              items={processItems}
+              items={presentation}
               turn={turn}
               running={running}
               duration={duration}
@@ -1085,7 +1148,7 @@ function ConversationTurnView({
             )}
             {(turn.lifecycleKnown || turn.completedAt || turn.error) && <>
               <ConversationStatusBadge status={turn.status} copy={c} />
-              {showTerminalDuration && <span className="text-[11px] text-gray-400">{duration}</span>}
+              {showTerminalDuration && !hasProcessDisclosure && <span className="text-[11px] text-gray-400">{duration}</span>}
               {operationCount > 0 && (
                 <span className="text-[11px] text-gray-400">
                   {c.operations(operationCount, failedOperationCount)}

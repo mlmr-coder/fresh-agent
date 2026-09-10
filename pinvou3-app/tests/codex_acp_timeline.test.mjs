@@ -643,6 +643,10 @@ try {
   assert.ok(!runtime.includes('runtime.prompt(content, mode_id)'), 'prompt must not overwrite acknowledged config with local UI mode');
 
   const codexView = readFileSync(path.join(root, 'src', 'features', 'codex', 'CodexAcpView.jsx'), 'utf8');
+  const conversationLayout = readFileSync(
+    path.join(root, 'src', 'features', 'conversation', 'conversation-layout.js'),
+    'utf8',
+  );
   const runtimeNotices = readFileSync(path.join(root, 'src', 'features', 'codex', 'AcpRuntimeNotices.jsx'), 'utf8');
   const acpClient = readFileSync(path.join(root, 'src', 'features', 'codex', 'acpClient.js'), 'utf8');
   const runtimeNoticeState = readFileSync(
@@ -660,6 +664,37 @@ try {
   const conversationView = readFileSync(path.join(root, 'src', 'features', 'conversation', 'ConversationTimeline.jsx'), 'utf8');
   const baseStyles = readFileSync(path.join(root, 'src', 'styles', 'base.css'), 'utf8');
   const boundedPermissionOptionClass = 'max-w-full min-w-0 whitespace-normal break-all';
+  for (const sharedClass of [
+    'CONVERSATION_COLUMN_CLASS',
+    'CONVERSATION_COMPOSER_SURFACE_CLASS',
+    'CONVERSATION_COMPOSER_INPUT_CLASS',
+    'CONVERSATION_COMPOSER_FOOTER_CLASS',
+  ]) {
+    assert.ok(conversationLayout.includes(`const ${sharedClass}`)
+      && chatView.includes(sharedClass)
+      && codexView.includes(sharedClass),
+    `${sharedClass} must be defined once and shared by Work, Design, and Code composers`);
+  }
+  assert.ok(conversationLayout.includes('CONVERSATION_MAX_WIDTH = 1160')
+    && codexView.includes('style={conversationGutterStyle()}')
+    && codexView.includes('className={CONVERSATION_COLUMN_CLASS}')
+    && !codexView.includes("'w-full max-w-[800px] mx-auto'"),
+  'Code draft, active-session output, and composer must use the same responsive conversation column as Work and Design');
+  assert.ok(chatView.includes('data-testid="chat-composer-surface"')
+    && codexView.includes('data-testid="codex-composer-surface"')
+    && codexView.includes('<ComposerInput')
+    && codexView.includes('className={CONVERSATION_COMPOSER_INPUT_CLASS}')
+    && codexView.includes('data-testid="codex-disclaimer"'),
+  'the Code composer must keep its agent controls while matching the Work composer surface, input height, and footer treatment');
+  assert.ok(codexView.includes("scope: 'code'")
+    && codexView.includes('disabled: !isNativeAgent')
+    && codexView.includes('skills={isNativeAgent ? codeSuggestions.skills : []}')
+    && codexView.includes('{isNativeAgent && codeSuggestions.menu}')
+    && main.includes('onGotoSkills={() => navigateFromScheduledRun'),
+  'native Code conversations must expose the shared slash skill picker using code-scope capability switches');
+  assert.ok(codexView.includes('legacy.compactAuto')
+    && codexView.includes('codexCopy.compactAuto'),
+  'automatic context compaction notices must be identified in the Code timeline');
   // The permission-card option wrapping contract is now carried solely by the shared timeline implementation.
   assert.ok(conversationView.includes(boundedPermissionOptionClass),
   'long ACP permission option labels must wrap inside the shared permission card');
@@ -742,8 +777,10 @@ try {
   const attachmentButtonIndex = codexView.indexOf('title={codexCopy.addAttachment}', composerFooterIndex);
   assert.ok(composerFooterIndex >= 0
     && workspaceSelectorIndex > composerFooterIndex
-    && attachmentButtonIndex > workspaceSelectorIndex,
-  'the draft workspace selector must live in the composer footer before the attachment control');
+    && attachmentButtonIndex > workspaceSelectorIndex
+    && codexView.includes('className="relative order-1"')
+    && codexView.includes('className="relative order-2 min-w-0"'),
+  'the draft workspace selector must stay in the footer while attachment remains the first visual action');
   const accountTriggerIndex = codexView.indexOf('data-testid="acp-account-menu-trigger"');
   const composerConfigsIndex = codexView.indexOf('data-testid="codex-composer-configs"');
   assert.ok(accountTriggerIndex > composerFooterIndex
@@ -932,10 +969,10 @@ try {
     'Codex input answers must be returned through the ACP request');
   assert.ok(conversationView.includes('className={`codex-markdown'), 'conversation Markdown must keep the isolated Codex style scope');
   assert.ok(codexView.includes('<ConversationTurn'), 'Codex must render through the shared Turn renderer by default');
-  assert.ok(codexView.includes('<ConversationActivityIndicator')
-    && codexView.includes('turn={activeConversationTurn}')
-    && conversationView.includes("if (!turn || turn.status !== 'running') return null"),
-  'Codex must show the shared composer timer only while the active turn is running');
+  assert.ok(codexView.includes('<ConversationTurn')
+    && codexView.includes('groupProcess')
+    && !codexView.includes('<ConversationActivityIndicator'),
+  'Codex must use the unified transcript process disclosure without a duplicate composer timer');
   assert.ok(codexView.includes('data-testid="acp-session-loading"')
     && codexView.includes('const [sessionLoading, setSessionLoading] = useState(false)')
     && codexView.includes('disabled={!!nativeVoice.editPreview || !sessionReady')
@@ -972,11 +1009,21 @@ try {
     && codexView.includes('multiAgentAvailable={nativeMultiAgentAvailable}')
     && codexView.includes('onToggleMultiAgent={switchNativeMultiAgent}')
     && codexView.includes('triggerTestId="native-tools"')
+    && codexView.includes('triggerVariant="capability-groups"')
     && codexView.includes('scope="code"')
     && codexView.includes('mountedId={nativeMountedId}')
     && codexView.includes('<VoiceComposerButton')
     && codexView.includes('testId="codex-voice-input"'),
   'the native lane must mount the shared composer controls (work/design style) plus the voice input button behind the native-agent gate');
+  const nativeLeftControlsIndex = codexView.indexOf('data-testid="native-composer-controls"');
+  const nativeUsageIndex = codexView.indexOf('data-testid="native-usage-chip"');
+  const nativeModelIndex = codexView.indexOf('<ComposerModelSelector', nativeUsageIndex);
+  const nativeVoiceIndex = codexView.indexOf('testId="codex-voice-input"', nativeModelIndex);
+  assert.ok(nativeLeftControlsIndex > composerFooterIndex
+    && nativeUsageIndex > nativeLeftControlsIndex
+    && nativeModelIndex > nativeUsageIndex
+    && nativeVoiceIndex > nativeModelIndex,
+  'Code must follow Work footer grouping: capability actions left, then context, model, voice, and send on the right');
   assert.ok(codexView.includes('renderToolItem={isNativeAgent')
     && !codexView.includes('renderToolItem={isNativeAgent && nativeMultiAgentEnabled')
     && codexView.includes('{subagentPanel && activeSession && isNativeAgent && (')

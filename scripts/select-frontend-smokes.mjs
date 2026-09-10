@@ -6,6 +6,7 @@ const command = (kind, target) => ({ kind, target });
 
 export const FULL_FRONTEND_SMOKES = Object.freeze([
   command("npm", "test:bridge-smoke"),
+  command("npm", "test:conversation-presentation"),
   command("npm", "test:code-viewer-ui"),
   command("npm", "test:code-viewer-diff-ui"),
   command("npm", "test:workspace-panel-ui"),

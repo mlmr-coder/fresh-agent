@@ -456,10 +456,10 @@ try {
     && chatView.includes('const artifactsVisible = Boolean(activeSessionId && artifactsOpen)')
     && chatView.includes('if (!activeSessionId) setArtifactsOpen(false)'),
   'the empty Work home must hide and close the artifacts entry until a session exists');
-  assert.ok(chatView.includes('<ConversationActivityIndicator')
-    && chatView.includes('turn={activeConversationTurn}')
-    && conversationView.includes("if (!turn || turn.status !== 'running') return null"),
-  'the composer activity timer must be shared and visible only while a turn is active');
+  assert.ok(!chatView.includes('<LiveConversationActivityIndicator')
+    && conversationView.includes('data-testid="conversation-process-summary"')
+    && conversationView.includes('const open = manualOpen ?? (running || liveTools || failed);'),
+  'the running state must appear once in the transcript process disclosure and fold after completion');
   assert.ok(chatView.includes('!isSearchTool(item.tool)') && chatView.includes('!isFetchTool(item.tool)'),
     'web search and fetch tools must use shared structured renderers while other DeepSeek tools retain provider cards');
   assert.ok(chatView.includes('variant="timeline"'),
@@ -470,13 +470,14 @@ try {
   'timeline tool cards must stay compact except while a live shell operation needs visible output and controls');
   assert.ok(chatView.includes('groupProcess')
     && conversationView.includes('data-testid="conversation-process-summary"')
-    && conversationView.includes('data-testid="conversation-process-content"')
+    && conversationView.includes('data-testid="conversation-ordered-content"')
     && conversationView.includes('running && !hasProcessDisclosure')
-    && conversationView.includes('ref={scrollRef} id={detailsId}')
     && conversationView.includes('transitionConversationScrollState({')
-    && conversationView.includes('element.scrollTop = element.scrollHeight')
-    && conversationView.includes('max-h-64')
-    && conversationView.includes('overflow-y-auto'),
+    && conversationView.includes('node.scrollTop = node.scrollHeight')
+    && conversationView.includes('items={presentation}')
+    && conversationView.includes('<ProcessReasoningEntry')
+    && conversationView.includes('<ProcessToolEntries')
+    && conversationView.includes('showTerminalDuration && !hasProcessDisclosure'),
   'work conversations must show one running status and keep the bounded process disclosure following its latest output');
   assert.ok(toolRenderers.includes('<QuestionChoiceCard'),
     'DeepSeek request_user_input must use the shared Codex-style choice card');

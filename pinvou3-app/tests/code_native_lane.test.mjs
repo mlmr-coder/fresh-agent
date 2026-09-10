@@ -499,11 +499,12 @@ try {
 
   // ── compaction：渲染为系统提示项 ─────────────────────────────────
   const lane7 = createNativeLane();
-  applyNativeChatEvent(lane7, 'chat:compaction', { session_id: 's7', phase: 'start', message: 'auto compact' });
+  applyNativeChatEvent(lane7, 'chat:compaction', { session_id: 's7', phase: 'start', auto: true, message: 'auto compact' });
   applyNativeChatEvent(lane7, 'chat:compaction', { session_id: 's7', phase: 'done', message: '12 → 8' });
   const notices = lane7.items.filter(item => item.type === 'system');
   assert.equal(notices.length, 2);
   assert.equal(notices[0].compactPhase, 'start');
+  assert.equal(notices[0].compactAuto, true);
   assert.equal(notices[1].compactPhase, 'done');
   assert.equal(notices[1].text, '12 → 8');
 
