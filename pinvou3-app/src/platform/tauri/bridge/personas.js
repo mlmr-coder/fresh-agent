@@ -136,8 +136,7 @@
     const sid = state.activeSessionId;
     try { await invoke("unequip_persona", { sessionId: state.activeSessionId }); } catch (e) {
       if (sid === state.activeSessionId) {
-        const copy = window.__PINVOU_SHARED_I18N__?.[state.settings?.language === "en" ? "en" : "zh"];
-        addSystemItem((copy?.personaRemoveFailed || bt("deleteFailed")) + e);
+        addSystemItem(bt("personaRemoveFailed") + e);
       }
       return; // A failed durable removal must not disappear locally and return after restart.
     }
