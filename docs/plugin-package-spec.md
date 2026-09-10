@@ -165,10 +165,18 @@ MCP server 的启动真相源。本地 stdio server 的必填与常用字段：
   "id": "qcc", "name": "企查查", "description": "d", "version": "1.0.0",
   "icon": "", "category": "search", "mcp_tools": [], "command": "", "args": [],
   "servers": [
-    { "name": "qcc", "url": "https://…", "oauth": { "client_id": "…" } }
+    { "name": "qcc", "url": "https://…", "oauth": {} }
   ]
 }
 ```
+
+- `url` 必须是原始 URL 字符串，不能写成 Markdown 链接（例如
+  `[https://host/mcp](https://host/mcp)`）。
+- 支持标准 OAuth discovery 的服务使用 `"oauth": {}` 标记需要授权即可；应用从
+  protected-resource 与 authorization-server metadata 自动发现授权地址、注册端点和 scope。
+- 只有服务要求固定客户端时才填写 `oauth.client_id`；只有 discovery 得不到正确资源标识时
+  才填写 `oauth_resource`。它是单个字符串，不是数组。
+- `scopes` 仅填写服务端明确要求的 scope；不要把 `"mcp"` 当作所有 MCP 服务的通用 scope。
 
 可选字段全量：`env`、`secret_env`、`secret_headers`、`validate_on_install`、
 `config_fields`、`routing_rules`、`tool_table_entries`、`pip_dependencies`、
@@ -244,7 +252,7 @@ metadata:                       # 可选
 
 - 可选：zip 根放 `icon.svg` 或 `icon.png`（仅这两种扩展名），`plugin.json.icon` 引用。
 - 缺省：无图标 → 导入时落盘内置默认图标 `bundles/<id>/icon.svg`。
-- 落盘后图标与工具同目录：`bundles/<id>/icon.<ext>`；前端「已装工具」一律读这里。
+- 落盘后图标与工具同目录：`bundles/<id>/icon.<ext>`；能力中心、聊天输入框头像和连接器菜单共同读取这张原图，不做灰度或换色处理。
 
 ---
 

@@ -107,6 +107,7 @@ fingerprints=(
   "T2|具名 tool_choice 不得指向省略工具  |CodeWhale/crates/tui/src/client.rs|async fn forkguard_moonshot_rejects_named_choice_for_omitted_tool"
   "T2|Moonshot 每轮只发一次投影诊断       |CodeWhale/crates/tui/src/client.rs|async fn forkguard_moonshot_stream_emits_one_projection_warning"
   "T2|宿主 MCP 密钥解析不写进程环境       |CodeWhale/crates/tui/src/mcp.rs|pub fn install_mcp_secret_resolver("
+  "T2|OAuth resource 覆盖保持单值         |CodeWhale/crates/tui/src/mcp/oauth.rs|fn forkguard_oauth_resource_override_is_single_valued"
   "T2|禁用 MCP server 从全部 pool 面消失 |CodeWhale/crates/tui/src/mcp/tests.rs|fn forkguard_mcp_pool_denied_server_disappears_from_every_surface"
   "T2|子智能体不得绕过 MCP 禁用继承       |CodeWhale/crates/tui/src/tools/subagent/tests.rs|fn forkguard_spawn_request_inherit_disallowed_tools_opt_out_not_honored"
   "T2|Shell 跨 poll 保持 UTF-8 解码状态  |CodeWhale/crates/tui/src/tools/shell/output.rs|fn forkguard_shell_output_decoder_preserves_utf8_across_poll_boundaries"

@@ -94,7 +94,7 @@ description: 当用户要把手头的工具打包/标准化成智灵插件包时
 - 入口脚本**命名为 `server.py`**、`args: ["server.py"]`（安装时被重写为包内绝对路径）。
 - 依赖 pip 包 → `"pip_dependencies": ["requests"]`（上传/导入安装路径不会自动执行 pip 安装，须提醒用户自行安装）。
 - 密钥/Token **不写明文**：走 `config_fields`（`secret:true`）或 `secret_env`/`secret_headers`。
-- 远程 HTTP/OAuth server：仍须保留 `"command": ""` 与 `"args": []`（manifest 必填字段），另以 `servers:[{name,url,scopes?,oauth?}]` 声明远程端点。
+- 远程 HTTP/OAuth server：仍须保留 `"command": ""` 与 `"args": []`（manifest 必填字段），另以 `servers:[{name,url,oauth:{}}]` 声明远程端点。`url` 必须是原始 URL 字符串，不能写 Markdown 链接。标准 discovery 可用时让 `oauth:{}` 作为授权标记即可；只有服务明确要求固定客户端、固定 scope 或不同的 RFC 8707 资源标识时，才分别填写 `oauth.client_id`、`scopes`、`oauth_resource`。`oauth_resource` 必须是单个字符串，禁止数组；不要默认猜测 `scopes:["mcp"]`。
 
 ---
 
@@ -127,6 +127,7 @@ description: 解读天气数据，用户要分析/解释天气结果时使用。
 1. `plugin.json` 存在且 `manifest_version:1`、`id` 全小写合法。
 2. 目录结构符合 §标准包结构；声明了 `components` 的 `dir` 都在包内、skill 目录有 `SKILL.md`。
 3. MCP：`mcp/manifest.json` 的 `id/name/description/version/icon/category/mcp_tools/command/args` 八项齐（可空值但字段在），`command` 是解释器、`args` 指向 `server.py`。
+   远程 OAuth MCP 还要访问 endpoint 验证 401 challenge、protected-resource metadata 与 authorization-server metadata；确认 resource 是字符串、授权地址可发现。不可访问时明确标成“结构校验通过、联通性未验证”，不能宣称插件可用。
 4. 技能：`SKILL.md` frontmatter 有 `name` + `description`。
 5. 图标：有 `icon.svg` 或 `icon.png`。
 6. 无明文密钥/Token；无路径穿越名（`.`/`..`/分隔符）。
