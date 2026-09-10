@@ -1,4 +1,9 @@
 fn main() {
+    // `tauri::generate_context!()` embeds the application icon during rustc
+    // expansion, outside tauri-build's codegen path. Keep Cargo aware of these
+    // inputs so dev restarts cannot reuse a binary containing stale icon bytes.
+    println!("cargo:rerun-if-changed=icons");
+
     // Bundle system prompt and security hook changes must invalidate the
     // extracted immutable bundle on existing installations.
     let mut hashed = Vec::new();

@@ -4,7 +4,7 @@
 
 根目录 `BRAND.json` 是显示名称和品牌图标路径的单一来源。修改后运行 `node scripts/sync-brand.mjs`；脚本会同步前端品牌常量、主窗口与 HTML 标题、macOS 应用菜单与安装元数据、Linux 启动器、包描述及原生图标清单。`node scripts/sync-brand.mjs --check` 用于检查遗漏。生成的 `pinvou3-app/src/shared/brand.js` 与 `pinvou3-app/src-tauri/src/core/brand.rs` 不应手工修改。
 
-品牌图标分为一个前端显示资源和一组原生平台尺寸资源，路径统一登记在 `BRAND.json`。macOS Dock 会按图标画布统一排版，主体贴满画布时会显得比其他应用更大；`icons.macosContentScale` 控制主体占画布的比例，默认 `0.8`。更换源图后，正常执行 `npm run dev` 或 `npm run build` 会先等比缩放原图、生成带透明安全区的 `macos-icon.png` 和最终 `icon.icns`，不会重绘图标；也可以单独运行 `npm run sync:brand:macos-icon`。生成内容未变化时不会改写文件，以免触发无意义的 Rust 重编译。其他平台尺寸仍按配置准备，随后运行品牌同步命令。内置提示词发生变化时会更新内容哈希，应用按正常资源提取流程刷新已安装内容。
+品牌图标分为一个前端显示资源和一组原生平台尺寸资源，路径统一登记在 `BRAND.json`。macOS Dock 会按图标画布统一排版，主体贴满画布时会显得比其他应用更大；`icons.macosContentScale` 控制主体占画布的比例，默认 `0.8`。更换源图后，正常执行 `npm run dev` 或 `npm run build` 会先等比缩放原图、生成带透明安全区的 `macos-icon.png` 和最终 `icon.icns`，不会重绘图标；也可以单独运行 `npm run sync:brand:macos-icon`。生成内容未变化时不会改写文件，以免触发无意义的 Rust 重编译；图标有变化时，`build.rs` 会让 Cargo 重新生成内嵌应用上下文，避免开发进程继续复用旧图标。其他平台尺寸仍按配置准备，随后运行品牌同步命令。内置提示词发生变化时会更新内容哈希，应用按正常资源提取流程刷新已安装内容。
 
 `legacyDisplayNames` 登记曾使用过的显示名称。`node scripts/sync-brand.mjs` 会在产品文档、界面文案、安装脚本和测试中替换残留名称，`--check` 会在发现残留时失败；兼容性技术标识不登记在这里。
 
