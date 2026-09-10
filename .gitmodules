@@ -3,5 +3,5 @@
 	url = https://github.com/mlmr-coder/CodeWhale.git
 [submodule "private-runtimes/windows"]
 	path = private-runtimes/windows
-	url = https://github.com/Pinvou/pinvou3-windows-runtime.git
+	url = https://github.com/mlmr-coder/pinvou3-windows-runtime.git
 	update = none

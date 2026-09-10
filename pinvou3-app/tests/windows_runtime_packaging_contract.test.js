@@ -89,14 +89,14 @@ const prWorkflow = readRepo(".github", "workflows", "pr-check.yml");
 
 assert.match(
   gitmodules,
-  /\[submodule "private-runtimes\/windows"\][\s\S]*?url = https:\/\/github\.com\/Pinvou\/pinvou3-windows-runtime\.git[\s\S]*?update = none/,
+  /\[submodule "private-runtimes\/windows"\][\s\S]*?url = https:\/\/github\.com\/mlmr-coder\/pinvou3-windows-runtime\.git[\s\S]*?update = none/,
   "private Windows runtime must be pinned as a non-automatic submodule",
 );
 assert.equal(lock.schemaVersion, 2);
 assert.equal(lock.target, "windows-x86_64");
 assert.equal(lock.source.type, "git-submodule");
 assert.equal(lock.source.path, "private-runtimes/windows");
-assert.equal(lock.source.url, "https://github.com/Pinvou/pinvou3-windows-runtime.git");
+assert.equal(lock.source.url, "https://github.com/mlmr-coder/pinvou3-windows-runtime.git");
 assert.match(lock.source.commit, /^[0-9a-f]{40}$/u);
 assert.match(lock.manifest.sha256, /^[0-9a-f]{64}$/u);
 assert.match(lock.vcRedist.minimumVersion, /^\d+\.\d+\.\d+\.\d+$/u);

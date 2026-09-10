@@ -6,12 +6,14 @@ Windows 分支只维护代码、安装器模板和 submodule gitlink。Poppler�
 Node.js、Pandoc、ONNX Runtime、ASR 引擎、7-Zip 和 VC Runtime 存放在公开仓库：
 
 ```text
-https://github.com/Pinvou/pinvou3-windows-runtime.git
+https://github.com/mlmr-coder/pinvou3-windows-runtime.git
 ```
 
 主仓库不保存这些大型二进制，也不在基础 `tauri.conf.json` 中硬编码平台资源路径。
 `private-runtimes/windows` 是为保持 gitlink、缓存和构建脚本兼容而保留的历史路径名，
 不代表当前仓库可见性。
+子模块自 2026-09-10 起改从自有 fork `mlmr-coder/pinvou3-windows-runtime` 消费（原
+`Pinvou/pinvou3-windows-runtime`），与 CodeWhale 一致不再依赖上游组织仓库。
 
 ## 目录和版本锁定
 
