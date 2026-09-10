@@ -2,9 +2,13 @@
 set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# CodeWhale is consumed from the mlmr-coder fork (forked from Pinvou/CodeWhale
+# so fork-only fixes can be published without waiting on an upstream PR).
+# The gitlink must point at a commit reachable from this public repo, otherwise
+# `git submodule update --init` fails for everyone, including CI.
 PINVOU_CODEWHALE_PATH="CodeWhale"
-PINVOU_CODEWHALE_URL="https://github.com/Pinvou/CodeWhale.git"
-PINVOU_CODEWHALE_TAG="pinvou-v0.9.5-r13"
+PINVOU_CODEWHALE_URL="https://github.com/mlmr-coder/CodeWhale.git"
+PINVOU_CODEWHALE_TAG="pinvou-v0.9.5-r13-oauth1"
 
 if [[ $# -ne 0 ]]; then
   echo "unknown argument: $1" >&2

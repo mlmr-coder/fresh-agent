@@ -2,18 +2,22 @@
 
 > 本文是 Pinvou 对 CodeWhale fork 的单一现状清单。
 > 基线、主题边界、守护指纹和同步结论以本文与 `docs/fork-policy.md` 为准。
-## 0. 当前状态（2026-09-01 · v0.9.5 r13 基线，父仓 gitlink 由 PR #370 接入）
+## 0. 当前状态（2026-09-10 · v0.9.5 r13 基线 + 本 fork 1 条 OAuth 修复）
+
+> 来源变更：子模块已由 `Pinvou/CodeWhale` 切到公开 fork `mlmr-coder/CodeWhale`，
+> 以便 fork 独有的修复无需等待上游 PR 即可发布。父仓 gitlink 指向的 commit
+> 必须能从该 fork 公开到达，否则 `git submodule update --init` 对所有人（含 CI）失败。
 
 | 项 | 当前值 |
 |---|---|
 | 上游基线 | tag `v0.9.5`，commit `853cb707bbcf4f7dc4268fba6d811e0d04083f9c` |
-| 公开维护分支 | `Pinvou/CodeWhale:pinvou3-clean`，r13 head `f853f8f1`（r12 + #32 GAIA 评测隔离扩展） |
+| 公开维护分支 | `mlmr-coder/CodeWhale:codex/oauth-resource-single-valued`（自 `Pinvou/CodeWhale` fork），head `fee18c2f2` = r13 `f853f8f1` + RFC 8707 `resource` 单值修复 |
 | 已合并修复 | 既有 `#9`、`#11`、`#12`、`#13`、`#15`、`#16`、`#17`、`#19`，以及 r11 的 `#18`、`#21`、`#22`、`#25`、`#26`、`#27`、`#29`、`#30`，r12 的 `#33`、`#35`，r13 的 `#32` 均已合并 |
-| 发布状态 | `pinvou3-clean` 与不可变 tag `pinvou-v0.9.5-r13` 均指向 `f853f8f1566c57e6be40d5439a222a932aa79ef5`；`r1` 至 `r13` 保持不可变；父仓 gitlink 由 PR #370 对齐 r13 |
+| 发布状态 | 不可变 tag `pinvou-v0.9.5-r13-oauth1` 指向 `fee18c2f2657d6f83563ff55efaaf9318dea0d05`，父仓 gitlink 对齐该 tag；上游 `Pinvou/CodeWhale` 的 `r1`–`r13` 保持不可变，但已不再是本仓的子模块来源 |
 | 旧基线备份 | tag `pinvou-v0.9.0-r4` + branch `backup/pinvou3-clean-v0.9.0-r4`，均指向 `03e9e1027c03ce1e4b35ab9e3ccce751b65b9624` |
 | 组织方式 | 从 `v0.9.5` clean re-fork 的 4 个当前长期主题；专用编排主题由 PR #13 整体撤销 |
 | drift | r13 基线合计 `110 files, +10895/-1195`（净增 9700 行）；r12→r13 为 `6 files, +1088/-1` |
-| 守护 | r13 发布基线为 63 条 CodeWhale `forkguard_*` 行为测试（含 6 条 GAIA 评测隔离测试）；当前工作树另加 1 条 OAuth resource 单值回归 + 通用工具/路由兼容回归 + 父仓指纹/行为测试 |
+| 守护 | r13 发布基线为 63 条 CodeWhale `forkguard_*` 行为测试（含 6 条 GAIA 评测隔离测试）；本 fork 另加 1 条 OAuth resource 单值回归（已随 `fee18c2f2` 入库，不再是工作树临时改动）+ 通用工具/路由兼容回归 + 父仓指纹/行为测试 |
 | 父仓适配 | gitlink、`Cargo.lock`、`EngineConfig` v0.9.5 字段适配、拒绝编辑的终态/权威历史对账、压缩后用量即时刷新与持久化回填、严格直连模型大小写桥接回归、搜索源设置页引导文案，以及 operator-owned 未登记云端模型（自定义 openai-compatible 端点）的显式输出路由事实声明与官方端点 fail-closed 守护（承 PR #216） |
 
 ### r12 厂商原生搜索与免 key 兜底 Bing 化（已合入底座）
