@@ -19,6 +19,7 @@ const { linuxStartupWindowConfigSpec } = require("./startup-window-config.js");
 const { prepareKnowledgeHost } = require("./knowledge-host.js");
 const { WRAPPER_ENV } = require("./require-wrapper.js");
 const { developmentArgs } = require("./macos-dev-signing.js");
+const { syncMacosIcon } = require("./macos-icon.js");
 const { stageWindowsInstaller } = require("./windows-installer.js");
 const {
   stageWindowsOnnxRuntime,
@@ -176,6 +177,9 @@ function main() {
 
   const isDev = args.includes("dev");
   const hasTauriBuildCommand = tauriCommandIndex(args) >= 0;
+  if (process.platform === "darwin" && (isDev || hasTauriBuildCommand)) {
+    syncMacosIcon();
+  }
   const additionalConfigs = [];
   // Windows 的 fastembed 使用动态 ONNX Runtime。正式包 staging 完整运行时并通过
   // resource overlay 携带 DLL；dev 只校验并展开 ONNX 组件，避免为 UI 开发准备无关工具。
