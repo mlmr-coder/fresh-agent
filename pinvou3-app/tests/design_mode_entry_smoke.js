@@ -168,7 +168,7 @@ async function clickExactButton(page, text) {
   const initial = await page.evaluate(() => {
     const homeSwitcher = document.querySelector('[data-testid="home-mode-switcher"]');
     const duplicateSwitcher = document.querySelector('[data-testid="pinvou-mode-switcher"]');
-    const textarea = document.querySelector('textarea');
+    const textarea = document.querySelector('[data-testid="chat-composer-input"]');
     return {
       homeSwitcher: !!homeSwitcher,
       duplicateSwitcher: !!duplicateSwitcher,
@@ -178,7 +178,7 @@ async function clickExactButton(page, text) {
       workHasPptDesign: !!document.querySelector('[data-testid="work-subtab-picker-option-ppt-design"]'),
       workHasDataVisualization: !!document.querySelector('[data-testid="work-subtab-picker-option-data-visualization"]'),
       sceneTag: !!document.querySelector('[data-testid="pinvou-scene-tag"]'),
-      placeholder: textarea && textarea.getAttribute('placeholder'),
+      placeholder: textarea && textarea.getAttribute('data-placeholder')?.split('  @')[0],
     };
   });
   rec('默认只渲染一个工作/设计/代码主入口',
@@ -189,7 +189,7 @@ async function clickExactButton(page, text) {
 
   await page.click('[data-testid="work-subtab-picker-option-document-writing"]');
   await sleep(250);
-  await page.focus('textarea');
+  await page.focus('[data-testid="chat-composer-input"]');
   await page.keyboard.type('发送后气泡标签测试');
   await page.keyboard.press('Enter');
   await sleep(900);
@@ -238,7 +238,7 @@ async function clickExactButton(page, text) {
       };
     }
   });
-  await page.focus('textarea');
+  await page.focus('[data-testid="chat-composer-input"]');
   await page.keyboard.type('普通工作问题');
   await page.keyboard.press('Enter');
   await sleep(250);
@@ -263,9 +263,9 @@ async function clickExactButton(page, text) {
   await page.click('[data-testid="work-subtab-picker-option-personal-workbench"]');
   await sleep(250);
   const personalWorkbenchState = await page.evaluate(() => {
-    const textarea = document.querySelector('textarea');
+    const textarea = document.querySelector('[data-testid="chat-composer-input"]');
     return {
-      placeholder: textarea && textarea.getAttribute('placeholder'),
+      placeholder: textarea && textarea.getAttribute('data-placeholder')?.split('  @')[0],
       textareaValue: textarea && textarea.value,
       sceneTag: document.querySelector('[data-testid="pinvou-scene-tag"]')?.textContent || '',
       templatePicker: !!document.querySelector('[data-testid="personal-workbench-template-picker"]'),
@@ -273,7 +273,7 @@ async function clickExactButton(page, text) {
         .map(node => (node.textContent || '').trim()),
     };
   });
-  await page.focus('textarea');
+  await page.focus('[data-testid="chat-composer-input"]');
   await page.keyboard.type('运动');
   await page.keyboard.press('Enter');
   await sleep(350);
@@ -285,7 +285,7 @@ async function clickExactButton(page, text) {
       templateId: sent.meta && sent.meta.pinvouTemplateId,
       templateTitle: sent.meta && sent.meta.pinvouTemplateTitle,
       payload: sent.meta && sent.meta.pinvouPayloadText,
-      textareaAfterSend: document.querySelector('textarea')?.value || '',
+      textareaAfterSend: document.querySelector('[data-testid="chat-composer-input"]')?.value || '',
       userBubbleText: [...document.querySelectorAll('[data-testid="chat-message-user"], .chat-message-user')]
         .map(node => node.textContent || '')
         .join('\n'),
@@ -313,9 +313,8 @@ async function clickExactButton(page, text) {
   await sleep(200);
   const longCustomWorkbenchPrompt = '我要做一个适合自由职业者使用的客户项目管理工作台，需要能管理客户、合同、收款节点、待办事项、沟通记录、项目风险、交付物清单和月度复盘，还要支持移动端查看，数据全部存在本地，并且界面需要像现代 iOS 工具应用一样清爽。';
   await page.evaluate((prompt) => {
-    const textarea = document.querySelector('textarea');
-    const setter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set;
-    setter.call(textarea, prompt);
+    const textarea = document.querySelector('[data-testid="chat-composer-input"]');
+    textarea.value = prompt;
     textarea.dispatchEvent(new Event('input', { bubbles: true }));
   }, longCustomWorkbenchPrompt);
   await page.keyboard.press('Enter');
@@ -328,7 +327,7 @@ async function clickExactButton(page, text) {
       templateId: sent.meta && sent.meta.pinvouTemplateId,
       templateTitle: sent.meta && sent.meta.pinvouTemplateTitle,
       payload: sent.meta && sent.meta.pinvouPayloadText,
-      textareaAfterSend: document.querySelector('textarea')?.value || '',
+      textareaAfterSend: document.querySelector('[data-testid="chat-composer-input"]')?.value || '',
     };
   });
   rec('个人工作台模板被整段替换后按自由输入处理',
@@ -346,7 +345,7 @@ async function clickExactButton(page, text) {
   await page.click('[data-testid="personal-workbench-template-1"]');
   await sleep(200);
   const personalTemplateSelected = await page.evaluate(() => {
-    const textarea = document.querySelector('textarea');
+    const textarea = document.querySelector('[data-testid="chat-composer-input"]');
     return {
       textareaValue: textarea && textarea.value,
       sceneTag: document.querySelector('[data-testid="pinvou-scene-tag"]')?.textContent || '',
@@ -357,10 +356,10 @@ async function clickExactButton(page, text) {
   await page.click('[data-testid="work-subtab-picker-option-document-writing"]');
   await sleep(250);
   const templateDraftClearedOnSceneSwitch = await page.evaluate(() => {
-    const textarea = document.querySelector('textarea');
+    const textarea = document.querySelector('[data-testid="chat-composer-input"]');
     return {
       textareaValue: textarea && textarea.value,
-      placeholder: textarea && textarea.getAttribute('placeholder'),
+      placeholder: textarea && textarea.getAttribute('data-placeholder')?.split('  @')[0],
       sceneTag: document.querySelector('[data-testid="pinvou-scene-tag"]')?.textContent || '',
       hasPersonalTemplatePrompt: /真实时薪计算器|个人账本|视觉要求/.test(textarea && textarea.value || ''),
     };
@@ -375,18 +374,17 @@ async function clickExactButton(page, text) {
   await page.click('[data-testid="work-subtab-picker-option-personal-workbench"]');
   await sleep(200);
   await page.evaluate((prompt) => {
-    const textarea = document.querySelector('textarea');
-    const setter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set;
-    setter.call(textarea, prompt);
+    const textarea = document.querySelector('[data-testid="chat-composer-input"]');
+    textarea.value = prompt;
     textarea.dispatchEvent(new Event('input', { bubbles: true }));
   }, personalTemplateSelected.textareaValue);
   await page.click('[data-testid="work-subtab-picker-option-document-writing"]');
   await sleep(250);
   const restoredTemplateDraftClearedOnSceneSwitch = await page.evaluate(() => {
-    const textarea = document.querySelector('textarea');
+    const textarea = document.querySelector('[data-testid="chat-composer-input"]');
     return {
       textareaValue: textarea && textarea.value,
-      placeholder: textarea && textarea.getAttribute('placeholder'),
+      placeholder: textarea && textarea.getAttribute('data-placeholder')?.split('  @')[0],
       sceneTag: document.querySelector('[data-testid="pinvou-scene-tag"]')?.textContent || '',
       hasPersonalTemplatePrompt: /真实时薪计算器|个人账本|视觉要求/.test(textarea && textarea.value || ''),
     };
@@ -403,9 +401,8 @@ async function clickExactButton(page, text) {
   await page.click('[data-testid="personal-workbench-template-1"]');
   await sleep(200);
   await page.evaluate(() => {
-    const textarea = document.querySelector('textarea');
-    const setter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set;
-    setter.call(textarea, `${textarea.value}\n\n用户补充需求：暗色模式`);
+    const textarea = document.querySelector('[data-testid="chat-composer-input"]');
+    textarea.value = `${textarea.value}\n\n用户补充需求：暗色模式`;
     textarea.dispatchEvent(new Event('input', { bubbles: true }));
   });
   await page.keyboard.press('Enter');
@@ -418,7 +415,7 @@ async function clickExactButton(page, text) {
       templateId: sent.meta && sent.meta.pinvouTemplateId,
       templateTitle: sent.meta && sent.meta.pinvouTemplateTitle,
       payload: sent.meta && sent.meta.pinvouPayloadText,
-      textareaAfterSend: document.querySelector('textarea')?.value || '',
+      textareaAfterSend: document.querySelector('[data-testid="chat-composer-input"]')?.value || '',
       templateTagAfterSend: !!document.querySelector('[data-testid="pinvou-scene-template-tag"]'),
     };
   });
@@ -446,20 +443,20 @@ async function clickExactButton(page, text) {
   await page.click('[data-testid="work-subtab-picker-option-document-writing"]');
   await sleep(250);
   const selectedWorkScene = await page.evaluate(() => {
-    const textarea = document.querySelector('textarea');
+    const textarea = document.querySelector('[data-testid="chat-composer-input"]');
     return {
-      placeholder: textarea && textarea.getAttribute('placeholder'),
+      placeholder: textarea && textarea.getAttribute('data-placeholder')?.split('  @')[0],
       tag: document.querySelector('[data-testid="pinvou-scene-tag"]')?.textContent || '',
       clear: !!document.querySelector('[data-testid="pinvou-scene-tag-clear"]'),
     };
   });
-  await page.focus('textarea');
+  await page.focus('[data-testid="chat-composer-input"]');
   await page.keyboard.type('写一份项目验收通知');
   await page.click('[data-testid="pinvou-scene-tag-clear"]');
   await sleep(250);
   const clearedWorkScene = await page.evaluate(() => ({
     tag: !!document.querySelector('[data-testid="pinvou-scene-tag"]'),
-    text: document.querySelector('textarea')?.value || '',
+    text: document.querySelector('[data-testid="chat-composer-input"]')?.value || '',
   }));
   rec('工作子模式以标签显示并可取消且保留草稿',
     selectedWorkScene.placeholder === '描述公文主题、文种、收发单位和关键要求' &&
@@ -471,7 +468,7 @@ async function clickExactButton(page, text) {
 
   await page.click('[data-testid="work-subtab-picker-option-document-writing"]');
   await sleep(250);
-  await page.focus('textarea');
+  await page.focus('[data-testid="chat-composer-input"]');
   await page.keyboard.press('Enter');
   await sleep(700);
   const documentPayload = await page.evaluate(() => {
@@ -503,13 +500,13 @@ async function clickExactButton(page, text) {
   await clickExactButton(page, '设计');
   await sleep(250);
   const designGeneralState = await page.evaluate(() => {
-    const textarea = document.querySelector('textarea');
+    const textarea = document.querySelector('[data-testid="chat-composer-input"]');
     return {
-      placeholder: textarea && textarea.getAttribute('placeholder'),
+      placeholder: textarea && textarea.getAttribute('data-placeholder')?.split('  @')[0],
       tag: !!document.querySelector('[data-testid="pinvou-scene-tag"]'),
     };
   });
-  await page.focus('textarea');
+  await page.focus('[data-testid="chat-composer-input"]');
   await page.keyboard.type('把当前页面调得更高级');
   await page.keyboard.press('Enter');
   await sleep(250);
@@ -523,7 +520,7 @@ async function clickExactButton(page, text) {
     };
   });
   rec('设计 general 保持设计语境但不注入子场景 meta',
-    designGeneralState.placeholder === '描述你想生成或调整的内容' &&
+    designGeneralState.placeholder === '今天帮你做些什么？' &&
       !designGeneralState.tag &&
       designGeneralPayload &&
       designGeneralPayload.text === '把当前页面调得更高级' &&
@@ -536,9 +533,9 @@ async function clickExactButton(page, text) {
   await page.click('[data-testid="design-subtab-picker-option-data-visualization"]');
   await sleep(250);
   const designDataPlaceholder = await page.evaluate(() => {
-    const textarea = document.querySelector('textarea');
+    const textarea = document.querySelector('[data-testid="chat-composer-input"]');
     return {
-      placeholder: textarea && textarea.getAttribute('placeholder'),
+      placeholder: textarea && textarea.getAttribute('data-placeholder')?.split('  @')[0],
       workDataTab: !!document.querySelector('[data-testid="work-subtab-picker-option-data-visualization"]'),
       designDataTab: !!document.querySelector('[data-testid="design-subtab-picker-option-data-visualization"]'),
       posterTab: !!document.querySelector('[data-testid="design-subtab-picker-option-poster"]'),
@@ -553,7 +550,7 @@ async function clickExactButton(page, text) {
       ),
     };
   });
-  await page.focus('textarea');
+  await page.focus('[data-testid="chat-composer-input"]');
   await page.keyboard.type('把近 7 天销售额做成趋势图');
   await page.keyboard.press('Enter');
   await sleep(700);
@@ -593,14 +590,14 @@ async function clickExactButton(page, text) {
   await page.click('[data-testid="design-subtab-picker-option-ppt"]');
   await sleep(250);
   const pptSceneState = await page.evaluate(() => {
-    const textarea = document.querySelector('textarea');
+    const textarea = document.querySelector('[data-testid="chat-composer-input"]');
     return {
-      placeholder: textarea && textarea.getAttribute('placeholder'),
+      placeholder: textarea && textarea.getAttribute('data-placeholder')?.split('  @')[0],
       tag: document.querySelector('[data-testid="pinvou-scene-tag"]')?.textContent || '',
       ariaDisabled: document.querySelector('[data-testid="design-subtab-picker-option-ppt"]')?.getAttribute('aria-disabled'),
     };
   });
-  await page.focus('textarea');
+  await page.focus('[data-testid="chat-composer-input"]');
   await page.keyboard.type('做一个 Q2 季度汇报 PPT');
   await page.keyboard.press('Enter');
   await sleep(700);
@@ -704,14 +701,14 @@ async function clickExactButton(page, text) {
 
   await sleep(700);
   const design = await page.evaluate(() => {
-    const textarea = document.querySelector('textarea');
+    const textarea = document.querySelector('[data-testid="chat-composer-input"]');
     const homeSwitcher = document.querySelector('[data-testid="home-mode-switcher"]');
     const designPicker = document.querySelector('[data-testid="design-subtab-picker"]');
     const sceneTag = document.querySelector('[data-testid="pinvou-scene-tag"]');
     const userSceneTag = document.querySelector('[data-testid="user-message-scene-tag"]');
     return {
       statusHidden: !document.querySelector('[data-testid="design-mode-status"]'),
-      placeholder: textarea && textarea.getAttribute('placeholder'),
+      placeholder: textarea && textarea.getAttribute('data-placeholder')?.split('  @')[0],
       homeSwitcher: !!homeSwitcher,
       designPicker: !!designPicker,
       sceneTag: sceneTag && sceneTag.textContent,
@@ -736,7 +733,7 @@ async function clickExactButton(page, text) {
       };
     }
   });
-  await page.focus('textarea');
+  await page.focus('[data-testid="chat-composer-input"]');
   await page.keyboard.type('设计一张科技峰会海报');
   await page.keyboard.press('Enter');
   await sleep(250);
@@ -1108,16 +1105,12 @@ async function clickExactButton(page, text) {
   }) : '';
 
   await page.click('[data-testid="design-text-input"]');
-  await page.keyboard.down('Control');
-  await page.keyboard.press('A');
-  await page.keyboard.up('Control');
+  await page.evaluate(() => document.activeElement.select());
   await page.keyboard.type('鲜小助 可视化编辑');
   await page.keyboard.press('Enter');
   await sleep(350);
   await page.click('[data-testid="design-font-size-input"]');
-  await page.keyboard.down('Control');
-  await page.keyboard.press('A');
-  await page.keyboard.up('Control');
+  await page.evaluate(() => document.activeElement.select());
   await page.keyboard.type('40');
   await page.keyboard.press('Tab');
   await sleep(350);

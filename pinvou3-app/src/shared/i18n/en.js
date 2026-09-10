@@ -414,6 +414,7 @@ export const dictEn = {
         feedbackBodyRequired: 'Please enter feedback details.', feedbackUnsupportedFile: 'Unsupported attachment format.',
         feedbackTooManyFiles: 'You can attach up to 5 files.', feedbackPickUnavailable: 'File picker is unavailable.',
         chatGreeting: 'Hi — what would you like to work on today?', artifacts: 'Artifacts', placeholder: 'What can I help you with today?', disclaimer: '鲜小助 may display inaccurate info, so double-check.', ctxUsage: 'Context',
+        ctxUsageTooltip: (percent, used, total) => `${percent}% · ${used} / ${total} context used`,
         chatInputLimitReached: n => `The ${n}-character limit has been reached.`,
         searchPlaceholder: 'Search chats', searchNoResults: 'No matching chats', searchDateAll: 'All',
         searchBatchManage: 'Select', searchBatchDone: 'Done', searchSelectAll: 'Select all', searchSelectedCount: n => `${n} selected`,

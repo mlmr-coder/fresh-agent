@@ -29,6 +29,7 @@ import {
 } from './conversation-model.js';
 import { AssistantMessageActions, AssistantMessageFooter } from './AssistantMessageActions.jsx';
 import { assistantResponseAvailable, assistantResponseText } from './message-clipboard.js';
+import './conversation.css';
 
 // Fallback copy derives from the zh dictionary instead of duplicating its strings here:
 // dictionary tweaks in shared/i18n propagate automatically, and a caller that forgets to
@@ -121,7 +122,7 @@ export function ConversationMarkdown({ text, className = '', onOpenExternal, onO
     // biome-ignore lint/a11y/useKeyWithClickEvents: link-interception layer; the keyboard path is covered by the rendered <a>'s own focus
     // biome-ignore lint/a11y/noStaticElementInteractions: static rich-text container; onClick only intercepts links to open them externally
     <div
-      className={`codex-markdown conversation-markdown text-[15px] leading-7 ${className}`}
+      className={`codex-markdown conversation-markdown conversation-prose text-[15px] leading-7 ${className}`}
       onClick={openLink}
       dangerouslySetInnerHTML={{ __html: html }}
     />
@@ -547,20 +548,22 @@ function ToolGroup({ group, now, renderToolItem, onOpenExternal, onOpenResource,
   const leadLabel = running ? `${c.executing}${runningSuffix}` : c.executionSteps;
   const failedSuffix = failedCount ? ` · ${c.failedItems(failedCount)}` : '';
   const summary = `${leadLabel} · ${c.items(items.length)}${failedSuffix}`;
-  const [open, setOpen] = useState(running);
-  const expanded = running || open;
+  const [open, setOpen] = useState(null);
+  // Completion must not inherit an initially-running group's expanded state.
+  // Failures stay visible until the user explicitly folds them.
+  const expanded = open ?? (running || failed);
   const detailsId = useId();
   const hasDetails = items.length > 0;
   const resources = collectToolWorkspaceResources(items);
   return (
     <div className="min-w-0 max-w-full">
-      <button type="button" onClick={() => setOpen(value => !value)}
+      <button type="button" onClick={() => setOpen(!expanded)}
         data-testid="conversation-tool-group-summary"
         aria-expanded={hasDetails ? Boolean(expanded) : undefined}
         aria-controls={hasDetails && expanded ? detailsId : undefined}
-        className="w-full min-w-0 h-9 overflow-hidden px-1 flex items-center gap-2 text-left text-[12px] text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200">
-        <StatusDot tone={failed ? 'fail' : running ? 'run' : 'idle'} />
-        <span className="min-w-0 flex-1 truncate">{summary}</span>
+        className={`conversation-process-row ${failed ? 'text-red-500' : 'text-gray-500 dark:text-gray-400'}`}>
+        {(failed || running) && <StatusDot tone={failed ? 'fail' : 'run'} />}
+        <span className="min-w-0 truncate">{summary}</span>
         <ChevronDown size={13} className={`shrink-0 transition-transform ${expanded ? 'rotate-180' : ''}`} />
       </button>
       <WorkspaceResourceButtons resources={resources} onOpenResource={onOpenResource} />
@@ -599,13 +602,13 @@ function ReasoningItem({ item, now, copy }) {
         data-testid="conversation-reasoning-toggle"
         aria-expanded={hasDetails ? Boolean(open) : undefined}
         aria-controls={hasDetails && open ? detailsId : undefined}
-        className="w-full h-9 px-1 flex items-center gap-2 text-left text-[12px] text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200">
-        <span className={`w-1.5 h-1.5 rounded-full bg-violet-500 ${running ? 'animate-pulse' : ''}`} />
+        className="conversation-process-row text-gray-500 dark:text-gray-400">
+        {running && <span className="w-2.5 h-2.5 rounded-full border border-current/20 border-t-current animate-spin" />}
         <span>{statusText}{duration ? ` · ${duration}` : ''}</span>
-        <ChevronDown size={13} className={`ml-auto transition-transform ${open ? 'rotate-180' : ''}`} />
+        {hasDetails && <ChevronDown size={13} className={`transition-transform ${open ? 'rotate-180' : ''}`} />}
       </button>
       {open && hasDetails && (
-        <div id={detailsId} data-testid="conversation-reasoning-content" className="min-w-0 max-w-full ml-3 pl-3 py-1 border-l border-violet-500/15 text-[12px] leading-6 text-gray-500 dark:text-gray-300 whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
+        <div id={detailsId} data-testid="conversation-reasoning-content" className="min-w-0 max-w-full ml-1 pl-3 py-1 border-l border-black/10 dark:border-white/10 text-[13px] leading-6 text-gray-500 dark:text-gray-400 whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
           {item.text}
         </div>
       )}
@@ -836,6 +839,8 @@ function ConversationTurnView({
   const duration = c.elapsed(elapsedMs(turn.startedAt, turn.completedAt, effectiveNow));
   const showTerminalDuration = Boolean(turn.startedAt && turn.completedAt);
   const presentation = turn.presentation || turn.items || [];
+  const hasRunningActivity = presentation.some(item => item.type === 'reasoning' && item.status === 'in_progress'
+    || item.type === 'tool_group' && item.items?.some(tool => terminalStatus(tool.status) === 'running'));
   const operationCount = Number(turn.operationCount || 0);
   const failedOperationCount = Number(turn.failedOperationCount || 0);
   const turnUsage = turn.usage || null;
@@ -881,7 +886,7 @@ function ConversationTurnView({
       : null;
 
   return (
-    <section className="space-y-4" data-conversation-turn={turn.id} style={{ contentVisibility: 'auto', containIntrinsicSize: 'auto 600px' }}>
+    <section className="conversation-turn space-y-4" data-conversation-turn={turn.id} style={{ contentVisibility: 'auto', containIntrinsicSize: 'auto 600px' }}>
       {userContent}
       {assistantRowVisible && (
       <div className="flex items-start gap-3">
@@ -891,8 +896,8 @@ function ConversationTurnView({
           </div>
         )}
         <div className="min-w-0 flex-1 space-y-1">
-          {running && (
-            <div className={`h-9 flex items-center gap-2 text-[12px] ${waitingAttention ? 'text-amber-600 dark:text-amber-300' : 'text-gray-500 dark:text-gray-400'}`}>
+          {running && (waitingAttention || !hasRunningActivity) && (
+            <div className={`h-7 flex items-center gap-2 text-[12px] ${waitingAttention ? 'text-amber-600 dark:text-amber-300' : 'text-gray-500 dark:text-gray-400'}`}>
               <StatusDot tone={waitingAttention ? 'warn' : 'okPulse'} />
               {waitingPermission ? c.waitingPermission : waitingInput ? c.waitingInputShort : (turn.activityToolName ? c.callingTool(turn.activityToolName) : c.processingActive)} · {duration}
             </div>

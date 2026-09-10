@@ -408,7 +408,7 @@ async function expand(page) {
   await sleep(120);
   const browserPane = await page.evaluate(async () => {
     const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-    document.querySelector('[data-sidebar-toggle]')?.click();
+    if ((document.querySelector('[data-testid="app-sidebar"]')?.getBoundingClientRect().width || 0) < 200) document.querySelector('[data-sidebar-toggle]')?.click();
     await window.__uiWait__(() => (document.querySelector('[data-testid="app-sidebar"]')?.getBoundingClientRect().width || 0) > 200);
     const task = [...document.querySelectorAll('[data-testid="regular-sidebar-item"]')]
       .find(node => (node.textContent || '').includes('第三季度财报分析'));
@@ -1465,7 +1465,7 @@ async function expand(page) {
       detailsBefore,
       controlsAfter: summary?.getAttribute('aria-controls') || '',
       expandedAfter: summary?.getAttribute('aria-expanded') || '',
-      detailsAfter: Boolean(controls && document.getElementById(controls)),
+      detailsAfter: Boolean(summary?.getAttribute('aria-controls') && document.getElementById(summary.getAttribute('aria-controls'))),
     };
   });
   rec('①a-3d Codex 工具完成后摘要保持稳定',
@@ -1474,12 +1474,12 @@ async function expand(page) {
       && codexCompletedOverflow.contained,
     JSON.stringify(codexCompletedOverflow));
   rec('①a-3d-1 统一工具组折叠状态与详情 DOM 一致',
-    codexCompletedOverflow.expandedBefore === 'true'
-      && Boolean(codexCompletedOverflow.controls)
-      && codexCompletedOverflow.detailsBefore
-      && codexCompletedOverflow.expandedAfter === 'false'
-      && !codexCompletedOverflow.controlsAfter
-      && !codexCompletedOverflow.detailsAfter,
+    codexCompletedOverflow.expandedBefore === 'false'
+      && !codexCompletedOverflow.controls
+      && !codexCompletedOverflow.detailsBefore
+      && codexCompletedOverflow.expandedAfter === 'true'
+      && Boolean(codexCompletedOverflow.controlsAfter)
+      && codexCompletedOverflow.detailsAfter,
     JSON.stringify(codexCompletedOverflow));
 
   await clickText(page, '查看全部'); await sleep(400);
@@ -1977,8 +1977,7 @@ async function expand(page) {
   const draftInputFound = await page.evaluate((value) => {
     const textarea = document.querySelector('[data-testid="chat-composer-input"]');
     if (!textarea) return false;
-    const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set;
-    setter.call(textarea, value);
+    textarea.value = value;
     textarea.dispatchEvent(new Event('input', { bubbles: true }));
     return true;
   }, composerDraft);
@@ -2014,8 +2013,7 @@ async function expand(page) {
   const pendingDraftResult = await page.evaluate(async (value) => {
     const textarea = document.querySelector('[data-testid="chat-composer-input"]');
     if (!textarea) return { inputFound: false };
-    const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set;
-    setter.call(textarea, value);
+    textarea.value = value;
     textarea.dispatchEvent(new Event('input', { bubbles: true }));
     for (const handler of (window.__TAURI_EVENT_HANDLERS__['chat:usage'] || [])) {
       await handler({
@@ -2039,8 +2037,7 @@ async function expand(page) {
   await page.evaluate(() => {
     const textarea = document.querySelector('[data-testid="chat-composer-input"]');
     if (!textarea) return;
-    const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set;
-    setter.call(textarea, '');
+    textarea.value = '';
     textarea.dispatchEvent(new Event('input', { bubbles: true }));
   });
   await clickText(page, '第三季度财报分析');

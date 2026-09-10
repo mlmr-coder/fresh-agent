@@ -640,14 +640,13 @@ const ToolOutput = ({ item, t }) => {
           <div
             data-tool-card-variant="timeline"
             data-tool-name={item.name}
-            className={`rounded-xl border ${
-              isFailed ? 'border-red-500/20' : 'border-black/[0.05] dark:border-white/[0.07]'
-            } bg-white/45 dark:bg-white/[0.015]`}
+            className={`rounded-lg ${isFailed ? 'border border-red-500/20' : ''}`}
           >
             {/* biome-ignore lint/a11y/useSemanticElements: the tool card collapse header hosts a multi-child layout; a button would break existing styles */}
             <div
               role="button"
               tabIndex={0}
+              aria-expanded={displayExpanded}
               onClick={toggleExpanded}
               onKeyDown={(event) => {
                 if (event.key === 'Enter' || event.key === ' ') {
@@ -655,14 +654,14 @@ const ToolOutput = ({ item, t }) => {
                   toggleExpanded();
                 }
               }}
-              className="w-full min-h-10 px-2.5 py-2 flex items-center gap-2.5 text-left rounded-xl cursor-pointer hover:bg-black/[0.025] dark:hover:bg-white/[0.035]"
+              className="w-full min-h-8 px-1.5 py-1 flex items-center gap-2 text-left rounded-lg cursor-pointer hover:bg-black/[0.025] dark:hover:bg-white/[0.035]"
             >
-              <span className={`w-6 h-6 shrink-0 rounded-lg flex items-center justify-center ${tone}`}>
+              <span className={`w-5 h-5 shrink-0 rounded flex items-center justify-center ${tone}`}>
                 <Wrench size={13} />
               </span>
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-[12px] font-medium">{item.name}</span>
-                <span className="block mt-0.5 truncate text-[10px] text-gray-400">{meta}</span>
+              <span className="min-w-0 flex flex-1 items-baseline gap-2 text-[12px]">
+                <span className="shrink-0 font-medium text-gray-600 dark:text-gray-300">{item.name}</span>
+                <span className="truncate text-gray-400">{meta}</span>
               </span>
               {isRunning && <StatusDot tone="run" />}
               {cancelButton}

@@ -8,7 +8,6 @@ import { AlertTriangle, ArrowLeft, BarChart2, Brain, Briefcase, Check, ChevronDo
 import { bridge } from '../../hooks/useBridge.js';
 import { can, isWeb } from '../../shared/platform.js';
 import { isImeComposing } from '../../shared/ime-guard.mjs';
-import { formatCompactCount } from '../../shared/format-number.js';
 import { getSyntaxHighlightVersion, subscribeSyntaxHighlight } from '../../shared/syntax-highlighter.js';
 import { renderMarkdown } from '../../shared/markdown-renderer.js';
 import { AppIcon, DEPT_ORDER, deptLabelFor, personaText } from '../personas/persona-shared.jsx';
@@ -42,6 +41,8 @@ import {
   restoreConversationScrollPosition,
 } from '../conversation/conversation-model.js';
 import { useComposerSuggestions } from './ComposerSuggestions.jsx';
+import { ComposerInput } from './ComposerInput.jsx';
+import { ComposerContextUsage } from './ComposerContextUsage.jsx';
 import { AttachmentChips } from '../attachments/AttachmentChips.jsx';
 import { collectClipboardImages, readPasteImageAsBytes } from '../attachments/paste-image.js';
 import { formatAttachmentLimitError } from '../attachments/attachment-limit-errors.js';
@@ -868,14 +869,8 @@ const ToolWelcomeCard = ({ toolId, _theme, t, onSend }) => {
         }, 80);
         return () => window.clearTimeout(timer);
       }, [focusComposerTick]);
-      // 输入框自动增高:随内容从最小(~2行)长到上限 160px,再内部滚动(iOS 手感)。
-      // 清空(发送后)inputText 变 '' → 自动缩回最小高。
-      useEffect(() => {
-        const el = composerRef.current;
-        if (!el) return;
-        el.style.height = 'auto';
-        el.style.height = Math.min(Math.max(el.scrollHeight, 48), 160) + 'px';
-      }, [inputText]);
+      // ComposerInput grows intrinsically (88–200px), including when the viewport
+      // changes width; it does not retain a textarea's last measured height.
       // 输入框是浮动绝对定位,会随 auto-grow / 附件 / 排队 chips 变高 → 量它实际高度,
       // 动态给滚动区底部留白(= 输入框高 + 间距),保证最后几条消息永不被遮挡、也不浪费空间。
       const composerWrapRef = useRef(null);
@@ -985,7 +980,6 @@ const ToolWelcomeCard = ({ toolId, _theme, t, onSend }) => {
         }
       }, [queuedEditCandidate, queued, activeSessionId, t, flashQueuedNotice]);
       const ctxTokens = (bs && bs.tokens) || null; // {input, max}，chat:usage 每轮更新
-      const ctxPct = ctxTokens && ctxTokens.max > 0 ? ctxTokens.input / ctxTokens.max : 0;
       const artifactItems = (bs && bs.artifacts) || [];
       const artifactCount = artifactItems.length;
       const latestArtifact = artifactItems[artifactItems.length - 1] || null;
@@ -2782,10 +2776,12 @@ const ToolWelcomeCard = ({ toolId, _theme, t, onSend }) => {
                 onApplyAndSend={() => chatVoice.applyVoiceEditPreview({ send: true })}
                 onCancel={chatVoice.cancelVoiceEditPreview}
               />
-              <textarea
+              <ComposerInput
                 ref={composerRef}
                 data-testid="chat-composer-input"
                 value={inputText}
+                skills={suggestions.skills}
+                resetKey={`${activeSessionId}:${draftEpoch}`}
                 onChange={e => { handleComposerInputChange(e.target.value); suggestions.onSelect(e); }}
                 onSelect={suggestions.onSelect}
                 {...suggestions.inputProps}
@@ -2793,8 +2789,7 @@ const ToolWelcomeCard = ({ toolId, _theme, t, onSend }) => {
                 onPaste={handlePaste}
                 maxLength={CHAT_INPUT_MAX_LENGTH}
                 placeholder={composerPlaceholder}
-                rows={1}
-                className="w-full bg-transparent resize-none outline-none text-gray-800 dark:text-gray-100 text-[16px] leading-relaxed min-h-[48px] overflow-y-auto hide-scrollbar placeholder:text-gray-400 dark:placeholder:text-gray-500"
+                className="w-full bg-transparent resize-none outline-none text-gray-800 dark:text-gray-100 text-[16px] leading-relaxed min-h-[88px] overflow-y-auto hide-scrollbar placeholder:text-gray-400 dark:placeholder:text-gray-500"
               />
               {suggestions.menu}
               <TextareaContextMenu inputRef={composerRef} setValue={setInputText} theme={theme} t={t} />
@@ -2826,6 +2821,7 @@ const ToolWelcomeCard = ({ toolId, _theme, t, onSend }) => {
                   />
                   <ComposerKbSelector t={t} bs={bs} compact={composerCompact} />
                 </div>
+                <ComposerContextUsage tokens={ctxTokens} copy={t.ctxUsageTooltip} />
                 <ComposerModelSelector t={t} bs={bs} onGotoSettings={onGotoModelSettings || onGotoSettings} compact={composerCompact} />
                 <VoiceComposerButton
                   refProp={voiceAsrPopoverRef}
@@ -2882,14 +2878,6 @@ const ToolWelcomeCard = ({ toolId, _theme, t, onSend }) => {
                 </>
               )}
             </div>
-            {ctxTokens && ctxTokens.max > 0 && (
-              <div className={`mt-1.5 px-5 text-[11px] font-mono ${
-                ctxPct >= 0.9 ? 'text-[#C5221F] dark:text-[#F28B82]'
-                : ctxPct >= 0.75 ? 'text-[#B06000] dark:text-[#F9AB00]'
-                : 'text-[#9AA0A6] dark:text-[#5F6368]'}`}>
-                {t.ctxUsage} {ctxTokens.input > 0 ? formatCompactCount(ctxTokens.input) : '—'} / {formatCompactCount(ctxTokens.max)} · {Math.round(ctxPct * 100)}%
-              </div>
-            )}
             <div className="flex items-center justify-center mt-3">
                <p data-testid="chat-disclaimer" className={`text-[12px] ${'text-[#757575] dark:text-[#8E8E8E]'}`}>{t.disclaimer}</p>
             </div>
@@ -3496,12 +3484,12 @@ const UserBubble = ({ item, sessionId, _theme, editable, t, conversationVariant 
           && bridge.personas.getPersonas().some(function(c){ return c && c.source === 'user' && c.name === pd.draft.name; });
         return (
           <div className="flex justify-start">
-            <div ref={assistantSelectionHostRef} className={`relative ${cq.q ? 'w-full' : 'max-w-[95%]'} light-code dark-code`}>
+            <div ref={assistantSelectionHostRef} className="relative w-full min-w-0 light-code dark-code">
               {/* biome-ignore lint/a11y/useKeyWithClickEvents: link-intercept layer; keyboard path handled by the rendered <a>'s own focus */}
               {/* biome-ignore lint/a11y/noStaticElementInteractions: static rich-text container; onClick only intercepts links to open the external browser */}
               <div
                 ref={assistantSelectionTargetRef}
-                className={`msg-md text-[15px] leading-relaxed ${item.streaming ? 'streaming-cursor' : ''} ${'text-[#1F1F1F] dark:text-[#E3E3E3]'}`}
+                className={`msg-md conversation-prose text-[15px] leading-relaxed ${item.streaming ? 'streaming-cursor' : ''} ${'text-[#1F1F1F] dark:text-[#E3E3E3]'}`}
                 onClick={(e) => {
                   // 聊天里的链接(如飞书授权 URL)点击 → 走系统浏览器,别导航主窗口/不可点。
                   const a = e.target && e.target.closest && e.target.closest('a[href]');

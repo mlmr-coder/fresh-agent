@@ -670,7 +670,8 @@ try {
     && conversationView.includes("return copy.shellCommand;")
     && !conversationView.includes('runningItem.tool.name || runningItem.tool.title')
     && conversationView.includes('data-testid="conversation-tool-group-summary"')
-    && conversationView.includes('min-w-0 flex-1 truncate'),
+    && conversationView.includes('min-w-0 truncate')
+    && conversationView.includes('conversation-process-row'),
   'running tool groups must use bounded semantic labels instead of rendering raw command titles');
   const boundedLongTextClass = 'whitespace-pre-wrap break-words [overflow-wrap:anywhere]';
   // The long-text bounding contract is now carried solely by the shared timeline implementation (the legacy codex transcript component was removed).

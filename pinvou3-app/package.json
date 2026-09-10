@@ -54,6 +54,7 @@
     "test:reader-ui": "node tests/reader_app_smoke.mjs",
     "test:reader-diff-ui": "node tests/reader_app_diff_smoke.mjs",
     "test:marketplace-oauth": "node tests/marketplace_oauth_logic.test.js",
+    "test:conversation-presentation": "node tests/conversation_presentation_smoke.mjs",
     "test:composer-tools": "node tests/composer_tool_menu_logic.test.js && node tests/composer_suggestions.test.mjs",
     "test:code-permission-state": "node tests/code_permission_state.test.mjs",
     "test:codex-checkpoints": "node tests/codex_checkpoints_logic.test.mjs",

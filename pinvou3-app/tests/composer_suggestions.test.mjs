@@ -21,3 +21,17 @@ assert.deepEqual(composerSuggestions('skills', [], 'visualizer'), []);
 assert.equal(composerToken('帮我/数据', 5).query, '数据');
 assert.equal(composerToken('start/vis', 9).query, 'vis');
 console.log('composer suggestions: PASS');
+
+const editorSource = readFileSync(new URL('../src/features/chat/composer-input-dom.js', import.meta.url), 'utf8');
+const { composerSegments } = await import(`data:text/javascript;base64,${Buffer.from(editorSource).toString('base64')}`);
+const catalogue = [{ title: '视觉设计' }, { title: '数据库操作' }];
+assert.deepEqual(composerSegments('先用/视觉设计 /数据库操作 分析', catalogue), [
+  { text: '先用' }, { text: '/视觉设计', name: '视觉设计' }, { text: ' ' },
+  { text: '/数据库操作', name: '数据库操作' }, { text: ' 分析' },
+]);
+for (const raw of ['https://视觉设计', '/tmp/视觉设计', '/视觉设计/file', '/视觉设计中', '/uninstalled ']) {
+  assert.deepEqual(composerSegments(raw, catalogue), [{ text: raw }]);
+}
+assert.deepEqual(composerSegments('/视觉设计', catalogue), [{ text: '/视觉设计', name: '视觉设计' }]);
+assert.deepEqual(composerSegments('', catalogue), []);
+console.log('composer skill tokens: PASS');

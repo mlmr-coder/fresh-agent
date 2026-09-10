@@ -1,0 +1,31 @@
+.composer-rich-input {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 30px;
+  min-height: 88px;
+  max-height: 200px;
+  caret-color: currentColor;
+}
+.composer-rich-input:empty::before {
+  content: attr(data-placeholder);
+  color: #9ca3af;
+  pointer-events: none;
+}
+.composer-skill-token {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 100%;
+  padding: 1px 9px;
+  border-radius: 999px;
+  background: #f1f1f2;
+  color: #242629;
+  line-height: 24px;
+  vertical-align: baseline;
+  white-space: nowrap;
+  user-select: all;
+}
+.composer-skill-token > svg { flex-shrink: 0; align-self: center; }
+.composer-skill-token > span { overflow: hidden; text-overflow: ellipsis; }
+.dark .composer-skill-token { background: #33363c; color: #f3f4f6; }
+.dark .composer-rich-input:empty::before { color: #6b7280; }

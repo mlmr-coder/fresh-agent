@@ -65,7 +65,7 @@ function injectSource() {
           {id:'pending',name:'待授权',installed:true},
         ]);
         case 'list_marketplace_skills': return Promise.resolve([
-          {id:'government-writing',title:'党政机关公文写作',description:'配套技能',installed:true,user_uploaded:false},
+          {id:'government-writing',title:'数据库操作',description:'配套技能',installed:true,user_uploaded:false},
           {id:'visualizer',title:'数据分析可视化',description:'Chart.js 仪表盘',installed:true,user_uploaded:false},
           {id:'research',title:'深度研究',installed:true,user_uploaded:false},
           {id:'documents',title:'文档制作',installed:true,user_uploaded:false},
@@ -74,7 +74,7 @@ function injectSource() {
         case 'get_marketplace_tool_auth_status': return Promise.resolve({status:args.toolId==='pending'?'auth_pending':'connected'});
         case 'list_composer_skills': return Promise.resolve([
           {name:'visualizer',description:'数据分析可视化',aliases:['chart']},
-          {name:'government-writing',description:'公文写作',aliases:[]}
+          {name:'database-ops',title:'数据库操作',description:'数据库查询和维护',aliases:[]}
         ]);
         case 'get_disabled_connectors': return Promise.resolve(state.disabled);
         case 'set_disabled_connectors': state.disabled=(args&&args.connectorIds)||[]; return Promise.resolve(null);
@@ -157,9 +157,14 @@ const sleep = ms => new Promise(r => { setTimeout(r, ms); });
   await page.click('[data-testid="chat-composer-input"]');
   await page.type('[data-testid="chat-composer-input"]', '/chart');
   await page.waitForSelector('[data-testid="composer-suggestions"] [role="option"]');
-  rec('/ 按技能别名筛选', await page.$eval('[data-testid="composer-suggestions"]', node => node.textContent.includes('/数据分析可视化') && !node.textContent.includes('/党政机关公文写作')));
+  rec('/ 按技能别名筛选', await page.$eval('[data-testid="composer-suggestions"]', node => node.textContent.includes('/数据分析可视化') && !node.textContent.includes('/数据库操作')));
   await page.keyboard.press('Enter');
   rec('回车插入技能且不自动发送', await page.$eval('[data-testid="chat-composer-input"]', node => node.value === '/数据分析可视化 '));
+  await page.keyboard.press('Backspace');
+  rec('刚选中的技能按一次退格即可删除', await page.$eval('[data-testid="chat-composer-input"]', node => node.value === '' && !node.querySelector('[data-skill-text]')));
+  await page.keyboard.down('Control'); await page.keyboard.press('z'); await page.keyboard.up('Control');
+  rec('删除最后一个技能后仍可撤销', await page.$eval('[data-testid="chat-composer-input"]', node => node.value === '/数据分析可视化 ' && !!node.querySelector('[data-skill-text]')));
+  await page.$eval('[data-testid="chat-composer-input"]', node => node.setSelectionRange(node.value.length, node.value.length));
   rec('技能选择不修改全局开关', await page.evaluate(() => !window.__COMPOSER_TOOLS_TEST__.calls.some(call => call.cmd === 'set_disabled_connectors')));
   await page.keyboard.type('@');
   await page.waitForSelector('[data-testid="composer-suggestions"]');
@@ -194,7 +199,59 @@ const sleep = ms => new Promise(r => { setTimeout(r, ms); });
 
   await page.keyboard.press('ArrowDown');
   await page.keyboard.press('Enter');
-  rec('方向键可选择第二个中文技能', await page.$eval('[data-testid="chat-composer-input"]', node => node.value.includes('/党政机关公文写作')));
+  rec('方向键可选择第二个中文技能', await page.$eval('[data-testid="chat-composer-input"]', node => node.value.includes('/数据库操作')));
+
+  const inputSelector = '[data-testid="chat-composer-input"]';
+  rec('多个技能显示图标和中文标签，不显示斜杠', await page.$eval(inputSelector, node => (
+    node.querySelectorAll('[data-skill-text]').length === 2
+    && [...node.querySelectorAll('[data-skill-text]')].every(chip => chip.querySelector('svg') && !chip.textContent.startsWith('/') && chip.contentEditable === 'false')
+  )));
+  await page.$eval(inputSelector, node => { node.focus(); node.setSelectionRange(0, 0); });
+  await page.keyboard.type('先用');
+  await page.$eval(inputSelector, node => node.setSelectionRange(node.value.length, node.value.length));
+  await page.keyboard.type('处理文件');
+  rec('技能前后可继续输入', await page.$eval(inputSelector, node => node.value.startsWith('先用/数据分析可视化') && node.value.endsWith('处理文件')));
+  await page.$eval(inputSelector, node => {
+    const end = node.value.indexOf('/数据库操作') + '/数据库操作'.length;
+    node.setSelectionRange(end, end);
+  });
+  await page.keyboard.press('Backspace');
+  rec('退格整项删除技能，保留前后文字与另一个技能', await page.$eval(inputSelector, node => node.querySelectorAll('[data-skill-text]').length === 1 && !node.value.includes('/数据库操作') && node.value.endsWith('处理文件')));
+  await page.keyboard.down('Control'); await page.keyboard.press('z'); await page.keyboard.up('Control');
+  rec('撤销恢复技能标签', await page.$eval(inputSelector, node => node.querySelectorAll('[data-skill-text]').length === 2));
+  await page.$eval(inputSelector, node => node.setSelectionRange(node.value.length, node.value.length));
+  await page.keyboard.down('Shift'); await page.keyboard.press('Enter'); await page.keyboard.up('Shift');
+  await page.keyboard.type('下一行');
+  rec('Shift+Enter 保留换行且不会发送', await page.$eval(inputSelector, node => node.value.endsWith('处理文件\n下一行')));
+  const clipboard = await page.$eval(inputSelector, node => {
+    node.select();
+    const data = new DataTransfer();
+    node.dispatchEvent(new ClipboardEvent('copy', { bubbles: true, cancelable: true, clipboardData: data }));
+    return { value: node.value, plain: data.getData('text/plain'), html: data.getData('text/html') };
+  });
+  rec('复制保留可调用的技能引用，去除富文本', clipboard.plain === clipboard.value && clipboard.plain.includes('/数据库操作') && !clipboard.html);
+  await page.$eval(inputSelector, node => {
+    node.setSelectionRange(node.value.length, node.value.length);
+    const data = new DataTransfer();
+    data.setData('text/plain', '\n粘贴内容');
+    data.setData('text/html', '<b>不应作为富文本插入</b>');
+    node.dispatchEvent(new ClipboardEvent('paste', { bubbles: true, cancelable: true, clipboardData: data }));
+  });
+  rec('粘贴只插入纯文本，保留技能标签', await page.$eval(inputSelector, node => node.value.endsWith('\n粘贴内容') && node.querySelectorAll('[data-skill-text]').length === 2 && !node.querySelector('b')));
+  await page.$eval(inputSelector, node => {
+    node.dispatchEvent(new CompositionEvent('compositionstart', { bubbles: true }));
+    node.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key: 'Enter' }));
+    node.dispatchEvent(new CompositionEvent('compositionend', { bubbles: true }));
+  });
+  rec('中文输入法确认不会发送草稿', await page.$eval(inputSelector, node => node.value.endsWith('粘贴内容')));
+  await page.setViewport({ width: 1360, height: 900 });
+  await page.$eval(inputSelector, node => node.setSelectionRange(node.value.length, node.value.length));
+  await page.screenshot({ path: '/tmp/fresh-skill-chips.png' });
+  await page.$eval(inputSelector, node => { node.focus(); node.select(); });
+  await page.keyboard.press('Backspace');
+  await page.keyboard.type('x');
+  await page.keyboard.press('Backspace');
+  rec('删除最后一个普通字符后恢复空输入框', await page.$eval(inputSelector, node => node.value === '' && !node.childNodes.length));
 
   rec('页面无未处理 JavaScript 异常', errors.length === 0, errors.slice(0, 2).join(' | '));
 

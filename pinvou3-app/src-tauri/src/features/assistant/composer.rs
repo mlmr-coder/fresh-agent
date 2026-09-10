@@ -24,6 +24,10 @@ pub fn skills(language: &str) -> Vec<ComposerSkill> {
             None,
         ),
         &metadata,
+        &connector_bundles()
+            .into_iter()
+            .flat_map(|bundle| bundle.skills)
+            .collect(),
         language,
     )
 }
@@ -31,12 +35,19 @@ pub fn skills(language: &str) -> Vec<ComposerSkill> {
 fn catalogue_from_sources(
     sources: Vec<(String, PathBuf)>,
     metadata: &[crate::features::marketplace::skill_marketplace::MarketplaceSkillInfo],
+    connector_skills: &HashSet<String>,
     language: &str,
 ) -> Vec<ComposerSkill> {
     let mut seen = HashSet::new();
     let mut out = Vec::new();
     let mut registries = HashMap::new();
     for (directory_name, source) in sources {
+        // The picker follows the capability centre: connector-owned skills are
+        // implementation details of that connector, not independent choices.
+        // This does not change the enabled directory materialized for CodeWhale.
+        if connector_skills.contains(&directory_name) {
+            continue;
+        }
         let Some(parent) = source.parent() else {
             continue;
         };
@@ -45,11 +56,9 @@ fn catalogue_from_sources(
         let registry = registries
             .entry(parent.to_path_buf())
             .or_insert_with(|| deepseek_tui::skills::SkillRegistry::discover(parent));
-        for skill in registry
-            .list()
-            .iter()
-            .filter(|skill| skill.path.parent() == Some(source.as_path()))
-        {
+        for skill in registry.list().iter().filter(|skill| {
+            skill.path.parent() == Some(source.as_path()) && !connector_skills.contains(&skill.name)
+        }) {
             if seen.insert(skill.name.clone()) {
                 out.push(ComposerSkill {
                     name: skill.name.clone(),
@@ -161,12 +170,43 @@ mod tests {
         let entries = catalogue_from_sources(
             vec![("visualizer".to_string(), temp.path().join("visualizer"))],
             &[],
+            &HashSet::new(),
             "zh",
         );
         assert_eq!(entries.len(), 1, "discover must scan the parent collection");
         assert_eq!(entries[0].name, "visualizer");
         assert_eq!(entries[0].description, "数据图表");
         assert_eq!(entries[0].aliases, vec!["chart"]);
+    }
+
+    #[test]
+    fn composer_hides_connector_companions_without_removing_runtime_skills() {
+        let temp = tempfile::tempdir().unwrap();
+        let mut sources = Vec::new();
+        for (directory, name) in [
+            ("visualizer", "visualizer"),
+            ("lark-base", "lark-base"),
+            ("custom-directory", "uploaded-api-helper"),
+        ] {
+            let dir = temp.path().join(directory);
+            std::fs::create_dir(&dir).unwrap();
+            std::fs::write(
+                dir.join("SKILL.md"),
+                format!("---\nname: {name}\ndescription: Fixture\n---\nSkill body\n"),
+            )
+            .unwrap();
+            sources.push((directory.to_string(), dir));
+        }
+        let owned = HashSet::from(["lark-base".to_string(), "uploaded-api-helper".to_string()]);
+        let entries = catalogue_from_sources(sources, &[], &owned, "zh");
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].name, "visualizer");
+        assert_eq!(
+            deepseek_tui::skills::SkillRegistry::discover(temp.path())
+                .list()
+                .len(),
+            3
+        );
     }
 
     #[test]

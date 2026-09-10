@@ -1,0 +1,67 @@
+/* Reading comes first; process rows stay small and use inline disclosure. */
+.conversation-process-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  max-width: 100%;
+  min-height: 28px;
+  padding: 3px 0;
+  text-align: left;
+  font-size: 12px;
+  line-height: 20px;
+}
+.conversation-process-row:hover { color: #242629; }
+.dark .conversation-process-row:hover { color: #e5e7eb; }
+.conversation-turn .conversation-prose {
+  margin: 12px 0 4px;
+  font-size: 15px;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+.conversation-turn .conversation-prose > :first-child { margin-top: 0; }
+.conversation-turn .conversation-prose > :last-child { margin-bottom: 0; }
+.conversation-turn .conversation-prose p { margin: .8em 0; line-height: inherit; }
+.conversation-turn .conversation-prose h1,
+.conversation-turn .conversation-prose h2,
+.conversation-turn .conversation-prose h3,
+.conversation-turn .conversation-prose h4 { margin: 1.25em 0 .55em; font-weight: 600; line-height: 1.5; }
+.conversation-turn .conversation-prose h1 { font-size: 1.35em; }
+.conversation-turn .conversation-prose h2 { font-size: 1.2em; }
+.conversation-turn .conversation-prose h3 { font-size: 1.07em; }
+.conversation-turn .conversation-prose ul,
+.conversation-turn .conversation-prose ol { margin: .7em 0; padding-left: 1.5em; }
+.conversation-turn .conversation-prose ul { list-style: disc outside; }
+.conversation-turn .conversation-prose ol { list-style: decimal outside; }
+.conversation-turn .conversation-prose li { margin: .3em 0; line-height: inherit; }
+.conversation-turn .conversation-prose li > p { margin: .25em 0; }
+.conversation-turn .conversation-prose li::marker { color: #8a8d93; }
+.conversation-turn .conversation-prose pre.pinvou-code-block {
+  margin: 1em 0;
+  border: 0;
+  border-radius: 10px;
+  background: #f6f6f7;
+  padding: 2.4rem 1rem 1rem;
+  font-size: 13px;
+  line-height: 1.65;
+}
+.conversation-turn .conversation-prose pre.pinvou-code-block::before {
+  border: 0;
+  font-weight: 400;
+  font-size: 11px;
+  color: #80838a;
+}
+/* A prose template is not a programming language: no empty "Text" toolbar. */
+.conversation-turn .conversation-prose pre.pinvou-code-block[data-language="Text"] { padding: 1rem; white-space: pre-wrap; }
+.conversation-turn .conversation-prose pre.pinvou-code-block[data-language="Text"]::before { display: none; }
+.conversation-turn .conversation-prose pre.pinvou-code-block[data-language="Text"] > code { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif; font-size: 14px; }
+.dark .conversation-turn .conversation-prose pre.pinvou-code-block { background: #202125; }
+.conversation-turn .conversation-prose blockquote { margin: 1em 0; border-left: 2px solid #d6d8dd; padding-left: 1em; color: #777b83; }
+.dark .conversation-turn .conversation-prose blockquote { border-color: #45474f; color: #a3a7b0; }
+.conversation-turn .conversation-prose table { display: block; max-width: 100%; overflow-x: auto; margin: 1em 0; border-collapse: collapse; font-size: .93em; }
+.conversation-turn .conversation-prose th,
+.conversation-turn .conversation-prose td { padding: .55em .8em; border: 0; border-bottom: 1px solid #e8e8ec; text-align: left; }
+.conversation-turn .conversation-prose th { font-weight: 600; background: #f7f7f8; }
+.dark .conversation-turn .conversation-prose th { background: #25262a; }
+.dark .conversation-turn .conversation-prose th,
+.dark .conversation-turn .conversation-prose td { border-bottom-color: #35373d; }
