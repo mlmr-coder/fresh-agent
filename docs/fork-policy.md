@@ -1,6 +1,6 @@
 # Pinvou 对 CodeWhale 底座的 fork 维护策略
 
-> 最后更新：2026-08-28（公开维护基线：上游 `v0.9.5` r12；r11 的 PR #18、#21、#22、#25、#26、#27、#29、#30 与 r12 的 PR #33、#35 已发布到现有 4 个 Pinvou 主题，父仓 gitlink 由父仓 PR #375 接入）
+> 最后更新：2026-09-10（**自即日起脱离上游，不再整体同步，上游仅作只读参考**；公开维护基线：上游 `v0.9.5` r12；r11 的 PR #18、#21、#22、#25、#26、#27、#29、#30 与 r12 的 PR #33、#35 已发布到现有 4 个 Pinvou 主题，父仓 gitlink 由父仓 PR #375 接入）
 > 配套：`docs/fork-modifications.md`、`scripts/fork-guard.sh`、`docs/底座升级验收清单.md`
 ## 0. 当前基线
 
@@ -67,29 +67,37 @@ Pinvou 的产品工具白名单、UI、工作区选择和业务策略留在 app�
 
 只更新 gitlink 且行为不变时，仍需更新基线、commit 和指纹；现有行为测试已覆盖时不强制新增测试。
 
-## 4. 上游同步流程
+## 4. 上游取用流程（只 cherry-pick，不整体同步）
 
-### 4.1 同步前
+> 2026-09-10 决策：本 fork **脱离上游，不再整体同步**。上游 `Pinvou/CodeWhale` / `Hmbown/CodeWhale` 只作为只读参考仓库。
+> 禁止 `git merge upstream/*`、GitHub “Sync fork”，以及任何会引入上游整段历史的批量操作——那会把 4 主题历史压成分叉并制造持续冲突。
+> 需要上游的东西时，只 cherry-pick 那一条 commit（见 4.1 / 4.2）。
+
+### 4.1 取用前
 
 ```bash
-git -C CodeWhale fetch upstream --tags
-git -C CodeWhale branch backup/pre-vX-sync <current-fork-head>
+git -C CodeWhale remote add upstream https://github.com/Pinvou/CodeWhale.git  # 临时
+git -C CodeWhale fetch upstream --tags --no-recurse-submodules
+git -C CodeWhale branch backup/pre-vX-pick <current-fork-head>
 git -C CodeWhale diff --shortstat <current-release-tag>..<current-fork-head>
 ./scripts/fork-guard.sh --fast
 ```
 
+`upstream` 是临时 remote，取完立即 `git remote remove upstream`；不常驻，也不给日常分支配置上游 refspec。
 先核对父仓、submodule 和 worktree 状态。备份只建 branch，不删除用户 worktree 或未跟踪文件。
 
-### 4.2 选择 merge 或 clean re-fork
+### 4.2 只 cherry-pick，不 merge
 
-以下任一成立时优先 clean re-fork：
+- 按 commit 粒度取：`git cherry-pick <sha>`，一条 commit 只解决一个问题。
+- 取完立即回归：`./scripts/fork-guard.sh --fast`，并过 4.4 的 gate。
+- cherry-pick 后必须同步父仓 gitlink、维护分支、不可变标签，并更新 `scripts/fork-guard.sh` 的 `PUBLISHED_HEAD` / `PUBLISHED_COMMITS` 与 `scripts/verify-public-submodule.sh` 的 `PINVOU_CODEWHALE_TAG`。
+- 只有**同时**满足以下全部条件，才允许改成整基线升级（clean re-fork），且需显式评审：
 
-- 上游重构 Engine、SubAgent、Prompt、Automation 或 crate 边界。
-- 预计冲突超过 10 处。
-- 旧 drift 超过软上限。
-- 多个旧 patch 已被上游吸收。
+  - 上游重构 Engine、SubAgent、Prompt、Automation 或 crate 边界；
+  - 预计冲突超过 10 处，或旧 drift 超过软上限；
+  - 多个旧 patch 已被上游吸收。
 
-clean re-fork 从 release tag 新建隔离分支，逐主题重表达仍必要的语义；不得把旧 fork 整包 merge 后直接把冲突结果当作新基线。
+  clean re-fork 从 release tag 新建隔离分支，逐主题重表达仍必要的语义；不得把旧 fork 整包 merge 后直接把冲突结果当作新基线。
 
 ### 4.3 逐项判定
 
@@ -120,6 +128,8 @@ python3 scripts/architecture-guard.py
 `fork-guard` 和自动测试不替代真实模型、GUI、MCP/OAuth 和定时任务端到端签收。
 
 ## 5. 上游贡献策略
+
+> 2026-09-10 起不再主动向上游提 PR：本 fork 已脱离上游，通用修复只在 fork 内沉淀。以下条款保留，仅在未来恢复贡献时适用。
 
 - 从最新 upstream main 建净分支，一项通用语义一个 PR。
 - 提交前扫描 `pinvou|qwen|vllm|gb10`，不得携带产品 fixture、私有注释或内部地址。
