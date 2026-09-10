@@ -26,7 +26,55 @@ fn write_binding(path: &std::path::Path, binding: &PersonaBinding) -> Result<()>
     deepseek_tui::utils::write_atomic(path, &bytes).context("save expert binding")
 }
 
+fn read_binding(root: &std::path::Path) -> Result<(PersonaBinding, bool)> {
+    let path = root.join(BINDING_FILE);
+    match std::fs::read_to_string(&path) {
+        Ok(content) => Ok((
+            serde_json::from_str::<PersonaBinding>(&content).context("read expert binding")?,
+            false,
+        )),
+        Err(error) if error.kind() == ErrorKind::NotFound => {
+            let mut binding = PersonaBinding { persona_id: None };
+            let mut found = false;
+            match std::fs::read_to_string(root.join("persona_events.json")) {
+                Ok(content) => {
+                    let events: Vec<serde_json::Value> =
+                        serde_json::from_str(&content).context("read legacy expert events")?;
+                    for event in events {
+                        match event.get("kind").and_then(|kind| kind.as_str()) {
+                            Some("equip") => {
+                                binding.persona_id = event
+                                    .pointer("/card/id")
+                                    .and_then(|id| id.as_str())
+                                    .map(str::to_string);
+                                found = true;
+                            }
+                            Some("unequip") => {
+                                binding.persona_id = None;
+                                found = true;
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+                Err(error) if error.kind() == ErrorKind::NotFound => {}
+                Err(error) => return Err(error).context("read legacy expert events"),
+            }
+            Ok((binding, found))
+        }
+        Err(error) => Err(error).context("read expert binding"),
+    }
+}
+
 impl SessionStore {
+    /// Read the lightweight durable binding for history rows without loading
+    /// the full transcript or initializing runtime state for every session.
+    pub(crate) fn persisted_persona_id(&self, id: &str) -> Result<Option<String>> {
+        validate_session_id(id)?;
+        let root = self.manager.sessions_dir().join(id);
+        Ok(read_binding(&root)?.0.persona_id)
+    }
+
     /// Commit the binding before publishing it to the UI/runtime. A failed
     /// save leaves both the previous identity and pending injection intact.
     pub fn set_session_persona(
@@ -73,44 +121,10 @@ impl SessionStore {
         if state.persona_loaded {
             return Ok(()); // An equip/unequip completed while the session was loading.
         }
-        let binding = match std::fs::read_to_string(&path) {
-            Ok(content) => {
-                serde_json::from_str::<PersonaBinding>(&content).context("read expert binding")?
-            }
-            Err(error) if error.kind() == ErrorKind::NotFound => {
-                let mut binding = PersonaBinding { persona_id: None };
-                match std::fs::read_to_string(root.join("persona_events.json")) {
-                    Ok(content) => {
-                        let events: Vec<serde_json::Value> =
-                            serde_json::from_str(&content).context("read legacy expert events")?;
-                        let mut found = false;
-                        for event in events {
-                            match event.get("kind").and_then(|kind| kind.as_str()) {
-                                Some("equip") => {
-                                    binding.persona_id = event
-                                        .pointer("/card/id")
-                                        .and_then(|id| id.as_str())
-                                        .map(str::to_string);
-                                    found = true;
-                                }
-                                Some("unequip") => {
-                                    binding.persona_id = None;
-                                    found = true;
-                                }
-                                _ => {}
-                            }
-                        }
-                        if found {
-                            write_binding(&path, &binding)?;
-                        }
-                    }
-                    Err(error) if error.kind() == ErrorKind::NotFound => {}
-                    Err(error) => return Err(error).context("read legacy expert events"),
-                }
-                binding
-            }
-            Err(error) => return Err(error).context("read expert binding"),
-        };
+        let (binding, migrate_legacy) = read_binding(&root)?;
+        if migrate_legacy {
+            write_binding(&path, &binding)?;
+        }
         // Re-establish the full persona once on the first resumed turn. The
         // existing transactional injection guard handles submission failures;
         // later reads/turns keep the normal short persona anchor.

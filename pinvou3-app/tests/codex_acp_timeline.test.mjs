@@ -560,13 +560,15 @@ try {
     && i18n.includes("sidebarTaskFilterCode: 'Code'"),
   'the task-list Code filter must show only Codex sessions in every supported locale, '
     + 'with a label distinct from the All/Code list-shape pill');
-  assert.ok(main.includes('leadingIcon: <PinvouLogo')
+  assert.ok(main.includes('leadingIcon: <SessionIdentityIcons')
+    && main.includes('data-testid="session-persona-icons"')
+    && main.includes('<AppIcon card={persona}')
     && main.includes('<AcpAgentLogo agentId={session.agent_id} className="h-[18px] w-[18px]"')
     && main.includes('<Clock size={18} />'),
-  'work, Codex, and scheduled sessions must expose equally sized type icons');
+  'work sessions must combine app and expert identities while Codex and scheduled sessions keep their type icons');
   assert.ok(navigationComponents.includes('group flex h-11 items-center')
-    && navigationComponents.includes('flex h-5 w-5 shrink-0 items-center justify-center'),
-  'all recent-session rows and their icon canvases must keep a consistent size');
+    && navigationComponents.includes("chat.leadingIconWide ? 'w-7' : 'w-5'"),
+  'all recent-session rows keep a consistent height while expert identity pairs receive a wider icon canvas');
   assert.ok(!main.includes("w-[280px] bg-[#1E1F20]")
     && main.includes("activeTheme === 'light'")
     && main.includes("? 'bg-[#F0F4F9]'")

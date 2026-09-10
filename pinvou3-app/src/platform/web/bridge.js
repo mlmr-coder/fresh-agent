@@ -5645,9 +5645,13 @@
   });
   listen("session:persona_changed", function (e) {
     const payload = e && e.payload || {};
-    if (payload.id !== state.activeSessionId) return;
-    Promise.resolve(syncActivePersona()).then(notify).catch(function (error) {
-      console.error("[sessions] session:persona_changed refresh failed", error);
+    const syncActive = payload.id === state.activeSessionId
+      ? Promise.resolve(syncActivePersona()).catch(function (error) {
+          console.error("[sessions] session:persona_changed active expert refresh failed", error);
+        })
+      : Promise.resolve();
+    syncActive.then(refreshHistoryList).catch(function (error) {
+      console.error("[sessions] session:persona_changed history refresh failed", error);
     });
   });
 

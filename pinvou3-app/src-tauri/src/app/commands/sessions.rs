@@ -6,6 +6,8 @@ pub struct SessionListItem {
     pub pinned_at: Option<String>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub title_attachment_names: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub persona: Option<crate::features::personas::PersonaSummary>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -136,10 +138,17 @@ pub async fn list_sessions(
         .into_iter()
         .map(|metadata| {
             let title_attachment_names = session_title_attachment_names(&store, &metadata);
+            let persona = store
+                .persisted_persona_id(&metadata.id)
+                .ok()
+                .flatten()
+                .and_then(|persona_id| crate::features::personas::get(&persona_id))
+                .map(|card| card.summary());
             SessionListItem {
                 pinned: store.is_pinned(&metadata.id),
                 pinned_at: store.pinned_at(&metadata.id),
                 title_attachment_names,
+                persona,
                 metadata,
             }
         })

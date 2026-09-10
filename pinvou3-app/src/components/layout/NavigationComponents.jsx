@@ -337,7 +337,7 @@ const NavItem = ({ icon, label, active, unread = false, isSidebarOpen = true, on
             className="flex min-w-0 flex-1 cursor-pointer items-center self-stretch border-0 bg-transparent px-4 text-left">
           {personaTarget && <Sparkles size={13} className="shrink-0 mr-1.5 text-[#007AFF] dark:text-[#0A84FF]" />}
           {chat.leadingIcon && (
-            <span className="mr-3 flex h-5 w-5 shrink-0 items-center justify-center opacity-95">
+            <span className={`mr-3 flex h-5 shrink-0 items-center justify-center opacity-95 ${chat.leadingIconWide ? 'w-7' : 'w-5'}`}>
               {chat.leadingIcon}
             </span>
           )}

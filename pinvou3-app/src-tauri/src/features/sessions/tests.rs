@@ -2485,6 +2485,12 @@ fn persona_binding_survives_reopen_and_restores_runtime_once() {
         .unwrap();
     let reopened = reopen_store(&store).unwrap();
     assert_eq!(
+        reopened.persisted_persona_id(&id).unwrap().as_deref(),
+        Some(card.id.as_str()),
+        "history rows restore the expert without loading the conversation"
+    );
+    assert!(reopened.persisted_persona_id(&other).unwrap().is_none());
+    assert_eq!(
         reopened.active_persona_id(&id).unwrap().as_deref(),
         Some(card.id.as_str())
     );
@@ -2543,6 +2549,11 @@ fn persona_binding_recovers_legacy_events_and_explicit_removal_wins() {
     let events = root.join("persona_events.json");
     std::fs::write(&events, r#"[{"kind":"equip","card":{"id":"missing-old-card"}},{"kind":"unequip"},{"kind":"equip","card":{"id":"pinvou-card-creator","body":"untrusted event body"}},{"kind":"card_creator_intro"}]"#).unwrap();
     let restored = reopen_store(&store).unwrap();
+    assert_eq!(
+        restored.persisted_persona_id(&id).unwrap().as_deref(),
+        Some("pinvou-card-creator"),
+        "legacy bindings are visible in history before the session is opened"
+    );
     assert_eq!(
         restored.active_persona_id(&id).unwrap().as_deref(),
         Some("pinvou-card-creator")
