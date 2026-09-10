@@ -6,7 +6,7 @@
 
 | 组件 | 版本或基线 | 使用方式 | 许可证 | 上游地址 |
 |---|---|---|---|---|
-| CodeWhale | `pinvou-v0.9.5-r13` | Git 子模块与链接的 Rust crates | MIT | https://github.com/Pinvou/CodeWhale |
+| CodeWhale | `pinvou-v0.9.5-r13-oauth1` | Git 子模块与链接的 Rust crates | MIT | https://github.com/mlmr-coder/CodeWhale |
 | DingTalk Workspace CLI（`dws`）及技能 | 1.0.58 | 内置 Apache-2.0 技能源码；首次使用连接器时下载并校验官方 CLI | Apache-2.0 | https://github.com/DingTalk-Real-AI/dingtalk-workspace-cli |
 | Lark CLI 及技能 | 1.0.87 | 内置 MIT 技能源码；首次使用连接器时下载并校验官方 CLI | MIT | https://github.com/larksuite/cli |
 | WeCom CLI 及技能 | 1.1.0 | 内置 MIT 技能源码；首次使用连接器时下载并校验官方 CLI | MIT | https://github.com/WecomTeam/wecom-cli |

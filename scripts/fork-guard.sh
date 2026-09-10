@@ -6,8 +6,10 @@ REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TUI="$REPO/CodeWhale"
 APP="$REPO/pinvou3-app/src-tauri"
 EXPECTED_UPSTREAM="853cb707bbcf4f7dc4268fba6d811e0d04083f9c"
-PUBLISHED_HEAD="f853f8f1566c57e6be40d5439a222a932aa79ef5"
-PUBLISHED_COMMITS=37
+# r13 baseline plus the fork-only RFC 8707 resource fix (tag
+# pinvou-v0.9.5-r13-oauth1 on mlmr-coder/CodeWhale).
+PUBLISHED_HEAD="fee18c2f2657d6f83563ff55efaaf9318dea0d05"
+PUBLISHED_COMMITS=38
 FAST_ONLY=0
 [[ "${1:-}" == "--fast" ]] && FAST_ONLY=1
 

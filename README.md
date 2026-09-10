@@ -70,7 +70,7 @@ scripts/              测试、构建与发布脚本
 docs/                 架构和维护文档
 ```
 
-模型调用、流式输出、工具循环、会话、Skills、Commands、MCP、Hooks 与 Compaction 由 [CodeWhale](https://github.com/Pinvou/CodeWhale) 提供；桌面界面、业务编排和系统集成位于 `pinvou3-app/`。
+模型调用、流式输出、工具循环、会话、Skills、Commands、MCP、Hooks 与 Compaction 由 [CodeWhale](https://github.com/mlmr-coder/CodeWhale) 提供；桌面界面、业务编排和系统集成位于 `pinvou3-app/`。
 
 ## 开发验证
 
@@ -84,6 +84,6 @@ python3 scripts/architecture-guard.py
 
 提交改动前请阅读 [贡献指南](CONTRIBUTING.md)。安全问题请使用 [安全政策](SECURITY.md) 中的私有渠道，不要在公开 Issue 中披露。
 
-智灵基于 [Pinvou/pinvou-agent](https://github.com/Pinvou/pinvou-agent) 继续开发，Agent 底座使用 [CodeWhale](https://github.com/Pinvou/CodeWhale)。兼容性技术标识仍保留 `pinvou3`，具体边界见 [品牌说明](docs/branding.md)。第三方许可见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+智灵基于 [Pinvou/pinvou-agent](https://github.com/Pinvou/pinvou-agent) 继续开发，Agent 底座使用 [CodeWhale](https://github.com/mlmr-coder/CodeWhale)。兼容性技术标识仍保留 `pinvou3`，具体边界见 [品牌说明](docs/branding.md)。第三方许可见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 
 **[MIT License](LICENSE)**

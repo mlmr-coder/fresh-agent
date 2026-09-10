@@ -5,9 +5,9 @@
 ## 0. 当前基线
 
 - 上游：`Hmbown/CodeWhale` tag `v0.9.5`，commit `853cb707bbcf4f7dc4268fba6d811e0d04083f9c`。
-- 公开维护分支：`Pinvou/CodeWhale:pinvou3-clean`，head `9c5f4f19`（`pinvou-v0.9.5-r12`）。
+- 公开维护分支：`mlmr-coder/CodeWhale`（自 `Pinvou/CodeWhale` fork），发布分支 `codex/oauth-resource-single-valued`，head `fee18c2f2`（`pinvou-v0.9.5-r13-oauth1`，即 r13 基线 + 1 条 RFC 8707 `resource` 修复）。
 - 升级前基线 `03e9e1027c03ce1e4b35ab9e3ccce751b65b9624` 同时保留在 tag `pinvou-v0.9.0-r4` 和 branch `backup/pinvou3-clean-v0.9.0-r4`。
-- `Pinvou/CodeWhale#18`、`#21`、`#22`、`#25`、`#26`、`#27`、`#29` 与 `#30` 已发布进 r11，`#33` 与 `#35` 已发布进 r12；`pinvou3-clean` 与固定标签 `pinvou-v0.9.5-r12` 均公开可达并指向 `9c5f4f19`，`r1` 至 `r12` 保持不可变。
+- `Pinvou/CodeWhale#18`、`#21`、`#22`、`#25`、`#26`、`#27`、`#29`、`#30` 已发布进 r11，`#33`、`#35` 进 r12，`#32` 进 r13；上游 `pinvou3-clean` 的 `r1` 至 `r13` 保持不可变。本仓子模块自 2026-09-10 起改从 fork `mlmr-coder/CodeWhale` 消费，其 tag `pinvou-v0.9.5-r13-oauth1` 指向 `fee18c2f2`，与父仓 gitlink 一致。
 - `.gitmodules` 不配置浮动 `branch`；发布后父仓 gitlink、维护分支和不可变标签必须指向同一 commit。
 - 当前只维护 4 个长期主题：
 
