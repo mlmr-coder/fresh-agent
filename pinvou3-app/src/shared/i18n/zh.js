@@ -8,7 +8,7 @@ import { BRAND_NAME } from '../brand.js';
 import { browserZh } from './browser.js';
 
 const conversationZh = {
-  completed:'已完成', failed:'失败', interrupted:'已中断', limitReached:'达到限制', processing:'处理中', processingActive:'正在处理',
+  completed:'已完成', failed:'失败', interrupted:'已中断', limitReached:'达到限制', processing:'处理中', processingActive:'正在处理', processed:'已处理', processDetails:'思考过程',
   waitingPermission:'等待授权', waitingInput:'等待你的输入', waitingInputShort:'等待输入',
   goLatest:label=>`${label}，前往最新消息`,
   elapsed:milliseconds=>{ const seconds=Math.max(0,Math.floor(milliseconds/1000)); if(seconds<60)return `${seconds}秒`; const minutes=Math.floor(seconds/60); const remaining=seconds%60; return remaining?`${minutes}分${remaining}秒`:`${minutes}分`; },

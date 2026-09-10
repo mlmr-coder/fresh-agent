@@ -12,9 +12,10 @@ const token = composerToken(text, 7);
 assert.equal(token.query, 'vis');
 assert.deepEqual(insertComposerSuggestion(text, token, '/visualizer'), { value: '请先 /visualizer  再分析', caret: 15 });
 assert.equal(composerToken('请看 @报', 5).kind, 'files');
-const skills = [{ name: 'visualizer', title: '数据分析可视化', description: '数据可视化', aliases: ['chart'] }];
+const skills = [{ name: 'visualizer', title: '数据分析可视化', description: '数据可视化', aliases: ['chart'], icon: 'LineChart', color: 'bg-blue' }];
 assert.equal(composerSuggestions('skills', skills, 'CHART')[0].insertion, '/数据分析可视化');
 assert.equal(composerSuggestions('skills', skills, '数据')[0].kind, 'skill');
+assert.equal(composerSuggestions('skills', skills, '数据')[0].icon, 'LineChart');
 const files = [{ name: '报告 1.csv', path: '/session/attachments/报告 1.csv' }];
 assert.equal(composerSuggestions('files', files, '报告')[0].insertion, '@"/session/attachments/报告 1.csv"');
 assert.deepEqual(composerSuggestions('skills', [], 'visualizer'), []);
@@ -23,7 +24,7 @@ assert.equal(composerToken('start/vis', 9).query, 'vis');
 console.log('composer suggestions: PASS');
 
 const editorSource = readFileSync(new URL('../src/features/chat/composer-input-dom.js', import.meta.url), 'utf8');
-const { composerSegments } = await import(`data:text/javascript;base64,${Buffer.from(editorSource).toString('base64')}`);
+const { composerSegments, composerSkillSegments, skillIconShapes } = await import(`data:text/javascript;base64,${Buffer.from(editorSource).toString('base64')}`);
 const catalogue = [{ title: '视觉设计' }, { title: '数据库操作' }];
 assert.deepEqual(composerSegments('先用/视觉设计 /数据库操作 分析', catalogue), [
   { text: '先用' }, { text: '/视觉设计', name: '视觉设计' }, { text: ' ' },
@@ -34,4 +35,11 @@ for (const raw of ['https://视觉设计', '/tmp/视觉设计', '/视觉设计/f
 }
 assert.deepEqual(composerSegments('/视觉设计', catalogue), [{ text: '/视觉设计', name: '视觉设计' }]);
 assert.deepEqual(composerSegments('', catalogue), []);
+const enriched = composerSkillSegments('/数据分析可视化 请分析', skills);
+assert.equal(enriched[0].skill.icon, 'LineChart');
+assert.equal(skillIconShapes(enriched[0].skill.icon)[0][1].d, 'M3 3v18h18M19 9l-5 5-4-4-3 3');
+const chatViewSource = readFileSync(new URL('../src/features/chat/ChatView.jsx', import.meta.url), 'utf8');
+assert.ok(chatViewSource.includes('data-testid="user-message-skill"')
+  && chatViewSource.includes('skills={suggestions.skills}')
+  && chatViewSource.includes('segment.skill?.icon'), 'sent messages must render skill references using catalogue metadata');
 console.log('composer skill tokens: PASS');

@@ -42,6 +42,7 @@ import {
 } from '../conversation/conversation-model.js';
 import { useComposerSuggestions } from './ComposerSuggestions.jsx';
 import { ComposerInput } from './ComposerInput.jsx';
+import { composerSkillSegments, skillIconShapes } from './composer-input-dom.js';
 import { ComposerContextUsage } from './ComposerContextUsage.jsx';
 import { AttachmentChips } from '../attachments/AttachmentChips.jsx';
 import { collectClipboardImages, readPasteImageAsBytes } from '../attachments/paste-image.js';
@@ -1798,8 +1799,9 @@ const ToolWelcomeCard = ({ toolId, _theme, t, onSend }) => {
           t={t}
           editable={!busy && !isMultiAgentReadOnly && item.id === lastUserId}
           conversationVariant="unified"
+          skills={suggestions.skills}
         />
-      ), [activeSessionId, busy, isMultiAgentReadOnly, lastUserId, t, theme]);
+      ), [activeSessionId, busy, isMultiAgentReadOnly, lastUserId, suggestions.skills, t, theme]);
       const handleTimelineRenderItem = useCallback((item) => {
         // reasoning items are handled by ConversationTimeline's ReasoningItem and must not be handed to
         // the legacy ChatBubble; the latter does not know the type and would return null, silently
@@ -2405,6 +2407,7 @@ const ToolWelcomeCard = ({ toolId, _theme, t, onSend }) => {
                     copy={t.uiConversation}
                     agentLabel={chatViewCopy.agentName}
                     assistantAvatar={(timelineAssistantAvatar)}
+                    groupProcess
                     renderUser={handleTimelineRenderUser}
                     renderItem={handleTimelineRenderItem}
                     renderToolItem={handleTimelineRenderToolItem}
@@ -3168,8 +3171,29 @@ const TextareaContextMenu = ({ inputRef, setValue, _theme, t }) => {
       ), document.body);
     };
 
-    // eslint-disable-next-line no-unused-vars -- theme is injected uniformly by the caller; keep the contract slot
-const UserBubble = ({ item, sessionId, _theme, editable, t, conversationVariant }) => {
+const SkillReferenceIcon = ({ name, className = '' }) => (
+  <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    {skillIconShapes(name).map(([tag, attributes], index) => React.createElement(tag, { ...attributes, key: `${tag}-${index}` }))}
+  </svg>
+);
+
+const UserMessageText = ({ text, skills }) => composerSkillSegments(String(text || ''), skills || []).map((segment, index) => (
+  segment.name ? (
+    <span key={`${segment.text}-${index}`} data-testid="user-message-skill"
+      className="mx-0.5 inline-flex max-w-full align-middle items-center gap-1.5 rounded-full bg-black/[0.055] dark:bg-white/[0.10] px-2 py-0.5 text-[13px] font-medium leading-5">
+      <span className={`inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-[5px] text-white ${segment.skill?.color || 'bg-gradient-to-b from-slate-400 to-slate-600'}`}>
+        <SkillReferenceIcon name={segment.skill?.icon} className="h-3 w-3" />
+      </span>
+      <span className="truncate">{segment.name}</span>
+    </span>
+  ) : <React.Fragment key={`text-${index}`}>{segment.text}</React.Fragment>
+));
+
+const EMPTY_MESSAGE_SKILLS = Object.freeze([]);
+
+// eslint-disable-next-line no-unused-vars -- theme is injected uniformly by the caller; keep the contract slot
+const UserBubble = ({ item, sessionId, _theme, editable, t, conversationVariant, skills = EMPTY_MESSAGE_SKILLS }) => {
       const unified = conversationVariant === 'unified';
       const deliveryState = item.deliveryState || '';
       const sceneDisplay = pinvouSceneDisplay(item.pinvouScene, t.uiChat.sceneModes);
@@ -3277,7 +3301,7 @@ const UserBubble = ({ item, sessionId, _theme, editable, t, conversationVariant 
                   <span>{sceneDisplay.label}</span>
                 </span>
               )}
-              {bodyText}
+              <UserMessageText text={bodyText} skills={skills} />
             </div>}
             {deliveryState && (
               <div data-testid={`message-delivery-${deliveryState}`} title={item.deliveryError || undefined} className={`mt-1 flex items-center gap-1.5 pr-1 text-[11px] ${

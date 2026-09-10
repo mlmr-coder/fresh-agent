@@ -1,6 +1,6 @@
 // Skills remain ordinary /name references in drafts and outgoing messages.
 // Only the editor renders them as atomic inline labels.
-export function composerSegments(value, skills) {
+export function composerSkillSegments(value, skills) {
   const names = [...new Set(skills.map(skill => skill.title || skill.name).filter(Boolean))]
     .sort((a, b) => b.length - a.length);
   const segments = [];
@@ -13,12 +13,34 @@ export function composerSegments(value, skills) {
       && (at + title.length + 1 === value.length || /\s/u.test(value[at + title.length + 1])));
     if (!name) continue;
     if (at > plain) segments.push({ text: value.slice(plain, at) });
-    segments.push({ text: `/${name}`, name });
+    const skill = skills.find(candidate => (candidate.title || candidate.name) === name);
+    segments.push({ text: `/${name}`, name, skill });
     at += name.length;
     plain = at + 1;
   }
   if (plain < value.length) segments.push({ text: value.slice(plain) });
   return segments;
+}
+
+// Keep the parser's public plain-data contract stable for callers and tests
+// that only need token boundaries. Rendering uses the enriched form above.
+export function composerSegments(value, skills) {
+  return composerSkillSegments(value, skills).map(segment => (
+    segment.name ? { text: segment.text, name: segment.name } : { text: segment.text }
+  ));
+}
+
+const ICON_SHAPES = Object.freeze({
+  FileText: [['path', { d: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8ZM14 2v6h6M8 13h8M8 17h8' }]],
+  Presentation: [['rect', { x: '3', y: '4', width: '18', height: '12', rx: '2' }], ['path', { d: 'M12 16v5M8 21h8M7 9h3v3H7zM13 8h4M13 11h4' }]],
+  LineChart: [['path', { d: 'M3 3v18h18M19 9l-5 5-4-4-3 3' }]],
+  BookOpen: [['path', { d: 'M2 4h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2zM22 4h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z' }]],
+  Palette: [['path', { d: 'M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.9 0 1.6-.7 1.6-1.7 0-.8-.9-1.2-.9-2.2 0-.9.7-1.7 1.7-1.7h2c3.1 0 5.6-2.5 5.6-5.6C22 6 17.5 2 12 2Z' }], ['circle', { cx: '8.5', cy: '7.5', r: '.7' }], ['circle', { cx: '13.5', cy: '6.5', r: '.7' }], ['circle', { cx: '17.5', cy: '10.5', r: '.7' }], ['circle', { cx: '6.5', cy: '12.5', r: '.7' }]],
+  Package: [['path', { d: 'm7.5 4.3 9 5.1M21 8a2 2 0 0 0-1-1.7l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.7l7 4a2 2 0 0 0 2 0l7-4a2 2 0 0 0 1-1.7ZM3.3 7l8.7 5 8.7-5M12 22V12' }]],
+});
+
+export function skillIconShapes(name) {
+  return ICON_SHAPES[name] || ICON_SHAPES.Package;
 }
 
 export function readComposerNode(node) {
@@ -82,9 +104,11 @@ function skillNode(segment) {
   chip.title = segment.name;
   const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   for (const [key, value] of Object.entries({ width: '16', height: '16', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.7', 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'aria-hidden': 'true' })) icon.setAttribute(key, value);
-  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-  path.setAttribute('d', 'M14.5 3.5 20.5 9.5 M13 2l9 9-3 3-9-9 3-3Z M11.5 9.5 3 18l3 3 8.5-8.5 M4 17l3 3');
-  icon.append(path);
+  skillIconShapes(segment.skill?.icon).forEach(([tag, attributes]) => {
+    const shape = document.createElementNS('http://www.w3.org/2000/svg', tag);
+    Object.entries(attributes).forEach(([key, value]) => shape.setAttribute(key, value));
+    icon.append(shape);
+  });
   const label = document.createElement('span');
   label.textContent = segment.name;
   chip.append(icon, label);
@@ -92,7 +116,7 @@ function skillNode(segment) {
 }
 
 export function renderComposerValue(root, value, skills) {
-  const segments = composerSegments(value, skills);
+  const segments = composerSkillSegments(value, skills);
   const expected = segments.filter(segment => segment.name).map(segment => segment.text);
   const actual = Array.from(root.querySelectorAll('[data-skill-text]'), node => node.dataset.skillText);
   // Keep native text nodes and selection intact during ordinary typing and IME input.

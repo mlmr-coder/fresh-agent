@@ -466,8 +466,14 @@ try {
     'legacy DeepSeek tool details must use the shared timeline visual shell');
   assert.ok(toolRenderers.includes('data-tool-card-variant="timeline"')
     && toolRenderers.includes('const displayExpanded = hasLiveShellOutput || expanded')
-    && conversationView.includes('const expanded = running || open;'),
+    && conversationView.includes('const expanded = open ?? (running || failed);'),
   'timeline tool cards must stay compact except while a live shell operation needs visible output and controls');
+  assert.ok(chatView.includes('groupProcess')
+    && conversationView.includes('data-testid="conversation-process-summary"')
+    && conversationView.includes('data-testid="conversation-process-content"')
+    && conversationView.includes('max-h-64')
+    && conversationView.includes('overflow-y-auto'),
+  'work conversations must consolidate reasoning and tools into one bounded scrollable process disclosure');
   assert.ok(toolRenderers.includes('<QuestionChoiceCard'),
     'DeepSeek request_user_input must use the shared Codex-style choice card');
   assert.ok(toolRenderers.includes('isFreeTextPlaceholderOption')

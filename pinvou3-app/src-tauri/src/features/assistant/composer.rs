@@ -13,6 +13,8 @@ pub struct ComposerSkill {
     catalogue_id: String,
     description: String,
     aliases: Vec<String>,
+    icon: String,
+    color: String,
 }
 
 pub fn skills(language: &str) -> Vec<ComposerSkill> {
@@ -60,16 +62,35 @@ fn catalogue_from_sources(
             skill.path.parent() == Some(source.as_path()) && !connector_skills.contains(&skill.name)
         }) {
             if seen.insert(skill.name.clone()) {
+                let marketplace_entry = metadata
+                    .iter()
+                    .find(|entry| entry.id == directory_name || entry.id == skill.name);
                 out.push(ComposerSkill {
                     name: skill.name.clone(),
-                    title: metadata
-                        .iter()
-                        .find(|entry| entry.id == directory_name || entry.id == skill.name)
+                    title: marketplace_entry
                         .map(|entry| entry.title.clone())
                         .unwrap_or_else(|| skill.name.clone()),
                     catalogue_id: directory_name.clone(),
                     description: skill.description_for_locale(language).to_string(),
                     aliases: skill.aliases.clone(),
+                    icon: marketplace_entry
+                        .map(|entry| entry.icon.clone())
+                        .unwrap_or_else(|| {
+                            if directory_name == "visual-design" {
+                                "Palette".to_string()
+                            } else {
+                                "Package".to_string()
+                            }
+                        }),
+                    color: marketplace_entry
+                        .map(|entry| entry.color.clone())
+                        .unwrap_or_else(|| {
+                            if directory_name == "visual-design" {
+                                "bg-gradient-to-b from-pink-400 to-fuchsia-600".to_string()
+                            } else {
+                                "bg-gradient-to-b from-slate-400 to-slate-600".to_string()
+                            }
+                        }),
                 });
             }
         }
@@ -199,6 +220,20 @@ mod tests {
             for title in ["数据分析可视化", "插件包标准化", "技能创建"] {
                 assert!(catalogue.iter().any(|skill| skill.title == title));
             }
+            let visualizer = catalogue
+                .iter()
+                .find(|skill| skill.name == "visualizer")
+                .unwrap();
+            assert_eq!(visualizer.icon, "LineChart");
+            assert_eq!(
+                visualizer.color,
+                "bg-gradient-to-b from-blue-500 to-cyan-600"
+            );
+            let builtin = catalogue
+                .iter()
+                .find(|skill| skill.name == "visual-design")
+                .unwrap();
+            assert_eq!(builtin.icon, "Palette");
             super::super::skill_materialization::materialize_session_skills(
                 "picker-fixture",
                 ConnectorScope::Plain,

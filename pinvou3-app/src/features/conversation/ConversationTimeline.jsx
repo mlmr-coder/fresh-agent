@@ -745,6 +745,79 @@ function DefaultItem({
   return null;
 }
 
+const PROCESS_ITEM_TYPES = new Set(['reasoning', 'tool_group', 'tool', 'command_execution', 'file_change']);
+
+function ProcessDisclosure({
+  items,
+  turn,
+  running,
+  duration,
+  now,
+  pendingByTool,
+  onRespond,
+  responding,
+  renderItem,
+  renderToolItem,
+  onOpenExternal,
+  onOpenResource,
+  agentLabel,
+  copy,
+}) {
+  const c = conversationCopy(copy);
+  const failed = items.some(item => (
+    item.type === 'tool_group'
+      ? item.items?.some(countsAsFailedOperation)
+      : countsAsFailedOperation(item)
+  ));
+  const [open, setOpen] = useState(true);
+  const detailsId = useId();
+  return (
+    <div className="min-w-0 max-w-full">
+      <button type="button" onClick={() => setOpen(value => !value)}
+        data-testid="conversation-process-summary"
+        aria-expanded={open}
+        aria-controls={open ? detailsId : undefined}
+        className={`conversation-process-row ${failed ? 'text-red-500' : 'text-gray-500 dark:text-gray-400'}`}>
+        {running
+          ? <span className="h-2.5 w-2.5 shrink-0 animate-spin rounded-full border border-current/20 border-t-current" />
+          : <StatusDot tone={failed ? 'fail' : 'ok'} />}
+        <span>{running ? c.processingActive : c.processed}{duration ? ` · ${duration}` : ''}</span>
+        <ChevronDown size={13} className={`shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        <div id={detailsId} data-testid="conversation-process-content"
+          className="ml-1 mt-1 max-h-64 min-w-0 max-w-full overflow-y-auto border-l border-black/10 py-1 pl-3 pr-2 custom-scrollbar dark:border-white/10">
+          <div className="mb-1 text-[11px] font-medium text-gray-400">{c.processDetails}</div>
+          <div className="space-y-1">
+            {items.map((item, index) => {
+              const context = { turn, now, pendingByTool, onRespond, responding };
+              const custom = renderItem && renderItem(item, context);
+              if (custom !== undefined) {
+                return <React.Fragment key={item.id || `${item.type}-${index}`}>{custom}</React.Fragment>;
+              }
+              return (
+                <DefaultItem
+                  key={item.id || `${item.type}-${index}`}
+                  item={item}
+                  now={now}
+                  pendingByTool={pendingByTool}
+                  onRespond={onRespond}
+                  responding={responding}
+                  renderToolItem={renderToolItem}
+                  onOpenExternal={onOpenExternal}
+                  onOpenResource={onOpenResource}
+                  agentLabel={agentLabel}
+                  copy={c}
+                />
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Default props must keep stable identities or React.memo below would see fresh
 // objects/functions on every parent render and never skip work.
 const EMPTY_PENDING_BY_TOOL = Object.freeze({});
@@ -823,6 +896,7 @@ function ConversationTurnView({
   agentLabel = 'Agent',
   assistantAvatar,
   copy,
+  groupProcess = false,
 }) {
   const c = conversationCopy(copy);
   const running = turn.status === 'running';
@@ -839,6 +913,8 @@ function ConversationTurnView({
   const duration = c.elapsed(elapsedMs(turn.startedAt, turn.completedAt, effectiveNow));
   const showTerminalDuration = Boolean(turn.startedAt && turn.completedAt);
   const presentation = turn.presentation || turn.items || [];
+  const processItems = groupProcess ? presentation.filter(item => PROCESS_ITEM_TYPES.has(item.type)) : [];
+  const visiblePresentation = groupProcess ? presentation.filter(item => !PROCESS_ITEM_TYPES.has(item.type)) : presentation;
   const hasRunningActivity = presentation.some(item => item.type === 'reasoning' && item.status === 'in_progress'
     || item.type === 'tool_group' && item.items?.some(tool => terminalStatus(tool.status) === 'running'));
   const operationCount = Number(turn.operationCount || 0);
@@ -902,7 +978,25 @@ function ConversationTurnView({
               {waitingPermission ? c.waitingPermission : waitingInput ? c.waitingInputShort : (turn.activityToolName ? c.callingTool(turn.activityToolName) : c.processingActive)} · {duration}
             </div>
           )}
-          {presentation.map((item, index) => {
+          {groupProcess && processItems.length > 0 && (
+            <ProcessDisclosure
+              items={processItems}
+              turn={turn}
+              running={running}
+              duration={duration}
+              now={effectiveNow}
+              pendingByTool={pendingByTool}
+              onRespond={onRespond}
+              responding={responding}
+              renderItem={renderItem}
+              renderToolItem={renderToolItem}
+              onOpenExternal={onOpenExternal}
+              onOpenResource={onOpenResource}
+              agentLabel={agentLabel}
+              copy={c}
+            />
+          )}
+          {visiblePresentation.map((item, index) => {
             const context = { turn, now: effectiveNow, pendingByTool, onRespond, responding };
             const custom = renderItem && renderItem(item, context);
             if (custom !== undefined) {

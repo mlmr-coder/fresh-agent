@@ -9,7 +9,7 @@ import { BRAND_NAME } from '../brand.js';
 import { browserEn } from './browser.js';
 
 const conversationEn = {
-  completed:'Completed', failed:'Failed', interrupted:'Interrupted', limitReached:'Limit reached', processing:'Processing', processingActive:'Processing',
+  completed:'Completed', failed:'Failed', interrupted:'Interrupted', limitReached:'Limit reached', processing:'Processing', processingActive:'Processing', processed:'Processed', processDetails:'Thinking process',
   waitingPermission:'Waiting for permission', waitingInput:'Waiting for your input', waitingInputShort:'Waiting for input',
   goLatest:label=>`${label}. Go to latest message`,
   elapsed:milliseconds=>{ const seconds=Math.max(0,Math.floor(milliseconds/1000)); if(seconds<60)return `${seconds}s`; const minutes=Math.floor(seconds/60); const remaining=seconds%60; return remaining?`${minutes}m ${remaining}s`:`${minutes}m`; },
