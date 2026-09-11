@@ -177,9 +177,9 @@ pub fn auth_status_decision(
     use objc2_speech::SFSpeechRecognizerAuthorizationStatus as S;
     match status {
         S::Authorized => Ok(()),
-        S::NotDetermined => Err(
-            "语音识别尚未授权（未决定）。请再次触发语音输入以弹出授权请求".to_string(),
-        ),
+        S::NotDetermined => {
+            Err("语音识别尚未授权（未决定）。请再次触发语音输入以弹出授权请求".to_string())
+        }
         S::Denied => Err(
             "语音识别权限已被拒绝。请到「系统设置 > 隐私与安全性 > 语音识别」开启Lingo的权限后重试"
                 .to_string(),
