@@ -24,13 +24,13 @@ https://github.com/mlmr-coder/fresh-agent/releases/latest/download/latest.json
 ```json
 {
   "schema_version": 1,
-  "version": "0.9.4",
-  "notes": "Lingo v0.9.4",
-  "pub_date": "2026-09-09T00:00:00Z",
+  "version": "0.9.5",
+  "notes": "Lingo v0.9.5",
+  "pub_date": "2026-09-11T00:00:00Z",
   "platforms": {
     "linux-x64": {
-      "version": "0.9.4",
-      "url": "https://github.com/mlmr-coder/fresh-agent/releases/download/v0.9.4/pinvou-agent_0.9.4-linux-x64.deb",
+      "version": "0.9.5",
+      "url": "https://github.com/mlmr-coder/fresh-agent/releases/download/v0.9.5/pinvou-agent_0.9.5-linux-x64.deb",
       "format": "deb",
       "sha256": "<64 位十六进制字符>",
       "size": 123456,
