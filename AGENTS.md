@@ -1,4 +1,4 @@
-# 智灵项目约定
+# Lingo项目约定
 
 ## 开始工作
 
@@ -8,7 +8,7 @@
 
 ## CodeWhale 边界
 
-CodeWhale 提供模型调用、流式输出、工具循环、会话、Skills、Commands、MCP、Hooks 与 Compaction。智灵不重复实现这些能力。
+CodeWhale 提供模型调用、流式输出、工具循环、会话、Skills、Commands、MCP、Hooks 与 Compaction。Lingo不重复实现这些能力。
 
 | 改动类型 | 位置 |
 |---|---|
@@ -33,7 +33,7 @@ CodeWhale 提供模型调用、流式输出、工具循环、会话、Skills、C
 
 ## 产品约定
 
-- 产品显示名称统一为“智灵”。`pinvou3`、bundle id、环境变量和 `~/.pinvou3/` 等兼容性技术标识按 `docs/branding.md` 保留。
+- 产品显示名称统一为“Lingo”。`pinvou3`、bundle id、环境变量和 `~/.pinvou3/` 等兼容性技术标识按 `docs/branding.md` 保留。
 - 应用文案统一从 `pinvou3-app/src/shared/i18n.js` 读取，提供简体中文和英文，不在组件中新增单语言文案。
 - 社区功能必须在没有私有服务和内部地址时完整可用。
 - 网络、上传、外部命令或新依赖采用安全默认值，并向用户清楚说明。

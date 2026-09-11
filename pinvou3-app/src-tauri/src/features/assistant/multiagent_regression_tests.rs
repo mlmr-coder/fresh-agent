@@ -421,7 +421,7 @@ async fn code_session_real_spawn_refresh_resolves_config_expert_without_project_
             .members()
             .iter()
             .all(|member| !member.id.starts_with("exp-")),
-        "ordinary sessions must not gain 智灵 experts"
+        "ordinary sessions must not gain Lingo experts"
     );
     assert!(
         bridge.build_dt_config().fleet_config().profiles.is_empty(),

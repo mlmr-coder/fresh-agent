@@ -6,7 +6,7 @@
       {
         "label": "main",
         "url": "index.html?ui=vite-react-1",
-        "title": "智灵",
+        "title": "Lingo",
         "width": 1100,
         "height": 760,
         "resizable": true,
@@ -38,7 +38,7 @@
       "signingIdentity": "-",
       "entitlements": "packaging/macos/entitlements.plist",
       "infoPlist": "packaging/macos/Info.plist",
-      "bundleName": "智灵"
+      "bundleName": "Lingo"
     }
   }
 }

@@ -595,7 +595,7 @@ async function ensureBrowserRunning() {
   }
 
   hostedWebView2 = false;
-  const reason = 'browser/host-backend-unavailable: in-app WebView2 is not ready; restart 智灵 and retry; external Chrome will not be started';
+  const reason = 'browser/host-backend-unavailable: in-app WebView2 is not ready; restart Lingo and retry; external Chrome will not be started';
   throw new Error(reason);
 }
 
@@ -833,7 +833,7 @@ function hostMutationCommitUnknownOutcome(
       type: 'text',
       text:
         `The ${toolName || 'browser'} action crossed the native-host dispatch boundary, but its ` +
-        'final acknowledgement or exact compensation was not proven, so 智灵 cannot prove ' +
+        'final acknowledgement or exact compensation was not proven, so Lingo cannot prove ' +
         'that the page mutation did not occur. ' +
         'Do not repeat the action; inspect the page state before continuing. ' +
         `Host error: ${hostError}`,
@@ -867,7 +867,7 @@ function committedActionFollowupFailureOutcome(
     content: [{
       type: 'text',
       text:
-        `The ${toolName || 'browser'} action was committed, but 智灵 could not refresh the ` +
+        `The ${toolName || 'browser'} action was committed, but Lingo could not refresh the ` +
         'page view afterwards. Do not repeat the action; refresh or inspect the page state before ' +
         `continuing. Follow-up error: ${followupError}`,
     }],

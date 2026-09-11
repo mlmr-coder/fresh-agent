@@ -685,7 +685,7 @@ function selectorSubLabel(m, t) {
 
 // ── 思考深度（reasoning effort）档位 ─────────────────────────────
 // 每个 provider 只暴露底座 wire 层有实际区别的档位（归一后无区别的档位
-// 不展示，避免用户选到"看起来不同、实际相同"的值）。语义与智灵 Rust 侧
+// 不展示，避免用户选到"看起来不同、实际相同"的值）。语义与Lingo Rust 侧
 // provider() 判定对齐（vendor 优先 + preset 兜底）。
 const REASONING_EFFORT_TIERS = {
   // vllm：off/low/medium/high 四档；max 被底座降级为 high，不重复暴露。
@@ -711,7 +711,7 @@ const REASONING_EFFORT_TIERS = {
 
 // OpenAI 官方 API 支持「自定义模型」手输模型 ID，因此 reasoning 家族判定必须
 // 对齐底座 CodeWhale `model_is_openai_reasoning_family`（models.rs）的完整
-// predicate，而不是只覆盖智灵目录收录的 4 个 ID：用户手输 gpt-5.6 / gpt-5.5-pro /
+// predicate，而不是只覆盖Lingo目录收录的 4 个 ID：用户手输 gpt-5.6 / gpt-5.5-pro /
 // 日期快照 / gpt-5.3-codex 等模型时底座仍会注入多档 reasoning_effort，前端若
 // 返回 null 会隐藏切换，造成「后端注入、前端不可控」的不一致。
 function isOpenaiReasoningFamilyModel(model) {
@@ -757,7 +757,7 @@ function hasOpenaiDateSnapshotSuffix(lower, prefix) {
   return true;
 }
 
-// 智灵 provider 判定（对齐 bridge.rs `provider()`：base_url(deepseek) 优先，
+// Lingo provider 判定（对齐 bridge.rs `provider()`：base_url(deepseek) 优先，
 // vendor 优先 + preset 兜底）。
 //
 // 与 Rust `provider()` 的结构性差异（均为前端「只暴露底座有实际档位区别的
@@ -928,7 +928,7 @@ function expandIpv6(host) {
   return groups.map((g) => g.padStart(4, '0').toLowerCase()).join(':');
 }
 
-// 智灵 provider 判定（对齐 bridge.rs `provider()`：vendor 优先 + preset 兜底）。
+// Lingo provider 判定（对齐 bridge.rs `provider()`：vendor 优先 + preset 兜底）。
 function reasoningProviderForModel(model) {
   if (!model) return null;
   // 对齐 Rust provider() 优先级：官方 deepseek base_url 优先（即使 preset 是
@@ -999,7 +999,7 @@ function alwaysThinkingSpecForModel(modelId) {
 }
 
 // 该模型可切换的思考深度档位（无则 null = 不提供切换）。
-// 路由/模型级细分（仅智灵目录收录的模型）：
+// 路由/模型级细分（仅Lingo目录收录的模型）：
 // - zai：first-party z.ai 端点上 GLM-5.2/5.3 提供 tiered effort（off/high/max），
 //   GLM-5.1/GLM-5-Turbo 只有 generic thinking 开关（off/high）；中国 open.bigmodel.cn、
 //   兼容网关、未验证模型底座会删除 thinking/reasoning_effort（两档等效）→ 不提供切换。

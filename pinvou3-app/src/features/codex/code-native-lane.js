@@ -1,4 +1,4 @@
-// 代码模块原生（智灵 Engine）会话的本地会话车道。
+// 代码模块原生（Lingo Engine）会话的本地会话车道。
 //
 // ACP 会话由后端维护 timeline（get_codex_acp_timeline）；原生会话复用主聊天的
 // engine 链路：chat 命令发消息、`chat:*` 事件推进、SavedSession messages 落盘。

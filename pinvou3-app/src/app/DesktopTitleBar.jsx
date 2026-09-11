@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { PinvouLogo } from '../components/PinvouLogo.jsx';
 import { tryGetCurrentTauriWindow } from '../platform/tauri/client.js';
 
 const appWindow = tryGetCurrentTauriWindow();
@@ -37,10 +36,7 @@ export const TitleBar = ({ t, sidebarOpen = true }) => {
   return (
     <div data-tauri-drag-region
       className={`h-9 shrink-0 flex items-center justify-between select-none ${titleBarBg} text-[#1F1F1F] dark:text-[#E3E3E3]`}>
-      <div data-tauri-drag-region className={`flex items-center gap-2 ${nativeControls === true ? 'pl-[76px] pr-3' : 'px-3'} text-[13px] font-medium pointer-events-none`}>
-        <PinvouLogo className="h-[18px] w-[18px] select-none" />
-        {t.appTitle}
-      </div>
+      <div data-tauri-drag-region className={`h-full ${nativeControls === true ? 'pl-[76px] pr-3' : 'px-3'} pointer-events-none`} />
       {nativeControls === false && (
       <div className="flex items-center h-full">
         <button type="button" onClick={() => appWindow && appWindow.minimize()} title={t.winMin}

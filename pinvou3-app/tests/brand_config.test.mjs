@@ -14,8 +14,8 @@ test('all managed product surfaces match BRAND.json', () => {
 });
 
 test('brand synchronization accepts Windows line endings', () => {
-  assert.equal(brandContentMatches('智灵\r\n桌面应用\r\n', '智灵\n桌面应用\n'), true);
-  assert.equal(brandContentMatches('智灵\r\n桌面应用\r\n', '智灵\n网页应用\n'), false);
+  assert.equal(brandContentMatches('Lingo\r\n桌面应用\r\n', 'Lingo\n桌面应用\n'), true);
+  assert.equal(brandContentMatches('Lingo\r\n桌面应用\r\n', 'Lingo\n网页应用\n'), false);
 });
 
 test('macOS app menu uses the generated display name instead of the executable name', () => {

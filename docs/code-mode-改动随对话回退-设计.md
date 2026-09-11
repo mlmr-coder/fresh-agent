@@ -1,7 +1,7 @@
 # 代码模式「改动随对话回退」设计方案
 
 > 状态：已落地（PR #397，经两轮评审加固）。
-> 范围：**仅智灵原生代码会话（Native code lane）**；ACP 会话（Codex/Claude 外部进程）明确不做。
+> 范围：**仅 Lingo 原生代码会话（Native code lane）**；ACP 会话（Codex/Claude 外部进程）明确不做。
 > 关联：`docs/adr/0006-多智能体收缩为会话内主动委派模式.md`（需修订，见 §8）、`docs/code-native-agent-完全体架构设计.md`（qiuYliangM/feat-full-code-mode 分支，本方案移植其 checkpoint 机制）。
 
 ## 1. 目标与语义定义
@@ -21,12 +21,12 @@
 
 ### 2.1 不启用底座快照（CodeWhale `crates/tui/src/snapshot/`）
 
-底座已有完整 shadow-git 快照体系（pre/post-turn + per-tool 快照、`restore` 带 pre-restore 反悔、`/undo`/`revert_turn`），但不适用于智灵场景：
+底座已有完整 shadow-git 快照体系（pre/post-turn + per-tool 快照、`restore` 带 pre-restore 反悔、`/undo`/`revert_turn`），但不适用于 Lingo 场景：
 
 - `mod snapshot;` 非 pub（`CodeWhale/crates/tui/src/lib.rs:134`），app 使用必须改 fork；
 - 标签用进程内 `turn_counter`（`engine.rs`），重启后 `pre-turn:1` 重复，多进程下锚定失效；
 - 存储按工作区哈希隔离（`~/.codewhale/snapshots/`），同工作区多会话交错，保留策略 7 天/50 个/500MB 与会话生命周期脱节；
-- 智灵当前显式关闭：`snapshots_enabled: false`（`pinvou3-app/src-tauri/src/features/assistant/platform/bridge.rs:1500`），两套体系不并存。
+- Lingo 当前显式关闭：`snapshots_enabled: false`（`pinvou3-app/src-tauri/src/features/assistant/platform/bridge.rs:1500`），两套体系不并存。
 
 复用底座需 4 处 fork 改动（pub/facade、锚定、会话命名空间、保留策略），按项目公约应优先回馈上游，周期不可控。
 

@@ -5,9 +5,9 @@ import { dict } from '../src/shared/i18n-all.js'; // 中英文全量断言：浏
 const source = relative => readFileSync(new URL(`../src/${relative}`, import.meta.url), 'utf8');
 
 for (const language of ['zh', 'en']) {
-  assert.equal(dict[language].appTitle, '智灵');
-  assert.equal(dict[language].uiPlatformMisc.appTitle, '智灵');
-  assert.ok(dict[language].remoteKbBackupFileType.includes('智灵'));
+  assert.equal(dict[language].appTitle, 'Lingo');
+  assert.equal(dict[language].uiPlatformMisc.appTitle, 'Lingo');
+  assert.ok(dict[language].remoteKbBackupFileType.includes('Lingo'));
   for (const section of [
     'uiRemote',
     'uiMonitor',

@@ -1,6 +1,6 @@
 # 应用更新机制
 
-智灵从 GitHub 最新 Release 读取静态更新清单：
+Lingo 从 GitHub 最新 Release 读取静态更新清单：
 
 ```text
 https://github.com/mlmr-coder/fresh-agent/releases/latest/download/latest.json
@@ -25,7 +25,7 @@ https://github.com/mlmr-coder/fresh-agent/releases/latest/download/latest.json
 {
   "schema_version": 1,
   "version": "0.9.4",
-  "notes": "智灵 v0.9.4",
+  "notes": "Lingo v0.9.4",
   "pub_date": "2026-09-09T00:00:00Z",
   "platforms": {
     "linux-x64": {

@@ -153,7 +153,7 @@ function injectSource() {
     var saveModelError = null;
     var dependencyCheckResponse = [];
     var memoryOverview = {
-      profile: { version: 1, revision: 3, identity: { call_name: '升级前称呼', assistant_alias: '智灵' }, conventions: {} },
+      profile: { version: 1, revision: 3, identity: { call_name: '升级前称呼', assistant_alias: 'Lingo' }, conventions: {} },
       preferences: [], work_context: [], current_focus: [], recent_activity: [], recent_work: [], pending: [], never: [],
       runtime: null, snapshot_path: '', warnings: [],
       sources: {
@@ -1767,7 +1767,7 @@ async function modalWidth(page, headingText) {
       width: rect ? Math.round(rect.width) : 0,
       insideViewport: !!rect && rect.left >= -1 && rect.right <= window.innerWidth + 1 && rect.top >= -1 && rect.bottom <= window.innerHeight + 1,
       noUpstreamQrImage: !qr,
-      correctGroupName: (groupName?.textContent || '').trim() === '智灵用户交流群',
+      correctGroupName: (groupName?.textContent || '').trim() === 'Lingo用户交流群',
       groupNumberPending: (groupNumber?.textContent || '').trim() === '待补充',
       copyDisabled: !!copyButton && copyButton.disabled,
       noClipboardWrite: window.__COMMUNITY_CLIPBOARD_TEXT__ === null,

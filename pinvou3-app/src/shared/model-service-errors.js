@@ -218,7 +218,7 @@
       serverTitle: "{provider} is temporarily unavailable",
       serverMessage: "The current model service is temporarily unavailable, {stop}Try again later or switch to another model.",
       networkTitle: "Network connection failed",
-      networkMessage: "智灵 could not connect to the current model service. {stop}Check network, proxy, or endpoint settings and retry.",
+      networkMessage: "Lingo could not connect to the current model service. {stop}Check network, proxy, or endpoint settings and retry.",
       contextTitle: "Context is too long",
       contextMessage: "This conversation is longer than the model can handle. Compact context, reduce input, or start a new session.",
       contentTitle: "Content rejected by the model service",
@@ -675,7 +675,7 @@
   // the placeholder parameterization.
   function stopPhraseFor(language, terminal) {
     const lang = languageTag(language);
-    if (lang === "en") return terminal ? "so this reply stopped. " : "智灵 will keep retrying this reply. ";
+    if (lang === "en") return terminal ? "so this reply stopped. " : "Lingo will keep retrying this reply. ";
     return terminal ? "本次回复已停止。" : "系统会继续重试当前回复。";
   }
 

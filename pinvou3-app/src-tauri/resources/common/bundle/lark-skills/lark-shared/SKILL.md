@@ -176,7 +176,7 @@ lark-cli 命令执行后，如果检测到新版本，JSON 输出中会包含 `_
 LARKSUITE_CLI_NO_UPDATE_NOTIFIER=1 LARKSUITE_CLI_NO_SKILLS_NOTIFIER=1 <lark-cli command>
 ```
 
-当你在输出中看到 `_notice.update` 时，先完成用户当前请求；如仍相关，再简短告知用户：智灵内 lark-cli 由应用按锁文件钉扎分发与升级，**不要执行 `lark-cli update` 自行更新**（自行更新会脱离智灵校验，导致下次使用时被重装回钉扎版本）；新版本会随智灵应用更新自动就位。
+当你在输出中看到 `_notice.update` 时，先完成用户当前请求；如仍相关，再简短告知用户：Lingo内 lark-cli 由应用按锁文件钉扎分发与升级，**不要执行 `lark-cli update` 自行更新**（自行更新会脱离Lingo校验，导致下次使用时被重装回钉扎版本）；新版本会随Lingo应用更新自动就位。
 
 ## JSON 输出契约
 

@@ -121,7 +121,7 @@ pub async fn prepare_codex_acp(acp_pool: State<'_, AcpPool>) -> Result<CodexAcpS
     let status = acp_pool.refresh_status().await;
     if !status.bridge_ready {
         return Err(
-            "准备 Codex 运行环境失败: 智灵 安装包缺少可用的 Codex ACP Bridge".to_string(),
+            "准备 Codex 运行环境失败: Lingo 安装包缺少可用的 Codex ACP Bridge".to_string(),
         );
     }
     acp_pool
@@ -646,7 +646,7 @@ pub async fn respond_codex_acp_elicitation(
         .map_err(|error| format!("回复 Codex ACP 输入请求失败: {error:#}"))
 }
 
-/// 列表项的 agent_id：ACP 后端使用各自 id；原生（智灵）代码会话固定为 "pinvou"。
+/// 列表项的 agent_id：ACP 后端使用各自 id；原生（Lingo）代码会话固定为 "pinvou"。
 fn code_session_agent_id(backend: AgentBackend) -> String {
     backend.agent_id().unwrap_or("pinvou").to_string()
 }
@@ -868,7 +868,7 @@ pub(crate) async fn create_codex_acp_session_with_workspace_binding(
     Ok(session.metadata)
 }
 
-/// 创建“代码”模块原生（智灵 Engine）会话。
+/// 创建“代码”模块原生（Lingo Engine）会话。
 ///
 /// 临时会话执行目录与 ACP 临时会话共用 `SessionStore::session_roots` 推导
 /// （两根一致，均为会话私有目录）；项目会话绑定调用方选定的目录（经

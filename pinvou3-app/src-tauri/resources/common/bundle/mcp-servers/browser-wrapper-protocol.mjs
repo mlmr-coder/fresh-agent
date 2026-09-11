@@ -989,7 +989,7 @@ export async function runLeasedHostDispatch({
       content: [{
         type: 'text',
         text:
-          'The browser authorization heartbeat failed while this tool was in flight, and 智灵 ' +
+          'The browser authorization heartbeat failed while this tool was in flight, and Lingo ' +
           'cannot prove that the page action did not occur. Do not repeat the action; inspect the ' +
           `page state before continuing. Authorization error: ${authorizationError}. ` +
           `Upstream result: ${upstreamError}`,

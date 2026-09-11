@@ -1,8 +1,8 @@
 <div align="center">
 
-<img src="pinvou3-app/src-tauri/icons/icon.png" alt="智灵图标" width="112" />
+<img src="pinvou3-app/src-tauri/icons/icon.png" alt="Lingo图标" width="112" />
 
-# 智灵
+# Lingo
 
 **面向工作、设计与代码的开源桌面 AI Agent。**
 
@@ -15,7 +15,7 @@
 
 </div>
 
-智灵把对话、文件、知识、专家、技能、连接器和代码 Agent 放在一个桌面工作台中。它既可以回答问题，也可以调用工具完成任务、修改真实项目并交付文件。
+Lingo把对话、文件、知识、专家、技能、连接器和代码 Agent 放在一个桌面工作台中。它既可以回答问题，也可以调用工具完成任务、修改真实项目并交付文件。
 
 ## 核心能力
 
@@ -84,6 +84,6 @@ python3 scripts/architecture-guard.py
 
 提交改动前请阅读 [贡献指南](CONTRIBUTING.md)。安全问题请使用 [安全政策](SECURITY.md) 中的私有渠道，不要在公开 Issue 中披露。
 
-智灵基于 [Pinvou/pinvou-agent](https://github.com/Pinvou/pinvou-agent) 继续开发，Agent 底座使用 [CodeWhale](https://github.com/mlmr-coder/CodeWhale)。兼容性技术标识仍保留 `pinvou3`，具体边界见 [品牌说明](docs/branding.md)。第三方许可见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+Lingo基于 [Pinvou/pinvou-agent](https://github.com/Pinvou/pinvou-agent) 继续开发，Agent 底座使用 [CodeWhale](https://github.com/mlmr-coder/CodeWhale)。兼容性技术标识仍保留 `pinvou3`，具体边界见 [品牌说明](docs/branding.md)。第三方许可见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 
 **[MIT License](LICENSE)**

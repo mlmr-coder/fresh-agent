@@ -1,5 +1,5 @@
 [Unit]
-Description=智灵 shared knowledge server
+Description=Lingo shared knowledge server
 After=network-online.target
 Wants=network-online.target
 

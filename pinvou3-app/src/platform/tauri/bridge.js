@@ -118,7 +118,7 @@
   // 抹平裸 <script>/<style>/<iframe> 等危险标签:它们一旦被 marked 透传成真 HTML,
   // 浏览器按 HTML 解析时 script 元素会"吞掉"后续兄弟节点直到 </script>(或文档末尾),
   // 然后 DOMPurify 把整段 script 连同被卷进去的内容一起剥掉。后果:LLM 正文里裸写
-  // "在同一个 <script> 标签内……"会把后续表格/文字整段吞掉(历史上智灵报告表格踩过)。
+  // "在同一个 <script> 标签内……"会把后续表格/文字整段吞掉(历史上Lingo报告表格踩过)。
   //
   // 关键:在 marked.parse 【之后】做替换,而不是之前。原因:marked 给代码块/inline code 的
   // 输出本身就已经把 < 转义成 &lt;(不会有真 <script>),只有用户在正文里裸写 HTML 时才会
@@ -477,7 +477,7 @@
       targetSessionMissing: "Target chat does not exist",
       replyContentEmpty: "Reply content is empty",
       targetSessionSyncing: "The target chat is still syncing a turn completed elsewhere",
-      summonNeedsSession: "Start a conversation first, then summon 智灵 to review.",
+      summonNeedsSession: "Start a conversation first, then summon Lingo to review.",
       runHasNoSession: "This run has no chat to open",
       sessionDataInvalid: "Chat data is invalid",
       voicePermissionDenied: "Microphone permission was denied. Allow this app to access the microphone in system settings, then try again.",
@@ -577,7 +577,7 @@
       targetSessionMissing: "目标会话不存在",
       replyContentEmpty: "回复内容为空",
       targetSessionSyncing: "目标会话仍在同步另一端完成的回合",
-      summonNeedsSession: "先开始一个对话,再召唤 智灵 检阅。",
+      summonNeedsSession: "先开始一个对话,再召唤 Lingo 检阅。",
       runHasNoSession: "该运行记录没有可打开的会话",
       sessionDataInvalid: "会话数据无效",
       voicePermissionDenied: "麦克风权限被拒绝，请在系统设置中允许本应用访问麦克风后重试。",
@@ -1148,7 +1148,7 @@
   async function persistMessagesFor(sid) {
     if (!sid) return;
     if (isScheduledRunSession(sid)) return;
-    // 代码会话（智灵原生/ACP）不在 list_sessions 里：它不是桥接聊天会话——
+    // 代码会话（Lingo原生/ACP）不在 list_sessions 里：它不是桥接聊天会话——
     // 消息由后端 persist_chat_engine_state 持久化、标题由后端自动命名管理。
     // 跳过产物索引与自动重命名：meta 缺失时 msgs 会错读 active 聊天 state 的
     // 首条用户消息，把别的会话文本命名到代码会话上。正常聊天会话经

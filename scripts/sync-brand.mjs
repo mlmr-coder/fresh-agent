@@ -173,7 +173,7 @@ function managedFiles(repoRoot, brand) {
 
   const packagePath = resolve(appRoot, 'package.json');
   const packageJson = readJson(packagePath);
-  packageJson.description = `${displayName}智能助手桌面应用`;
+  packageJson.description = `${displayName} 智能助手桌面应用`;
   targets.push({
     path: packagePath,
     content: jsonText(packageJson),
@@ -188,7 +188,7 @@ function managedFiles(repoRoot, brand) {
     let next = replaceRequired(
       content,
       /^description\s*=\s*"[^"]*"/mu,
-      `description = "${displayName}智能助手桌面应用后端"`,
+      `description = "${displayName} 智能助手桌面应用后端"`,
       'src-tauri/Cargo.toml',
     );
     next = replaceRequired(
@@ -228,7 +228,7 @@ function managedFiles(repoRoot, brand) {
     const replacements = [
       [/^Name=.*$/mu, `Name=${displayName} 智能助手`],
       [/^Name\[en\]=.*$/mu, `Name[en]=${displayName} Assistant`],
-      [/^Name\[zh_CN\]=.*$/mu, `Name[zh_CN]=${displayName}智能助手`],
+      [/^Name\[zh_CN\]=.*$/mu, `Name[zh_CN]=${displayName} 智能助手`],
       [/^Keywords=.*$/mu, `Keywords=AI;LLM;assistant;chat;pinvou;${displayName};智能助手;`],
     ];
     return replacements.reduce(

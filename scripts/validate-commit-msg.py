@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""校验智灵提交信息格式。"""
+"""校验Lingo提交信息格式。"""
 
 from __future__ import annotations
 
@@ -167,7 +167,7 @@ def main() -> int:
     errors = validate_range(*args.range) if args.range else validate_file(args.message_file)
 
     if errors:
-        print("Commit message does not follow the mandatory 智灵 convention.", file=sys.stderr)
+        print("Commit message does not follow the mandatory Lingo convention.", file=sys.stderr)
         print(f"See {DOC_PATH}", file=sys.stderr)
         for error in errors:
             print(f"- {error}", file=sys.stderr)

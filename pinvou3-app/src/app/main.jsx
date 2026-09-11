@@ -876,7 +876,7 @@ function workspaceDisplayName(path) {
           if (disposed) unlisten();
           else unlisteners.push(unlisten);
         }).catch(() => {});
-        // 原生（智灵）代码会话的 turn 走 chat:* 事件：busy 徽标与 ACP 会话同机制，
+        // 原生（Lingo）代码会话的 turn 走 chat:* 事件：busy 徽标与 ACP 会话同机制，
         // 只跟踪代码会话列表内的 session，普通聊天会话不影响。
         ['chat:turn_started', 'chat:done'].forEach(eventName => {
           tauriEvents.listen(eventName, (message) => {
@@ -3578,7 +3578,7 @@ function workspaceDisplayName(path) {
               </div>
             )}
 
-            {/* 智灵 检阅弹窗(品/悟) —— 居中弹窗 + 毛玻璃背景(虚化身后 app);全局,任何视图都能弹;点背景或卡内「跳过」关闭 */}
+            {/* Lingo 检阅弹窗(品/悟) —— 居中弹窗 + 毛玻璃背景(虚化身后 app);全局,任何视图都能弹;点背景或卡内「跳过」关闭 */}
             {bs && bs.pinvouModal && browserOverlayPublicationReady && (
               // biome-ignore lint/a11y/useKeyWithClickEvents: keyboard users close the dialog through its real close button
               // biome-ignore lint/a11y/noStaticElementInteractions: this is a pointer-only backdrop around an accessible dialog card

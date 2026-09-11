@@ -1,6 +1,6 @@
-# 智灵品牌与兼容性说明
+# Lingo 品牌与兼容性说明
 
-应用窗口、原生代码会话、审核与语音提示、内置技能、知识服务、导出内容和安装说明等面向用户的品牌显示统一使用“智灵”。
+应用窗口、原生代码会话、审核与语音提示、内置技能、知识服务、导出内容和安装说明等面向用户的品牌显示统一使用“ Lingo ”。
 
 根目录 `BRAND.json` 是显示名称和品牌图标路径的单一来源。修改后运行 `node scripts/sync-brand.mjs`；脚本会同步前端品牌常量、主窗口与 HTML 标题、macOS 应用菜单与安装元数据、Linux 启动器、包描述及原生图标清单。`node scripts/sync-brand.mjs --check` 用于检查遗漏。生成的 `pinvou3-app/src/shared/brand.js` 与 `pinvou3-app/src-tauri/src/core/brand.rs` 不应手工修改。
 
@@ -11,7 +11,7 @@
 ## 兼容性边界
 
 - 包名、crate 名、可执行文件名、应用标识、环境变量、MCP 工具名、URL Scheme、数据库键和 `~/.pinvou3/` 路径保持稳定，避免破坏升级和既有数据。
-- Linux Debian 包继续使用 ASCII 技术名 `pinvou3`，桌面启动器显示“智灵”；macOS 和 Windows 安装包显示“智灵”。
+- Linux Debian 包继续使用 ASCII 技术名 `pinvou3`，桌面启动器显示“ Lingo ”；macOS 和 Windows 安装包显示“ Lingo ”。
 - 既有会话、用户自定义助手名称、知识服务名称、凭据和备份不做强制改写。
 - 第三方模型名称、语音转写内容、版权声明和许可证保留原始身份。
 - 官网、社区、Issue、Release 和支持链接统一指向 `mlmr-coder/fresh-agent`。

@@ -513,7 +513,7 @@ function ElicitationCard({ elicitation, pending, onRespond, responding, copy, co
   );
 }
 
-// 原生（智灵 Engine）会话的选择确认卡：chat:user_input_required → submit_user_input。
+// 原生（Lingo Engine）会话的选择确认卡：chat:user_input_required → submit_user_input。
 // 选项归一化逻辑与主聊天 UserInputCard 对齐（allow_free_text / multi_select），
 // 但提交走显式 sessionId，不依赖 bridge 全局 activeSession。
 const NATIVE_CHAT_EVENTS = [
@@ -1035,7 +1035,7 @@ export function CodexAcpView({
     [sessions, activeId],
   );
   const activeAgentId = activeSession?.agent_id || draftAgentId;
-  // 原生（智灵 Engine）代码会话：发消息走 chat 命令 + chat:* 事件，会话状态按
+  // 原生（Lingo Engine）代码会话：发消息走 chat 命令 + chat:* 事件，会话状态按
   // session 缓存在 lane Map 里（后台会话的 turn 也能继续推进，切回不丢流式内容）。
   const isNativeAgent = activeAgentId === 'pinvou';
   const codeSkillWorkspacePath = String(
@@ -1807,7 +1807,7 @@ export function CodexAcpView({
     setSessionInfoSessionId(null);
     setSessionLoading(true);
     try {
-      // 原生（智灵）会话：历史与 turn timeline 来自 SavedSession / timing_events，
+      // 原生（Lingo）会话：历史与 turn timeline 来自 SavedSession / timing_events，
       // 不走 ACP 的 timeline / pending / session_info 命令。
       if (nativeSessionIdsRef.current.has(id)) {
         const [saved, sessionTimeline] = await Promise.all([
@@ -2523,7 +2523,7 @@ export function CodexAcpView({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- remote reconnect callback: subscription mounts only once; depending on refresh functions would repeatedly unbind/resubscribe
   }), []);
 
-  // 原生（智灵）会话的 engine 事件：按 session 推进对应 lane，仅当前会话 bump 渲染；
+  // 原生（Lingo）会话的 engine 事件：按 session 推进对应 lane，仅当前会话 bump 渲染；
   // turn 边界顺手刷新会话列表（标题/时间戳），与 acp:event 的 turn_completed 处理对齐。
   useEffect(() => {
     let disposed = false;
@@ -2928,7 +2928,7 @@ export function CodexAcpView({
     }
   }
 
-  /// 原生（智灵 Engine）发送：草稿态先建会话（强制临时工作区），随后走 chat 命令；
+  /// 原生（Lingo Engine）发送：草稿态先建会话（强制临时工作区），随后走 chat 命令；
   /// 用户气泡乐观插入 lane，chat 命令同步失败（空消息 / turn 占用等）时回滚。
   async function sendNative(message, readyAttachments) {
     const attachmentsAtSend = attachments;
@@ -3214,7 +3214,7 @@ export function CodexAcpView({
     }
   }
 
-  // 原生（智灵）车道 deepseek 投影项渲染：agent_message 用 lane 保存的原始 markdown；
+  // 原生（Lingo）车道 deepseek 投影项渲染：agent_message 用 lane 保存的原始 markdown；
   // user_input 走选择确认卡；plan_card 走方案审批卡；careful_blocked 是拦截提示
   // （无需交互）；system 是引擎透传提示。reasoning / tool_group 由 ConversationTimeline 默认渲染。
   function renderNativeItem(item) {
@@ -3489,7 +3489,7 @@ export function CodexAcpView({
                 )}
               </div>
             ) : isNativeAgent ? (
-              // 原生（智灵）会话没有 ACP 登录/安装状态机；错误由 chat:done 事件内联展示。
+              // 原生（Lingo）会话没有 ACP 登录/安装状态机；错误由 chat:done 事件内联展示。
               null
             ) : (
               <>
@@ -3889,7 +3889,7 @@ export function CodexAcpView({
                       title={availableCommands.length ? codexCopy.commandsAvailable : codexCopy.commandsAfterSession}>/</button>
                   )}
                   {isNativeAgent && (
-                    // 原生（智灵）车道的底栏控件：与工作/设计页共用同一套共享 composer
+                    // 原生（Lingo）车道的底栏控件：与工作/设计页共用同一套共享 composer
                     // 控件（ComposerModeChip / ComposerModelSelector / ComposerKbSelector，
                     // 显式会话态驱动 props 绕开 bridge 聊天 active 绑定）；行为（直调
                     // per-session 命令、草稿暂存、busy 禁用、归属保护）不变。Plan 说明：

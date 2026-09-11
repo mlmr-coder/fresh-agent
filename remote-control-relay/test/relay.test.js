@@ -195,7 +195,7 @@ async function spawnRelay(env = {}) {
     },
     stdio: ["ignore", "pipe", "pipe"],
   });
-  await waitForOutput(child, /智灵 remote relay listening/);
+  await waitForOutput(child, /Lingo remote relay listening/);
   return {
     child,
     port: isolatedPort,
@@ -211,7 +211,7 @@ before(async () => {
   relayStatePath = join(testRoot, "relay-state.json");
   await mkdir(webDir, { recursive: true });
   await mkdir(join(webDir, "assets"), { recursive: true });
-  await writeFile(join(webDir, "index.html"), "<!doctype html><title>智灵 WebUI v2</title><main id=app></main>");
+  await writeFile(join(webDir, "index.html"), "<!doctype html><title>Lingo WebUI v2</title><main id=app></main>");
   await writeFile(join(webDir, "app.js"), "window.__pinvou_webui_v2__ = true;\n");
   await writeFile(join(webDir, "assets", "app-01234567.js"), "window.__hashed__ = true;\n");
   await writeFile(join(webDir, "assets", "brand-banner.jpg"), "fixed-name-asset\n");
@@ -228,7 +228,7 @@ before(async () => {
     },
     stdio: ["ignore", "pipe", "pipe"],
   });
-  await waitForOutput(relay, /智灵 remote relay listening/);
+  await waitForOutput(relay, /Lingo remote relay listening/);
 });
 
 after(async () => {
@@ -239,14 +239,14 @@ after(async () => {
 test("serves the built WebUI SPA at the public base path", async () => {
   const root = await fetch(`${httpUrl}/pinvou3/remote/`);
   assert.equal(root.status, 200);
-  assert.match(await root.text(), /智灵 WebUI v2/);
+  assert.match(await root.text(), /Lingo WebUI v2/);
   assert.equal(root.headers.get("cache-control"), "no-store");
   assert.match(root.headers.get("content-security-policy"), /connect-src 'self' ws: wss:/);
   assert.equal(root.headers.get("referrer-policy"), "no-referrer");
 
   const spa = await fetch(`${httpUrl}/pinvou3/remote/conversations/current`);
   assert.equal(spa.status, 200);
-  assert.match(await spa.text(), /智灵 WebUI v2/);
+  assert.match(await spa.text(), /Lingo WebUI v2/);
 
   const asset = await fetch(`${httpUrl}/pinvou3/remote/app.js`);
   assert.equal(asset.status, 200);

@@ -450,10 +450,10 @@ assert.equal(
 );
 
 const macos = composeEffectiveConfig([platformConfigPath("darwin")]).effectiveConfig;
-assert.equal(macos.productName, "智灵");
+assert.equal(macos.productName, "Lingo");
 assert.equal(macos.identifier, "com.pinvou.pinvou3");
 assert.equal(macos.mainBinaryName, "pinvou3-tauri");
-assert.equal(macos.bundle.macOS.bundleName, "智灵");
+assert.equal(macos.bundle.macOS.bundleName, "Lingo");
 assert.equal(linux.productName, "pinvou3", "Debian package identity stays ASCII and stable");
 assert.deepEqual(macos.bundle.targets, ["app", "dmg"]);
 assert.equal(
@@ -498,7 +498,7 @@ assert.ok(
 );
 
 const windows = composeEffectiveConfig([platformConfigPath("win32")]).effectiveConfig;
-assert.equal(windows.productName, "智灵");
+assert.equal(windows.productName, "Lingo");
 assert.equal(windows.identifier, "com.pinvou.pinvou3");
 assert.equal(
   windows.bundle.resources["resources/platforms/windows/chrome-devtools-mcp/"],
@@ -527,7 +527,7 @@ const runtimeBundleExtraction = fs.readFileSync(
 assert.match(
   runtimeBundleExtraction,
   /#\[cfg\(any\(target_os = "linux", target_os = "macos"\)\)\][\s\S]*?fn browser_mcp_entry_for_session[\s\S]*?@pinvou\/browser-core/,
-  "Linux and macOS must register the unified 智灵 BrowserCore wrapper",
+  "Linux and macOS must register the unified Lingo BrowserCore wrapper",
 );
 assert.match(
   runtimeBundleExtraction,

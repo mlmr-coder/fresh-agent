@@ -132,11 +132,11 @@ fn transient_read_error_keeps_authoritative_target_untouched() {
     let root = recovery_test_root("transient-read-guard");
     let target = root.join("profile.json");
     let backup = target.with_extension("bak");
-    let authoritative = "{\"version\":1,\"revision\":9,\"identity\":{\"call_name\":\"权威\",\"assistant_alias\":\"智灵\"}}\n";
+    let authoritative = "{\"version\":1,\"revision\":9,\"identity\":{\"call_name\":\"权威\",\"assistant_alias\":\"Lingo\"}}\n";
     fs::write(&target, authoritative).unwrap();
     fs::write(
         &backup,
-        "{\"version\":1,\"revision\":1,\"identity\":{\"call_name\":\"旧值\",\"assistant_alias\":\"智灵\"}}\n",
+        "{\"version\":1,\"revision\":1,\"identity\":{\"call_name\":\"旧值\",\"assistant_alias\":\"Lingo\"}}\n",
     )
     .unwrap();
 
@@ -267,7 +267,7 @@ fn corrupted_authoritative_file_self_heals_from_backup() {
     let root = recovery_test_root("corrupt-self-heal");
     let target = root.join("profile.json");
     let backup = target.with_extension("bak");
-    let authoritative = "{\"version\":1,\"revision\":9,\"identity\":{\"call_name\":\"权威\",\"assistant_alias\":\"智灵\"}}\n";
+    let authoritative = "{\"version\":1,\"revision\":9,\"identity\":{\"call_name\":\"权威\",\"assistant_alias\":\"Lingo\"}}\n";
     // The authoritative file is deterministically corrupted (invalid
     // UTF-8) while a valid older backup exists. The deterministic error
     // must still fall through to recovery so the file self-heals.
@@ -963,7 +963,7 @@ fn writes_memory_snapshot_document_for_debugging() {
 
     assert_eq!(path, snapshot_path());
     let doc = fs::read_to_string(path).unwrap();
-    assert!(doc.contains("# 智灵 设备记忆快照"));
+    assert!(doc.contains("# Lingo 设备记忆快照"));
     assert!(doc.contains("用户称呼"));
     assert!(doc.contains("回答先给结论"));
     assert!(doc.contains("pinvou-memory-snapshot/v1"));
